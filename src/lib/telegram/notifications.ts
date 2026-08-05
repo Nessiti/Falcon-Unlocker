@@ -1,0 +1,59 @@
+import "server-only";
+import { sendTelegramMessage } from "@/lib/telegram/bot";
+import { formatUsd } from "@/lib/ui";
+
+/** The 8 notification types from Chapter 9, all sent via the Telegram Bot with native buttons. */
+
+export function notifyOrderReceived(telegramId: bigint, serviceName: string, priceCents: number) {
+  return sendTelegramMessage(
+    telegramId,
+    `🧾 <b>Order received</b>\n${serviceName} — ${formatUsd(priceCents)}\nWe'll notify you once it's processed.`,
+    [{ text: "View Order", path: "/orders" }],
+  );
+}
+
+export function notifyPaymentAccepted(telegramId: bigint, amountCents: number) {
+  return sendTelegramMessage(
+    telegramId,
+    `✅ <b>Payment accepted</b>\n${formatUsd(amountCents)} has been added to your wallet.`,
+    [{ text: "View Wallet", path: "/wallet" }],
+  );
+}
+
+export function notifyPaymentRejected(telegramId: bigint, amountCents: number) {
+  return sendTelegramMessage(
+    telegramId,
+    `❌ <b>Payment rejected</b>\nYour recharge request for ${formatUsd(amountCents)} was rejected. Contact support if this seems wrong.`,
+    [{ text: "Contact Support", path: "/support" }],
+  );
+}
+
+export function notifyOrderCompleted(telegramId: bigint, serviceName: string) {
+  return sendTelegramMessage(telegramId, `🎉 <b>Order completed</b>\n${serviceName} is ready.`, [
+    { text: "View Order", path: "/orders" },
+  ]);
+}
+
+export function notifyPromotion(telegramId: bigint, title: string, message: string) {
+  return sendTelegramMessage(telegramId, `🎁 <b>${title}</b>\n${message}`, [
+    { text: "Open App", path: "/" },
+  ]);
+}
+
+export function notifyMaintenance(telegramId: bigint, message: string) {
+  return sendTelegramMessage(telegramId, `🛠 <b>Maintenance</b>\n${message}`);
+}
+
+export function notifyBalanceUpdated(telegramId: bigint, balanceCents: number) {
+  return sendTelegramMessage(
+    telegramId,
+    `💰 <b>Balance updated</b>\nYour new balance is ${formatUsd(balanceCents)}.`,
+    [{ text: "View Wallet", path: "/wallet" }],
+  );
+}
+
+export function notifySupportReply(telegramId: bigint, message: string) {
+  return sendTelegramMessage(telegramId, `💬 <b>Support reply</b>\n${message}`, [
+    { text: "Open Support", path: "/support" },
+  ]);
+}

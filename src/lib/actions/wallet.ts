@@ -5,6 +5,11 @@ import { getCurrentUser } from "@/lib/telegram/current-user";
 import { requireAdmin } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { RechargeStatus, WalletTransactionType } from "@/generated/prisma/client";
+import {
+  notifyBalanceUpdated,
+  notifyPaymentAccepted,
+  notifyPaymentRejected,
+} from "@/lib/telegram/notifications";
 
 export type RechargeMethodSummary = {
   id: string;
@@ -196,7 +201,7 @@ export async function reviewRechargeOrderAction(
   try {
     const admin = await requireAdmin(initData);
 
-    await prisma.$transaction(async (tx) => {
+    const outcome = await prisma.$transaction(async (tx) => {
       const order = await tx.rechargeOrder.findUnique({ where: { id: input.rechargeOrderId } });
       if (!order || order.status !== RechargeStatus.PENDING) {
         throw new Error("ORDER_NOT_PENDING");
@@ -212,7 +217,7 @@ export async function reviewRechargeOrderAction(
       });
 
       if (input.decision === "APPROVED") {
-        await tx.user.update({
+        const customer = await tx.user.update({
           where: { id: order.userId },
           data: { balanceCents: { increment: order.amountCents } },
         });
@@ -226,8 +231,20 @@ export async function reviewRechargeOrderAction(
             rechargeOrderId: order.id,
           },
         });
+
+        return { decision: "APPROVED" as const, order, customer };
       }
+
+      const customer = await tx.user.findUniqueOrThrow({ where: { id: order.userId } });
+      return { decision: "REJECTED" as const, order, customer };
     });
+
+    if (outcome.decision === "APPROVED") {
+      await notifyPaymentAccepted(outcome.customer.telegramId, outcome.order.amountCents);
+      await notifyBalanceUpdated(outcome.customer.telegramId, outcome.customer.balanceCents);
+    } else {
+      await notifyPaymentRejected(outcome.customer.telegramId, outcome.order.amountCents);
+    }
 
     return { ok: true };
   } catch (error) {

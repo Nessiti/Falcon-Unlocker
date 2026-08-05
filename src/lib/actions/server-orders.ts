@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { ServiceStatus, WalletTransactionType } from "@/generated/prisma/client";
+import { notifyOrderReceived } from "@/lib/telegram/notifications";
 
 export type CreateServerOrderInput = {
   serviceId: string;
@@ -71,6 +72,8 @@ export async function createServerOrderAction(
       }
       throw error;
     }
+
+    await notifyOrderReceived(user.telegramId, service.name, service.priceCents);
 
     return { ok: true };
   } catch (error) {
