@@ -27,4 +27,7 @@ model User {
   isFirstUser Boolean  @default(false)
   role        Role     @default(CUSTOMER)
   createdAt   DateTime @default(now())
+
+  /// Balance in USD cents. Chapter 7 (Wallet) adds recharges/transactions on top of this.
+  balanceCents Int @default(0)
 }

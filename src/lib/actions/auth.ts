@@ -14,6 +14,7 @@ export type AuthUser = {
   role: Role;
   isFirstUser: boolean;
   createdAt: string;
+  balanceCents: number;
 };
 
 export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: string };
@@ -78,6 +79,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         role: user.role,
         isFirstUser: user.isFirstUser,
         createdAt: user.createdAt.toISOString(),
+        balanceCents: user.balanceCents,
       },
     };
   } catch (error) {

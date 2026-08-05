@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TelegramRoot } from "@/components/telegram-root";
 import { TelegramUserProvider } from "@/components/telegram-user-provider";
+import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full">
         <TelegramRoot>
-          <TelegramUserProvider>{children}</TelegramUserProvider>
+          <TelegramUserProvider>
+            <AppShell>{children}</AppShell>
+          </TelegramUserProvider>
         </TelegramRoot>
       </body>
     </html>
