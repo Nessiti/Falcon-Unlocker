@@ -31,3 +31,62 @@ model User {
   /// Balance in USD cents. Chapter 7 (Wallet) adds recharges/transactions on top of this.
   balanceCents Int @default(0)
 }
+
+enum ServiceStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+enum ServiceBadge {
+  POPULAR
+  NEW
+  FEATURED
+}
+
+enum ServiceFieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  SELECT
+  CHECKBOX
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  imeiServices ImeiService[]
+}
+
+model ImeiService {
+  id            String        @id @default(cuid())
+  name          String
+  priceCents    Int
+  description   String
+  estimatedTime String
+  status        ServiceStatus @default(ONLINE)
+  badge         ServiceBadge?
+  imageUrl      String?
+  displayOrder  Int           @default(0)
+  createdAt     DateTime      @default(now())
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  fields ImeiServiceField[]
+}
+
+model ImeiServiceField {
+  id           String           @id @default(cuid())
+  label        String
+  type         ServiceFieldType
+  /// Comma-separated option list, only meaningful when type is SELECT.
+  options      String?
+  required     Boolean          @default(false)
+  displayOrder Int              @default(0)
+
+  serviceId String
+  service   ImeiService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
