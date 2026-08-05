@@ -15,6 +15,8 @@ export type AuthUser = {
   isFirstUser: boolean;
   createdAt: string;
   balanceCents: number;
+  hasPin: boolean;
+  biometricEnabled: boolean;
 };
 
 export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: string };
@@ -80,6 +82,8 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         isFirstUser: user.isFirstUser,
         createdAt: user.createdAt.toISOString(),
         balanceCents: user.balanceCents,
+        hasPin: user.pinHash !== null,
+        biometricEnabled: user.biometricEnabled,
       },
     };
   } catch (error) {

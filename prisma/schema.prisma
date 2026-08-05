@@ -41,6 +41,10 @@ model User {
   /// Balance in USD cents. Chapter 7 (Wallet) adds recharges/transactions on top of this.
   balanceCents Int @default(0)
 
+  /// Salted hash of the app-lock PIN (Chapter 8). Null when no PIN is set.
+  pinHash          String?
+  biometricEnabled Boolean @default(false)
+
   imeiOrders   ImeiOrder[]
   serverOrders ServerOrder[]
 
