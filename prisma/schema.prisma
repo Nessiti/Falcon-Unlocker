@@ -57,7 +57,8 @@ model Category {
   name      String   @unique
   createdAt DateTime @default(now())
 
-  imeiServices ImeiService[]
+  imeiServices   ImeiService[]
+  serverServices ServerService[]
 }
 
 model ImeiService {
@@ -89,4 +90,54 @@ model ImeiServiceField {
 
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+enum ServerServiceType {
+  LICENSE
+  ACTIVATION
+  CREDITS
+  SUBSCRIPTION
+  UNLOCK
+  FRP
+  FLASH
+  REPAIR
+}
+
+enum ServerFieldType {
+  USERNAME
+  PASSWORD
+  TOKEN
+  IP
+  SERIAL
+  CUSTOM_TEXTBOX
+}
+
+model ServerService {
+  id            String            @id @default(cuid())
+  name          String
+  priceCents    Int
+  description   String
+  estimatedTime String
+  status        ServiceStatus     @default(ONLINE)
+  badge         ServiceBadge?
+  imageUrl      String?
+  displayOrder  Int               @default(0)
+  type          ServerServiceType
+  createdAt     DateTime          @default(now())
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  fields ServerServiceField[]
+}
+
+model ServerServiceField {
+  id           String          @id @default(cuid())
+  label        String
+  type         ServerFieldType
+  required     Boolean         @default(false)
+  displayOrder Int             @default(0)
+
+  serviceId String
+  service   ServerService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 }
