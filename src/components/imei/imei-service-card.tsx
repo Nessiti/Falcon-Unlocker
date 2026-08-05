@@ -1,4 +1,5 @@
 import type { Category, ImeiService, ImeiServiceField } from "@/generated/prisma/client";
+import { ImeiOrderButton } from "@/components/imei/imei-order-button";
 
 type ServiceWithRelations = ImeiService & {
   category: Category | null;
@@ -56,6 +57,8 @@ export function ImeiServiceCard({ service }: { service: ServiceWithRelations }) 
           Required info: {service.fields.map((field) => field.label).join(", ")}
         </p>
       ) : null}
+
+      <ImeiOrderButton serviceId={service.id} fields={service.fields} />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   ServiceBadge,
   ServiceStatus,
 } from "@/generated/prisma/browser";
+import { formInputClass as inputClass } from "@/lib/ui";
 
 type FieldDraft = {
   label: string;
@@ -25,9 +26,6 @@ type FieldDraft = {
 function emptyField(): FieldDraft {
   return { label: "", type: ServerFieldType.USERNAME, required: false };
 }
-
-const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground";
 
 const SERVICE_TYPE_OPTIONS: { value: ServerServiceType; label: string }[] = [
   { value: ServerServiceType.LICENSE, label: "License" },

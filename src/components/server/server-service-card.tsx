@@ -1,4 +1,5 @@
 import type { Category, ServerService, ServerServiceField } from "@/generated/prisma/client";
+import { ServerOrderButton } from "@/components/server/server-order-button";
 
 type ServiceWithRelations = ServerService & {
   category: Category | null;
@@ -68,6 +69,8 @@ export function ServerServiceCard({ service }: { service: ServiceWithRelations }
           Required info: {service.fields.map((field) => field.label).join(", ")}
         </p>
       ) : null}
+
+      <ServerOrderButton serviceId={service.id} fields={service.fields} />
     </div>
   );
 }

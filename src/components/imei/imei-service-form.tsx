@@ -6,6 +6,7 @@ import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { createImeiServiceAction, type CreateImeiServiceField } from "@/lib/actions/imei-services";
 import { Role, ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/browser";
+import { formInputClass as inputClass } from "@/lib/ui";
 
 type FieldDraft = {
   label: string;
@@ -17,9 +18,6 @@ type FieldDraft = {
 function emptyField(): FieldDraft {
   return { label: "", type: ServiceFieldType.TEXT, options: "", required: false };
 }
-
-const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground";
 
 export function ImeiServiceForm() {
   const auth = useTelegramUser();
