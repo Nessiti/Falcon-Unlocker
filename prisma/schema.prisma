@@ -11,3 +11,20 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id          String   @id @default(cuid())
+  telegramId  BigInt   @unique
+  username    String?
+  firstName   String
+  lastName    String?
+  avatarUrl   String?
+  isFirstUser Boolean  @default(false)
+  role        Role     @default(CUSTOMER)
+  createdAt   DateTime @default(now())
+}

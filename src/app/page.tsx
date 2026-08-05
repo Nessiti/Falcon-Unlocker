@@ -1,4 +1,4 @@
-import { ConnectionStatus } from "@/components/connection-status";
+import { AuthStatus } from "@/components/auth-status";
 
 export default function Home() {
   return (
@@ -11,7 +11,7 @@ export default function Home() {
         The first Telegram-native GSM Server.
       </p>
       <div className="mt-4">
-        <ConnectionStatus />
+        <AuthStatus />
       </div>
     </main>
   );
