@@ -21,7 +21,8 @@ export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: str
 /**
  * Automatic Telegram login: verifies initData, then finds or creates the
  * matching account. No form, no password — identity comes entirely from
- * Telegram. The very first account ever created becomes Admin.
+ * Telegram. The very first account ever created becomes Admin, and the
+ * Telegram ID configured as TELEGRAM_ADMIN_ID is always granted Admin too.
  */
 export async function loginAction(initData: string): Promise<LoginResult> {
   try {
@@ -32,6 +33,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     }
 
     const telegramId = BigInt(tgUser.id);
+    const isConfiguredAdmin = process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
     const user = await prisma.$transaction(async (tx) => {
       const existing = await tx.user.findUnique({ where: { telegramId } });
@@ -44,6 +46,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
             firstName: tgUser.first_name,
             lastName: tgUser.last_name ?? null,
             avatarUrl: tgUser.photo_url ?? null,
+            role: isConfiguredAdmin ? Role.ADMIN : existing.role,
           },
         });
       }
@@ -58,7 +61,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
           lastName: tgUser.last_name ?? null,
           avatarUrl: tgUser.photo_url ?? null,
           isFirstUser,
-          role: isFirstUser ? Role.ADMIN : Role.CUSTOMER,
+          role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
         },
       });
     });
