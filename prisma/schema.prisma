@@ -51,6 +51,9 @@ model User {
   rechargeOrders         RechargeOrder[]     @relation("RechargeOrderSubmitter")
   reviewedRechargeOrders RechargeOrder[]     @relation("RechargeOrderReviewer")
   walletTransactions     WalletTransaction[]
+
+  supportTickets  SupportTicket[]
+  supportMessages SupportMessage[]
 }
 
 enum ServiceStatus {
@@ -276,4 +279,60 @@ model WalletTransaction {
 
   serverOrderId String?
   serverOrder   ServerOrder? @relation(fields: [serverOrderId], references: [id])
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+/// A support "ticket" is a chat thread (Chapter 10 lists Chat and Tickets together).
+model SupportTicket {
+  id        String       @id @default(cuid())
+  subject   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  messages SupportMessage[]
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  ticketId String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User @relation(fields: [authorId], references: [id])
+}
+
+/// Admin-editable FAQ entries (Chapter 10).
+model FaqItem {
+  id           String   @id @default(cuid())
+  question     String
+  answer       String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+/// Admin-editable Help articles (Chapter 10).
+model HelpArticle {
+  id           String   @id @default(cuid())
+  title        String
+  body         String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+/// Admin-editable About content (Chapter 10). Singleton row.
+model AboutPage {
+  id        String   @id @default("about")
+  content   String   @default("")
+  updatedAt DateTime @updatedAt
 }
