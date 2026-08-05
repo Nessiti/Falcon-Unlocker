@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
-import { ServiceStatus } from "@/generated/prisma/client";
+import { ServiceStatus, WalletTransactionType } from "@/generated/prisma/client";
 
 export type CreateServerOrderInput = {
   serviceId: string;
@@ -45,13 +45,23 @@ export async function createServerOrderAction(
           throw new Error("INSUFFICIENT_BALANCE");
         }
 
-        await tx.serverOrder.create({
+        const order = await tx.serverOrder.create({
           data: {
             userId: user.id,
             serviceId: service.id,
             priceCents: service.priceCents,
             fieldValues: input.fieldValues,
             notes: input.notes,
+          },
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            userId: user.id,
+            type: WalletTransactionType.DEBIT,
+            amountCents: service.priceCents,
+            reason: `Order: ${service.name}`,
+            serverOrderId: order.id,
           },
         });
       });

@@ -6,12 +6,7 @@ import { useTelegramUser } from "@/components/telegram-user-provider";
 import { getDashboardSummaryAction, type DashboardSummary } from "@/lib/actions/dashboard";
 import { HomeCard } from "@/components/dashboard/home-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-
-function formatUsd(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    cents / 100,
-  );
-}
+import { formatUsd } from "@/lib/ui";
 
 export default function Home() {
   const auth = useTelegramUser();

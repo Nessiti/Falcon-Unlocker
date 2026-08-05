@@ -43,6 +43,10 @@ model User {
 
   imeiOrders   ImeiOrder[]
   serverOrders ServerOrder[]
+
+  rechargeOrders         RechargeOrder[]     @relation("RechargeOrderSubmitter")
+  reviewedRechargeOrders RechargeOrder[]     @relation("RechargeOrderReviewer")
+  walletTransactions     WalletTransaction[]
 }
 
 enum ServiceStatus {
@@ -123,6 +127,8 @@ model ImeiOrder {
 
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id])
+
+  walletTransactions WalletTransaction[]
 }
 
 enum ServerServiceType {
@@ -182,6 +188,8 @@ model ServerOrder {
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id])
+
+  walletTransactions WalletTransaction[]
 }
 
 model ServerServiceField {
@@ -193,4 +201,75 @@ model ServerServiceField {
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+/// Admin-configured manual payment method (Chapter 7).
+model RechargeMethod {
+  id             String   @id @default(cuid())
+  name           String
+  instructions   String
+  /// Free text: crypto address, bank account, mobile money number, etc.
+  accountDetails String?
+  customText     String?
+  imageUrl       String?
+  qrCodeUrl      String?
+  displayOrder   Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  rechargeOrders RechargeOrder[]
+}
+
+enum RechargeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Customer's manual recharge request: proof of payment, awaiting admin review.
+model RechargeOrder {
+  id          String         @id @default(cuid())
+  amountCents Int
+  proofUrl    String?
+  proofNote   String?
+  status      RechargeStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  reviewedAt  DateTime?
+
+  userId String
+  user   User @relation("RechargeOrderSubmitter", fields: [userId], references: [id])
+
+  methodId String
+  method   RechargeMethod @relation(fields: [methodId], references: [id])
+
+  reviewedById String?
+  reviewedBy   User?   @relation("RechargeOrderReviewer", fields: [reviewedById], references: [id])
+
+  walletTransactions WalletTransaction[]
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+}
+
+/// Wallet transaction history ledger (Chapter 7): every balance change.
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  type        WalletTransactionType
+  amountCents Int
+  reason      String
+  createdAt   DateTime              @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  rechargeOrderId String?
+  rechargeOrder   RechargeOrder? @relation(fields: [rechargeOrderId], references: [id])
+
+  imeiOrderId String?
+  imeiOrder   ImeiOrder? @relation(fields: [imeiOrderId], references: [id])
+
+  serverOrderId String?
+  serverOrder   ServerOrder? @relation(fields: [serverOrderId], references: [id])
 }

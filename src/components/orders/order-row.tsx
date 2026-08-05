@@ -1,4 +1,5 @@
 import type { OrderSummary } from "@/lib/actions/orders";
+import { formatUsd } from "@/lib/ui";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Pending",
@@ -17,12 +18,6 @@ const STATUS_CLASS: Record<string, string> = {
   REJECTED: "bg-accent text-accent-foreground",
   CANCELLED: "bg-accent text-accent-foreground",
 };
-
-function formatUsd(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    cents / 100,
-  );
-}
 
 export function OrderRow({ order }: { order: OrderSummary }) {
   return (

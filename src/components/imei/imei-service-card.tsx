@@ -1,5 +1,6 @@
 import type { Category, ImeiService, ImeiServiceField } from "@/generated/prisma/client";
 import { ImeiOrderButton } from "@/components/imei/imei-order-button";
+import { formatUsd } from "@/lib/ui";
 
 type ServiceWithRelations = ImeiService & {
   category: Category | null;
@@ -11,12 +12,6 @@ const BADGE_LABEL: Record<string, string> = {
   NEW: "New",
   FEATURED: "Featured",
 };
-
-function formatUsd(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    cents / 100,
-  );
-}
 
 export function ImeiServiceCard({ service }: { service: ServiceWithRelations }) {
   return (

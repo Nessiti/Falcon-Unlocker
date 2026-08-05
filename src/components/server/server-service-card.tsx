@@ -1,5 +1,6 @@
 import type { Category, ServerService, ServerServiceField } from "@/generated/prisma/client";
 import { ServerOrderButton } from "@/components/server/server-order-button";
+import { formatUsd } from "@/lib/ui";
 
 type ServiceWithRelations = ServerService & {
   category: Category | null;
@@ -22,12 +23,6 @@ const TYPE_LABEL: Record<string, string> = {
   FLASH: "Flash",
   REPAIR: "Repair",
 };
-
-function formatUsd(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    cents / 100,
-  );
-}
 
 export function ServerServiceCard({ service }: { service: ServiceWithRelations }) {
   return (
