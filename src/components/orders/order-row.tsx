@@ -50,6 +50,17 @@ export function OrderRow({ order }: { order: OrderSummary }) {
           Download result
         </a>
       ) : null}
+
+      {order.statusHistory.length > 0 ? (
+        <div className="flex flex-col gap-1 border-t border-border pt-2">
+          {order.statusHistory.map((event, index) => (
+            <p key={index} className="text-[11px] text-hint">
+              {STATUS_LABEL[event.status]} · {new Date(event.createdAt).toLocaleString()}
+              {event.comment ? ` — ${event.comment}` : ""}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

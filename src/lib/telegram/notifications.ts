@@ -34,6 +34,22 @@ export function notifyOrderCompleted(telegramId: bigint, serviceName: string) {
   ]);
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  CHECKING: "being checked",
+  PROCESSING: "being processed",
+  REJECTED: "rejected",
+  CANCELLED: "cancelled",
+};
+
+/** Order Workflow (Chapter 11): notifies non-Completed status transitions. */
+export function notifyOrderStatusChanged(telegramId: bigint, serviceName: string, status: string) {
+  return sendTelegramMessage(
+    telegramId,
+    `📦 <b>Order update</b>\n${serviceName} is now ${STATUS_LABEL[status] ?? status.toLowerCase()}.`,
+    [{ text: "View Order", path: "/orders" }],
+  );
+}
+
 export function notifyPromotion(telegramId: bigint, title: string, message: string) {
   return sendTelegramMessage(telegramId, `🎁 <b>${title}</b>\n${message}`, [
     { text: "Open App", path: "/" },

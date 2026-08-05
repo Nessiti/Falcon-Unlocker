@@ -1,8 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/telegram/admin";
+import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
+import { logAdminAction } from "@/lib/telegram/audit";
 import { ServerFieldType, ServerServiceType, ServiceBadge, ServiceStatus } from "@/generated/prisma/client";
 
 export type CreateServerServiceField = {
@@ -85,6 +86,140 @@ export async function createServerServiceAction(
   } catch (error) {
     const message =
       error instanceof TelegramAuthError ? error.message : "Failed to create service";
+    return { ok: false, error: message };
+  }
+}
+
+export type AdminServerServiceSummary = {
+  id: string;
+  name: string;
+  priceCents: number;
+  status: ServiceStatus;
+  badge: ServiceBadge | null;
+  type: ServerServiceType;
+  categoryName: string | null;
+  fieldCount: number;
+};
+
+export type ListAllServerServicesResult =
+  | { ok: true; services: AdminServerServiceSummary[] }
+  | { ok: false; error: string };
+
+/** Admin view of every Server service, including Offline/Maintenance ones customers don't see. */
+export async function listAllServerServicesAction(
+  initData: string,
+): Promise<ListAllServerServicesResult> {
+  try {
+    await requireStaff(initData);
+
+    const services = await prisma.serverService.findMany({
+      include: { category: true, fields: true },
+      orderBy: { displayOrder: "asc" },
+    });
+
+    return {
+      ok: true,
+      services: services.map((service) => ({
+        id: service.id,
+        name: service.name,
+        priceCents: service.priceCents,
+        status: service.status,
+        badge: service.badge,
+        type: service.type,
+        categoryName: service.category?.name ?? null,
+        fieldCount: service.fields.length,
+      })),
+    };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to load services";
+    return { ok: false, error: message };
+  }
+}
+
+export type SetServerServiceStatusResult = { ok: true } | { ok: false; error: string };
+
+/** Activate / Deactivate / Maintenance (Chapter 11 Service Management). */
+export async function setServerServiceStatusAction(
+  initData: string,
+  serviceId: string,
+  status: ServiceStatus,
+): Promise<SetServerServiceStatusResult> {
+  try {
+    const admin = await requireAdmin(initData);
+    const service = await prisma.serverService.update({
+      where: { id: serviceId },
+      data: { status },
+    });
+    await logAdminAction(admin.id, "service.status", `Server ${service.name} -> ${status}`);
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to update status";
+    return { ok: false, error: message };
+  }
+}
+
+export type DeleteServerServiceResult = { ok: true } | { ok: false; error: string };
+
+export async function deleteServerServiceAction(
+  initData: string,
+  serviceId: string,
+): Promise<DeleteServerServiceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+    const service = await prisma.serverService.delete({ where: { id: serviceId } });
+    await logAdminAction(admin.id, "service.delete", `Server ${service.name}`);
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      error: "Failed to delete service (it may still have orders referencing it)",
+    };
+  }
+}
+
+export type DuplicateServerServiceResult = { ok: true } | { ok: false; error: string };
+
+export async function duplicateServerServiceAction(
+  initData: string,
+  serviceId: string,
+): Promise<DuplicateServerServiceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    const original = await prisma.serverService.findUnique({
+      where: { id: serviceId },
+      include: { fields: true },
+    });
+    if (!original) return { ok: false, error: "Service not found" };
+
+    await prisma.serverService.create({
+      data: {
+        name: `${original.name} (Copy)`,
+        priceCents: original.priceCents,
+        description: original.description,
+        estimatedTime: original.estimatedTime,
+        status: ServiceStatus.OFFLINE,
+        badge: original.badge,
+        imageUrl: original.imageUrl,
+        displayOrder: original.displayOrder,
+        type: original.type,
+        categoryId: original.categoryId,
+        fields: {
+          create: original.fields.map((field) => ({
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            displayOrder: field.displayOrder,
+          })),
+        },
+      },
+    });
+
+    await logAdminAction(admin.id, "service.duplicate", `Server ${original.name}`);
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof TelegramAuthError ? error.message : "Failed to duplicate service";
     return { ok: false, error: message };
   }
 }

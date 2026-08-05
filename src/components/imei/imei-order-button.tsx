@@ -14,6 +14,9 @@ type Field = {
   label: string;
   type: ServiceFieldType;
   options: string | null;
+  regex: string | null;
+  placeholder: string | null;
+  defaultValue: string | null;
   required: boolean;
 };
 
@@ -59,7 +62,14 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setValues(
+            Object.fromEntries(
+              fields.filter((field) => field.defaultValue).map((field) => [field.id, field.defaultValue as string]),
+            ),
+          );
+          setOpen(true);
+        }}
         className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
       >
         Order

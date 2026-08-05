@@ -31,8 +31,18 @@ export async function createImeiOrderAction(
     }
 
     for (const field of service.fields) {
-      if (field.required && !input.fieldValues[field.id]?.trim()) {
+      const value = input.fieldValues[field.id]?.trim();
+      if (field.required && !value) {
         return { ok: false, error: `${field.label} is required` };
+      }
+      if (field.regex && value) {
+        try {
+          if (!new RegExp(field.regex).test(value)) {
+            return { ok: false, error: `${field.label} is not in the expected format` };
+          }
+        } catch {
+          // Malformed admin-configured regex: skip validation rather than break ordering.
+        }
       }
     }
 

@@ -5,6 +5,12 @@ import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import type { OrderStatus } from "@/generated/prisma/client";
 
+export type OrderStatusHistoryEntry = {
+  status: OrderStatus;
+  comment: string | null;
+  createdAt: string;
+};
+
 export type OrderSummary = {
   id: string;
   status: OrderStatus;
@@ -14,6 +20,8 @@ export type OrderSummary = {
   notes: string | null;
   downloadUrl: string | null;
   createdAt: string;
+  /** Order Workflow (Chapter 11): Date/Comment per status transition. */
+  statusHistory: OrderStatusHistoryEntry[];
 };
 
 export type ListMyOrdersResult =
@@ -28,12 +36,12 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
     const [imeiOrders, serverOrders] = await Promise.all([
       prisma.imeiOrder.findMany({
         where: { userId: user.id },
-        include: { service: true },
+        include: { service: true, statusEvents: { orderBy: { createdAt: "asc" } } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.serverOrder.findMany({
         where: { userId: user.id },
-        include: { service: true },
+        include: { service: true, statusEvents: { orderBy: { createdAt: "asc" } } },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -47,6 +55,7 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
       notes: string | null;
       downloadUrl: string | null;
       createdAt: Date;
+      statusEvents: { status: OrderStatus; comment: string | null; createdAt: Date }[];
     }): OrderSummary => ({
       id: order.id,
       status: order.status,
@@ -56,6 +65,11 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
       notes: order.notes,
       downloadUrl: order.downloadUrl,
       createdAt: order.createdAt.toISOString(),
+      statusHistory: order.statusEvents.map((event) => ({
+        status: event.status,
+        comment: event.comment,
+        createdAt: event.createdAt.toISOString(),
+      })),
     });
 
     return {

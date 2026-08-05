@@ -8,7 +8,15 @@ type Field = {
   label: string;
   type: ServiceFieldType;
   options: string | null;
+  regex: string | null;
+  placeholder: string | null;
   required: boolean;
+};
+
+const HTML_TYPE: Record<string, string> = {
+  [ServiceFieldType.DATE]: "date",
+  [ServiceFieldType.PASSWORD]: "password",
+  [ServiceFieldType.EMAIL]: "email",
 };
 
 export function ImeiFieldInput({
@@ -22,12 +30,13 @@ export function ImeiFieldInput({
 }) {
   const label = field.required ? `${field.label} *` : field.label;
 
-  if (field.type === ServiceFieldType.TEXTAREA) {
+  if (field.type === ServiceFieldType.TEXTAREA || field.type === ServiceFieldType.JSON) {
     return (
       <label className="flex flex-col gap-1 text-xs text-hint">
         {label}
         <textarea
           className={formInputClass}
+          placeholder={field.placeholder ?? (field.type === ServiceFieldType.JSON ? "{ }" : undefined)}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={field.required}
@@ -43,6 +52,7 @@ export function ImeiFieldInput({
         <input
           type="number"
           className={formInputClass}
+          placeholder={field.placeholder ?? undefined}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={field.required}
@@ -93,7 +103,10 @@ export function ImeiFieldInput({
     <label className="flex flex-col gap-1 text-xs text-hint">
       {label}
       <input
+        type={HTML_TYPE[field.type] ?? "text"}
         className={formInputClass}
+        placeholder={field.placeholder ?? undefined}
+        pattern={field.regex ?? undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={field.required}

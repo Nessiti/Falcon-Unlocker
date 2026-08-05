@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ServiceStatus } from "@/generated/prisma/client";
 import { ServerServiceCard } from "@/components/server/server-service-card";
 import { ServerServiceForm } from "@/components/server/server-service-form";
+import { ServerServiceManager } from "@/components/server/server-service-manager";
 
 // The catalog reflects live admin changes (new/updated services), so it's
 // rendered per request instead of frozen at build time.
@@ -33,6 +34,7 @@ export default async function ServerPage() {
         <p className="text-sm text-hint">No services available yet.</p>
       )}
 
+      <ServerServiceManager />
       <ServerServiceForm />
     </main>
   );

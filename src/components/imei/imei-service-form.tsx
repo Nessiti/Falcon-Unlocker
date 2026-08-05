@@ -12,12 +12,39 @@ type FieldDraft = {
   label: string;
   type: ServiceFieldType;
   options: string;
+  regex: string;
+  placeholder: string;
+  defaultValue: string;
   required: boolean;
 };
 
 function emptyField(): FieldDraft {
-  return { label: "", type: ServiceFieldType.TEXT, options: "", required: false };
+  return {
+    label: "",
+    type: ServiceFieldType.TEXT,
+    options: "",
+    regex: "",
+    placeholder: "",
+    defaultValue: "",
+    required: false,
+  };
 }
+
+const FIELD_TYPE_OPTIONS: { value: ServiceFieldType; label: string }[] = [
+  { value: ServiceFieldType.TEXT, label: "Text" },
+  { value: ServiceFieldType.NUMBER, label: "Number" },
+  { value: ServiceFieldType.TEXTAREA, label: "Textarea" },
+  { value: ServiceFieldType.SELECT, label: "Select" },
+  { value: ServiceFieldType.CHECKBOX, label: "Checkbox" },
+  { value: ServiceFieldType.DATE, label: "Date" },
+  { value: ServiceFieldType.PASSWORD, label: "Password" },
+  { value: ServiceFieldType.EMAIL, label: "Email" },
+  { value: ServiceFieldType.IP, label: "IP" },
+  { value: ServiceFieldType.IMEI, label: "IMEI" },
+  { value: ServiceFieldType.SN, label: "SN" },
+  { value: ServiceFieldType.ECID, label: "ECID" },
+  { value: ServiceFieldType.JSON, label: "JSON" },
+];
 
 export function ImeiServiceForm() {
   const auth = useTelegramUser();
@@ -77,6 +104,9 @@ export function ImeiServiceForm() {
         label: field.label,
         type: field.type,
         options: field.type === ServiceFieldType.SELECT ? field.options : null,
+        regex: field.regex || null,
+        placeholder: field.placeholder || null,
+        defaultValue: field.defaultValue || null,
         required: field.required,
         displayOrder: index,
       }));
@@ -189,47 +219,74 @@ export function ImeiServiceForm() {
       <div className="flex flex-col gap-2">
         <p className="text-xs font-medium text-hint">Custom Fields</p>
         {fields.map((field, index) => (
-          <div key={index} className="flex flex-wrap items-center gap-2">
-            <input
-              className={`${inputClass} flex-1`}
-              placeholder="Field label (e.g. IMEI)"
-              value={field.label}
-              onChange={(e) => updateField(index, { label: e.target.value })}
-            />
-            <select
-              className={inputClass}
-              value={field.type}
-              onChange={(e) => updateField(index, { type: e.target.value as ServiceFieldType })}
-            >
-              <option value={ServiceFieldType.TEXT}>Text</option>
-              <option value={ServiceFieldType.TEXTAREA}>Textarea</option>
-              <option value={ServiceFieldType.NUMBER}>Number</option>
-              <option value={ServiceFieldType.SELECT}>Select</option>
-              <option value={ServiceFieldType.CHECKBOX}>Checkbox</option>
-            </select>
-            {field.type === ServiceFieldType.SELECT ? (
+          <div
+            key={index}
+            className="flex flex-col gap-2 rounded-lg border border-border p-2"
+          >
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 className={`${inputClass} flex-1`}
+                placeholder="Field label (e.g. IMEI)"
+                value={field.label}
+                onChange={(e) => updateField(index, { label: e.target.value })}
+              />
+              <select
+                className={inputClass}
+                value={field.type}
+                onChange={(e) => updateField(index, { type: e.target.value as ServiceFieldType })}
+              >
+                {FIELD_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-1 text-xs text-hint">
+                <input
+                  type="checkbox"
+                  checked={field.required}
+                  onChange={(e) => updateField(index, { required: e.target.checked })}
+                />
+                Required
+              </label>
+              <button
+                type="button"
+                onClick={() => setFields((current) => current.filter((_, i) => i !== index))}
+                className="text-xs text-accent"
+              >
+                Remove
+              </button>
+            </div>
+
+            {field.type === ServiceFieldType.SELECT ? (
+              <input
+                className={inputClass}
                 placeholder="Options (comma-separated)"
                 value={field.options}
                 onChange={(e) => updateField(index, { options: e.target.value })}
               />
             ) : null}
-            <label className="flex items-center gap-1 text-xs text-hint">
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <input
-                type="checkbox"
-                checked={field.required}
-                onChange={(e) => updateField(index, { required: e.target.checked })}
+                className={inputClass}
+                placeholder="Placeholder"
+                value={field.placeholder}
+                onChange={(e) => updateField(index, { placeholder: e.target.value })}
               />
-              Required
-            </label>
-            <button
-              type="button"
-              onClick={() => setFields((current) => current.filter((_, i) => i !== index))}
-              className="text-xs text-accent"
-            >
-              Remove
-            </button>
+              <input
+                className={inputClass}
+                placeholder="Default value"
+                value={field.defaultValue}
+                onChange={(e) => updateField(index, { defaultValue: e.target.value })}
+              />
+              <input
+                className={inputClass}
+                placeholder="Regex validation"
+                value={field.regex}
+                onChange={(e) => updateField(index, { regex: e.target.value })}
+              />
+            </div>
           </div>
         ))}
         <button

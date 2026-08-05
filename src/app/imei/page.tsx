@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ServiceStatus } from "@/generated/prisma/client";
 import { ImeiServiceCard } from "@/components/imei/imei-service-card";
 import { ImeiServiceForm } from "@/components/imei/imei-service-form";
+import { ImeiServiceManager } from "@/components/imei/imei-service-manager";
 
 // The catalog reflects live admin changes (new/updated services), so it's
 // rendered per request instead of frozen at build time.
@@ -31,6 +32,7 @@ export default async function ImeiPage() {
         <p className="text-sm text-hint">No services available yet.</p>
       )}
 
+      <ImeiServiceManager />
       <ImeiServiceForm />
     </main>
   );
