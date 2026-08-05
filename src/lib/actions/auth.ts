@@ -2,7 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { TelegramAuthError, verifyTelegramInitData } from "@/lib/telegram/auth";
-import { Role } from "@/generated/prisma/client";
+import { Role, UserStatus } from "@/generated/prisma/client";
+
+const STATUS_MESSAGE: Record<string, string> = {
+  [UserStatus.SUSPENDED]: "Your account is suspended. Contact support for help.",
+  [UserStatus.BLOCKED]: "Your account has been blocked.",
+};
 
 export type AuthUser = {
   id: string;
@@ -68,6 +73,10 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         },
       });
     });
+
+    if (user.status !== UserStatus.ACTIVE) {
+      return { ok: false, error: STATUS_MESSAGE[user.status] };
+    }
 
     return {
       ok: true,

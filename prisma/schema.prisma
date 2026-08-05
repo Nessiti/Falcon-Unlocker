@@ -14,7 +14,14 @@ datasource db {
 
 enum Role {
   CUSTOMER
+  MODERATOR
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
 }
 
 /// Order workflow (Chapter 11): Pending -> Checking -> Processing -> Completed / Rejected / Cancelled.
@@ -34,9 +41,10 @@ model User {
   firstName   String
   lastName    String?
   avatarUrl   String?
-  isFirstUser Boolean  @default(false)
-  role        Role     @default(CUSTOMER)
-  createdAt   DateTime @default(now())
+  isFirstUser Boolean    @default(false)
+  role        Role       @default(CUSTOMER)
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
 
   /// Balance in USD cents. Chapter 7 (Wallet) adds recharges/transactions on top of this.
   balanceCents Int @default(0)
@@ -54,6 +62,21 @@ model User {
 
   supportTickets  SupportTicket[]
   supportMessages SupportMessage[]
+
+  auditLogs              AuditLog[]
+  imeiOrderStatusEvents   ImeiOrderStatusEvent[]
+  serverOrderStatusEvents ServerOrderStatusEvent[]
+}
+
+/// Admin action log (Chapter 11).
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  actorId String
+  actor   User @relation(fields: [actorId], references: [id])
 }
 
 enum ServiceStatus {
@@ -68,12 +91,21 @@ enum ServiceBadge {
   FEATURED
 }
 
+/// Form Generator field types (Chapter 11 extends Chapter 4's original 5).
 enum ServiceFieldType {
   TEXT
   TEXTAREA
   NUMBER
   SELECT
   CHECKBOX
+  DATE
+  PASSWORD
+  EMAIL
+  IP
+  IMEI
+  SN
+  ECID
+  JSON
 }
 
 model Category {
@@ -110,6 +142,10 @@ model ImeiServiceField {
   type         ServiceFieldType
   /// Comma-separated option list, only meaningful when type is SELECT.
   options      String?
+  /// Optional regex the submitted value must match (Chapter 11 Form Generator).
+  regex        String?
+  placeholder  String?
+  defaultValue String?
   required     Boolean          @default(false)
   displayOrder Int              @default(0)
 
@@ -136,6 +172,21 @@ model ImeiOrder {
   service   ImeiService @relation(fields: [serviceId], references: [id])
 
   walletTransactions WalletTransaction[]
+  statusEvents       ImeiOrderStatusEvent[]
+}
+
+/// Order workflow history (Chapter 11): one row per status transition.
+model ImeiOrderStatusEvent {
+  id        String      @id @default(cuid())
+  status    OrderStatus
+  comment   String?
+  createdAt DateTime    @default(now())
+
+  orderId String
+  order   ImeiOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  adminId String
+  admin   User @relation(fields: [adminId], references: [id])
 }
 
 enum ServerServiceType {
@@ -197,6 +248,21 @@ model ServerOrder {
   service   ServerService @relation(fields: [serviceId], references: [id])
 
   walletTransactions WalletTransaction[]
+  statusEvents       ServerOrderStatusEvent[]
+}
+
+/// Order workflow history (Chapter 11): one row per status transition.
+model ServerOrderStatusEvent {
+  id        String      @id @default(cuid())
+  status    OrderStatus
+  comment   String?
+  createdAt DateTime    @default(now())
+
+  orderId String
+  order   ServerOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  adminId String
+  admin   User @relation(fields: [adminId], references: [id])
 }
 
 model ServerServiceField {
@@ -335,4 +401,30 @@ model AboutPage {
   id        String   @id @default("about")
   content   String   @default("")
   updatedAt DateTime @updatedAt
+}
+
+/// News post (Chapter 11): Create/Edit/Schedule/Pin.
+model NewsPost {
+  id        String    @id @default(cuid())
+  title     String
+  body      String
+  pinned    Boolean   @default(false)
+  /// When set in the future, the post isn't shown until this time (Schedule).
+  publishAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+/// Promotional popup (Chapter 11): Color/Image/Animation/Expiration/Button+Link.
+model Popup {
+  id         String    @id @default(cuid())
+  title      String
+  message    String
+  color      String?
+  imageUrl   String?
+  animation  String?
+  buttonText String?
+  buttonUrl  String?
+  active     Boolean   @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
 }

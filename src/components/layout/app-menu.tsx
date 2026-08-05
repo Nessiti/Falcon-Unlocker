@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { closeMiniApp } from "@telegram-apps/sdk-react";
+import { useTelegramUser } from "@/components/telegram-user-provider";
+import { Role } from "@/generated/prisma/browser";
 
 const MENU_ITEMS = [
   { label: "Dashboard", href: "/" },
@@ -15,6 +17,11 @@ const MENU_ITEMS = [
 ];
 
 export function AppMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const auth = useTelegramUser();
+  const isStaff =
+    auth.status === "authenticated" &&
+    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR);
+
   if (!open) return null;
 
   return (
@@ -36,6 +43,15 @@ export function AppMenu({ open, onClose }: { open: boolean; onClose: () => void 
             {item.label}
           </Link>
         ))}
+        {isStaff ? (
+          <Link
+            href="/admin"
+            onClick={onClose}
+            className="rounded-lg px-3 py-2 text-sm text-foreground hover:bg-background"
+          >
+            Admin Panel
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => {

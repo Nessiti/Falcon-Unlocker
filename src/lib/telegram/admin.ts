@@ -14,3 +14,16 @@ export async function requireAdmin(initData: string): Promise<User> {
   }
   return user;
 }
+
+/**
+ * Verifies initData and requires the matching account to be staff
+ * (Admin or Moderator). Used for the Admin Panel's read/operate access,
+ * while Admin-only actions (e.g. promoting other staff) use requireAdmin.
+ */
+export async function requireStaff(initData: string): Promise<User> {
+  const user = await getCurrentUser(initData);
+  if (user.role !== Role.ADMIN && user.role !== Role.MODERATOR) {
+    throw new TelegramAuthError("Staff access required");
+  }
+  return user;
+}
