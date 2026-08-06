@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ServiceFieldType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+import {
+  SERVICE_FIELD_RULES,
+  filterAllowedChars,
+  validateFieldValue,
+} from "@/lib/validation/field-formats";
 
 type Field = {
   id: string;
@@ -11,6 +17,8 @@ type Field = {
   regex: string | null;
   placeholder: string | null;
   required: boolean;
+  minLength?: number | null;
+  maxLength?: number | null;
 };
 
 const HTML_TYPE: Record<string, string> = {
@@ -28,7 +36,23 @@ export function ImeiFieldInput({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [touched, setTouched] = useState(false);
   const label = field.required ? `${field.label} *` : field.label;
+  const rule = SERVICE_FIELD_RULES[field.type];
+
+  const error =
+    touched
+      ? validateFieldValue(value, {
+          label: field.label,
+          required: field.required,
+          rule,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
+          regex: field.regex,
+        })
+      : { ok: true as const };
+  const hint = !error.ok ? error.error : rule?.hint;
+  const hintClass = !error.ok ? "text-accent" : "text-hint";
 
   if (field.type === ServiceFieldType.TEXTAREA || field.type === ServiceFieldType.JSON) {
     return (
@@ -39,8 +63,11 @@ export function ImeiFieldInput({
           placeholder={field.placeholder ?? (field.type === ServiceFieldType.JSON ? "{ }" : undefined)}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={() => setTouched(true)}
+          maxLength={field.maxLength ?? rule?.maxLength}
           required={field.required}
         />
+        {hint ? <span className={hintClass}>{hint}</span> : null}
       </label>
     );
   }
@@ -55,8 +82,10 @@ export function ImeiFieldInput({
           placeholder={field.placeholder ?? undefined}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={() => setTouched(true)}
           required={field.required}
         />
+        {hint ? <span className={hintClass}>{hint}</span> : null}
       </label>
     );
   }
@@ -105,12 +134,16 @@ export function ImeiFieldInput({
       <input
         type={HTML_TYPE[field.type] ?? "text"}
         className={formInputClass}
-        placeholder={field.placeholder ?? undefined}
+        placeholder={field.placeholder ?? rule?.hint ?? undefined}
         pattern={field.regex ?? undefined}
+        inputMode={rule?.inputMode === "numeric" ? "numeric" : rule?.inputMode === "email" ? "email" : undefined}
+        maxLength={field.maxLength ?? rule?.maxLength}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(filterAllowedChars(e.target.value, rule))}
+        onBlur={() => setTouched(true)}
         required={field.required}
       />
+      {hint ? <span className={hintClass}>{hint}</span> : null}
     </label>
   );
 }

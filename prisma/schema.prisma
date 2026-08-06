@@ -92,7 +92,8 @@ enum ServiceBadge {
   FEATURED
 }
 
-/// Form Generator field types (Chapter 11 extends Chapter 4's original 5).
+/// Form Generator field types (Chapter 11 extends Chapter 4's original 5;
+/// UDID/MEID/ICCID added for field format validation).
 enum ServiceFieldType {
   TEXT
   TEXTAREA
@@ -106,6 +107,9 @@ enum ServiceFieldType {
   IMEI
   SN
   ECID
+  UDID
+  MEID
+  ICCID
   JSON
 }
 
@@ -154,6 +158,11 @@ model ImeiServiceField {
   defaultValue String?
   required     Boolean          @default(false)
   displayOrder Int              @default(0)
+  /// Field format validation: overrides the type's built-in default length
+  /// (e.g. a service-specific SN length), unset falls back to the default
+  /// in src/lib/validation/field-formats.ts.
+  minLength Int?
+  maxLength Int?
 
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -288,6 +297,11 @@ model ServerServiceField {
   type         ServerFieldType
   required     Boolean         @default(false)
   displayOrder Int             @default(0)
+  placeholder  String?
+  /// Field format validation: overrides the type's built-in default length,
+  /// unset falls back to the default in src/lib/validation/field-formats.ts.
+  minLength Int?
+  maxLength Int?
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id], onDelete: Cascade)

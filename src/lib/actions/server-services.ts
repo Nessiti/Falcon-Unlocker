@@ -11,6 +11,10 @@ export type CreateServerServiceField = {
   type: ServerFieldType;
   required: boolean;
   displayOrder: number;
+  placeholder: string | null;
+  /// Field format validation (overrides the type's built-in default length).
+  minLength: number | null;
+  maxLength: number | null;
 };
 
 export type CreateServerServiceInput = {
@@ -76,6 +80,9 @@ export async function createServerServiceAction(
                 type: field.type,
                 required: field.required,
                 displayOrder: field.displayOrder,
+                placeholder: field.placeholder?.trim() || null,
+                minLength: field.minLength,
+                maxLength: field.maxLength,
               })),
           },
         },
@@ -145,6 +152,9 @@ export async function getServerServiceDetailAction(
           type: field.type,
           required: field.required,
           displayOrder: field.displayOrder,
+          placeholder: field.placeholder,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
         })),
       },
     };
@@ -207,6 +217,9 @@ export async function updateServerServiceAction(
           type: field.type,
           required: field.required,
           displayOrder: field.displayOrder,
+          placeholder: field.placeholder?.trim() || null,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
         };
         if (field.id) {
           await tx.serverServiceField.update({ where: { id: field.id }, data });
@@ -361,6 +374,9 @@ export async function duplicateServerServiceAction(
             type: field.type,
             required: field.required,
             displayOrder: field.displayOrder,
+            placeholder: field.placeholder,
+            minLength: field.minLength,
+            maxLength: field.maxLength,
           })),
         },
       },

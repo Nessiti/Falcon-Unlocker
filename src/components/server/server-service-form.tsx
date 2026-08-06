@@ -18,16 +18,27 @@ import {
   ServiceStatus,
 } from "@/generated/prisma/browser";
 import { formInputClass as inputClass } from "@/lib/ui";
+import { SERVER_FIELD_RULES } from "@/lib/validation/field-formats";
 
 type FieldDraft = {
   id?: string;
   label: string;
   type: ServerFieldType;
   required: boolean;
+  placeholder: string;
+  minLength: string;
+  maxLength: string;
 };
 
 function emptyField(): FieldDraft {
-  return { label: "", type: ServerFieldType.USERNAME, required: false };
+  return {
+    label: "",
+    type: ServerFieldType.USERNAME,
+    required: false,
+    placeholder: "",
+    minLength: "",
+    maxLength: "",
+  };
 }
 
 const SERVICE_TYPE_OPTIONS: { value: ServerServiceType; label: string }[] = [
@@ -84,6 +95,9 @@ export function ServerServiceForm({
         label: field.label,
         type: field.type,
         required: field.required,
+        placeholder: field.placeholder ?? "",
+        minLength: field.minLength != null ? String(field.minLength) : "",
+        maxLength: field.maxLength != null ? String(field.maxLength) : "",
       })) ?? [],
   );
   const [submitting, setSubmitting] = useState(false);
@@ -132,6 +146,9 @@ export function ServerServiceForm({
         type: field.type,
         required: field.required,
         displayOrder: index,
+        placeholder: field.placeholder || null,
+        minLength: field.minLength.trim() ? Number(field.minLength) : null,
+        maxLength: field.maxLength.trim() ? Number(field.maxLength) : null,
       }));
 
     const payload = {
@@ -265,39 +282,73 @@ export function ServerServiceForm({
       <div className="flex flex-col gap-2">
         <p className="text-xs font-medium text-hint">Custom Fields</p>
         {fields.map((field, index) => (
-          <div key={index} className="flex flex-wrap items-center gap-2">
-            <input
-              className={`${inputClass} flex-1`}
-              placeholder="Field label (e.g. Panel Username)"
-              value={field.label}
-              onChange={(e) => updateField(index, { label: e.target.value })}
-            />
-            <select
-              className={inputClass}
-              value={field.type}
-              onChange={(e) => updateField(index, { type: e.target.value as ServerFieldType })}
-            >
-              {FIELD_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-1 text-xs text-hint">
+          <div key={index} className="flex flex-col gap-2 rounded-lg border border-border p-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
-                type="checkbox"
-                checked={field.required}
-                onChange={(e) => updateField(index, { required: e.target.checked })}
+                className={`${inputClass} flex-1`}
+                placeholder="Field label (e.g. Panel Username)"
+                value={field.label}
+                onChange={(e) => updateField(index, { label: e.target.value })}
               />
-              Required
-            </label>
-            <button
-              type="button"
-              onClick={() => setFields((current) => current.filter((_, i) => i !== index))}
-              className="text-xs text-accent"
-            >
-              Remove
-            </button>
+              <select
+                className={inputClass}
+                value={field.type}
+                onChange={(e) => updateField(index, { type: e.target.value as ServerFieldType })}
+              >
+                {FIELD_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-1 text-xs text-hint">
+                <input
+                  type="checkbox"
+                  checked={field.required}
+                  onChange={(e) => updateField(index, { required: e.target.checked })}
+                />
+                Required
+              </label>
+              <button
+                type="button"
+                onClick={() => setFields((current) => current.filter((_, i) => i !== index))}
+                className="text-xs text-accent"
+              >
+                Remove
+              </button>
+            </div>
+
+            {SERVER_FIELD_RULES[field.type]?.hint ? (
+              <p className="text-[11px] text-hint">
+                Default format: {SERVER_FIELD_RULES[field.type]?.hint} — leave Min/Max length blank
+                to use it, or override below.
+              </p>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <input
+                className={inputClass}
+                placeholder="Placeholder"
+                value={field.placeholder}
+                onChange={(e) => updateField(index, { placeholder: e.target.value })}
+              />
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                placeholder="Min length"
+                value={field.minLength}
+                onChange={(e) => updateField(index, { minLength: e.target.value })}
+              />
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                placeholder="Max length"
+                value={field.maxLength}
+                onChange={(e) => updateField(index, { maxLength: e.target.value })}
+              />
+            </div>
           </div>
         ))}
         <button

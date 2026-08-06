@@ -8,6 +8,7 @@ import { notifyOrderReceived, notifyAdminNewOrder } from "@/lib/telegram/notific
 import { notifyAllStaff } from "@/lib/telegram/broadcast";
 import { resolveFieldValues } from "@/lib/orders";
 import { enqueueOrder } from "@/lib/queue/queue-engine";
+import { SERVICE_FIELD_RULES, validateFieldValue } from "@/lib/validation/field-formats";
 
 export type CreateImeiOrderInput = {
   serviceId: string;
@@ -34,17 +35,22 @@ export async function createImeiOrderAction(
     }
 
     for (const field of service.fields) {
-      const value = input.fieldValues[field.id]?.trim();
-      if (field.required && !value) {
-        return { ok: false, error: `${field.label} is required` };
-      }
-      if (field.regex && value) {
+      const value = input.fieldValues[field.id] ?? "";
+      const result = validateFieldValue(value, {
+        label: field.label,
+        required: field.required,
+        rule: SERVICE_FIELD_RULES[field.type],
+        minLength: field.minLength,
+        maxLength: field.maxLength,
+        regex: field.regex,
+      });
+      if (!result.ok) return { ok: false, error: result.error };
+
+      if (field.type === "JSON" && value.trim()) {
         try {
-          if (!new RegExp(field.regex).test(value)) {
-            return { ok: false, error: `${field.label} is not in the expected format` };
-          }
+          JSON.parse(value);
         } catch {
-          // Malformed admin-configured regex: skip validation rather than break ordering.
+          return { ok: false, error: `${field.label} must be valid JSON` };
         }
       }
     }

@@ -8,6 +8,7 @@ import { notifyOrderReceived, notifyAdminNewOrder } from "@/lib/telegram/notific
 import { notifyAllStaff } from "@/lib/telegram/broadcast";
 import { resolveFieldValues } from "@/lib/orders";
 import { enqueueOrder } from "@/lib/queue/queue-engine";
+import { SERVER_FIELD_RULES, validateFieldValue } from "@/lib/validation/field-formats";
 
 export type CreateServerOrderInput = {
   serviceId: string;
@@ -34,9 +35,14 @@ export async function createServerOrderAction(
     }
 
     for (const field of service.fields) {
-      if (field.required && !input.fieldValues[field.id]?.trim()) {
-        return { ok: false, error: `${field.label} is required` };
-      }
+      const result = validateFieldValue(input.fieldValues[field.id] ?? "", {
+        label: field.label,
+        required: field.required,
+        rule: SERVER_FIELD_RULES[field.type],
+        minLength: field.minLength,
+        maxLength: field.maxLength,
+      });
+      if (!result.ok) return { ok: false, error: result.error };
     }
 
     let orderId: string;

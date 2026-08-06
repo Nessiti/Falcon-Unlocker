@@ -16,6 +16,9 @@ export type CreateImeiServiceField = {
   defaultValue: string | null;
   required: boolean;
   displayOrder: number;
+  /// Field format validation (overrides the type's built-in default length).
+  minLength: number | null;
+  maxLength: number | null;
 };
 
 export type CreateImeiServiceInput = {
@@ -83,6 +86,8 @@ export async function createImeiServiceAction(
                 defaultValue: field.defaultValue?.trim() || null,
                 required: field.required,
                 displayOrder: field.displayOrder,
+                minLength: field.minLength,
+                maxLength: field.maxLength,
               })),
           },
         },
@@ -154,6 +159,8 @@ export async function getImeiServiceDetailAction(
           defaultValue: field.defaultValue,
           required: field.required,
           displayOrder: field.displayOrder,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
         })),
       },
     };
@@ -220,6 +227,8 @@ export async function updateImeiServiceAction(
           defaultValue: field.defaultValue?.trim() || null,
           required: field.required,
           displayOrder: field.displayOrder,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
         };
         if (field.id) {
           await tx.imeiServiceField.update({ where: { id: field.id }, data });
@@ -371,6 +380,8 @@ export async function duplicateImeiServiceAction(
             defaultValue: field.defaultValue,
             required: field.required,
             displayOrder: field.displayOrder,
+            minLength: field.minLength,
+            maxLength: field.maxLength,
           })),
         },
       },

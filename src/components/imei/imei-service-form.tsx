@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/imei-services";
 import { Role, ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/browser";
 import { formInputClass as inputClass } from "@/lib/ui";
+import { SERVICE_FIELD_RULES } from "@/lib/validation/field-formats";
 
 type FieldDraft = {
   id?: string;
@@ -22,6 +23,8 @@ type FieldDraft = {
   placeholder: string;
   defaultValue: string;
   required: boolean;
+  minLength: string;
+  maxLength: string;
 };
 
 function emptyField(): FieldDraft {
@@ -33,6 +36,8 @@ function emptyField(): FieldDraft {
     placeholder: "",
     defaultValue: "",
     required: false,
+    minLength: "",
+    maxLength: "",
   };
 }
 
@@ -47,8 +52,11 @@ const FIELD_TYPE_OPTIONS: { value: ServiceFieldType; label: string }[] = [
   { value: ServiceFieldType.EMAIL, label: "Email" },
   { value: ServiceFieldType.IP, label: "IP" },
   { value: ServiceFieldType.IMEI, label: "IMEI" },
-  { value: ServiceFieldType.SN, label: "SN" },
+  { value: ServiceFieldType.SN, label: "SN (Serial Number)" },
   { value: ServiceFieldType.ECID, label: "ECID" },
+  { value: ServiceFieldType.UDID, label: "UDID" },
+  { value: ServiceFieldType.MEID, label: "MEID" },
+  { value: ServiceFieldType.ICCID, label: "ICCID" },
   { value: ServiceFieldType.JSON, label: "JSON" },
 ];
 
@@ -87,6 +95,8 @@ export function ImeiServiceForm({
         placeholder: field.placeholder ?? "",
         defaultValue: field.defaultValue ?? "",
         required: field.required,
+        minLength: field.minLength != null ? String(field.minLength) : "",
+        maxLength: field.maxLength != null ? String(field.maxLength) : "",
       })) ?? [],
   );
   const [submitting, setSubmitting] = useState(false);
@@ -138,6 +148,8 @@ export function ImeiServiceForm({
         defaultValue: field.defaultValue || null,
         required: field.required,
         displayOrder: index,
+        minLength: field.minLength.trim() ? Number(field.minLength) : null,
+        maxLength: field.maxLength.trim() ? Number(field.maxLength) : null,
       }));
 
     const payload = {
@@ -306,6 +318,13 @@ export function ImeiServiceForm({
               />
             ) : null}
 
+            {SERVICE_FIELD_RULES[field.type]?.hint ? (
+              <p className="text-[11px] text-hint">
+                Default format: {SERVICE_FIELD_RULES[field.type]?.hint} — leave Min/Max length
+                blank to use it, or override below.
+              </p>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <input
                 className={inputClass}
@@ -324,6 +343,22 @@ export function ImeiServiceForm({
                 placeholder="Regex validation"
                 value={field.regex}
                 onChange={(e) => updateField(index, { regex: e.target.value })}
+              />
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                placeholder="Min length"
+                value={field.minLength}
+                onChange={(e) => updateField(index, { minLength: e.target.value })}
+              />
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                placeholder="Max length"
+                value={field.maxLength}
+                onChange={(e) => updateField(index, { maxLength: e.target.value })}
               />
             </div>
           </div>
