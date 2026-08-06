@@ -5,6 +5,7 @@ import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { listMyOrdersAction, type OrderSummary } from "@/lib/actions/orders";
 import { OrderRow } from "@/components/orders/order-row";
+import { OrderDetailModal } from "@/components/orders/order-detail-modal";
 import { RowListSkeleton } from "@/components/ui/row-skeleton";
 import { formInputClass } from "@/lib/ui";
 
@@ -37,6 +38,7 @@ export default function OrdersPage() {
     null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<OrderSummary | null>(null);
 
   useEffect(() => {
     if (auth.status !== "authenticated" || !initData) return;
@@ -123,9 +125,11 @@ export default function OrdersPage() {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {filtered.map((order) => (
-          <OrderRow key={order.id} order={order} />
+          <OrderRow key={order.id} order={order} onClick={() => setSelected(order)} />
         ))}
       </div>
+
+      {selected ? <OrderDetailModal order={selected} onClose={() => setSelected(null)} /> : null}
     </main>
   );
 }

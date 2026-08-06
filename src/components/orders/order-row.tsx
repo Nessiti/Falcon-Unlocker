@@ -1,4 +1,5 @@
 import type { OrderSummary } from "@/lib/actions/orders";
+import { Markdown } from "@/components/ui/markdown";
 import { formatUsd } from "@/lib/ui";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -19,9 +20,13 @@ const STATUS_CLASS: Record<string, string> = {
   CANCELLED: "bg-accent text-accent-foreground",
 };
 
-export function OrderRow({ order }: { order: OrderSummary }) {
+export function OrderRow({ order, onClick }: { order: OrderSummary; onClick?: () => void }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-sm">
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-left text-sm"
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-foreground">{order.serviceName}</span>
         <span
@@ -38,29 +43,16 @@ export function OrderRow({ order }: { order: OrderSummary }) {
         {order.tracking ? <span>Tracking: {order.tracking}</span> : null}
       </div>
 
-      {order.notes ? <p className="text-xs text-hint">Notes: {order.notes}</p> : null}
-
-      {order.downloadUrl ? (
-        <a
-          href={order.downloadUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-medium text-accent"
-        >
-          Download result
-        </a>
-      ) : null}
+      {order.notes ? <Markdown text={order.notes} className="text-xs" /> : null}
 
       {order.statusHistory.length > 0 ? (
-        <div className="flex flex-col gap-1 border-t border-border pt-2">
-          {order.statusHistory.map((event, index) => (
-            <p key={index} className="text-[11px] text-hint">
-              {STATUS_LABEL[event.status]} · {new Date(event.createdAt).toLocaleString()}
-              {event.comment ? ` — ${event.comment}` : ""}
-            </p>
-          ))}
-        </div>
+        <p className="text-[11px] text-hint">
+          Last update: {STATUS_LABEL[order.statusHistory[order.statusHistory.length - 1].status]} ·{" "}
+          {new Date(order.statusHistory[order.statusHistory.length - 1].createdAt).toLocaleString()}
+        </p>
       ) : null}
-    </div>
+
+      <span className="text-[11px] font-medium text-accent">View details →</span>
+    </button>
   );
 }

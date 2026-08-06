@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
+import { resolveFieldValues } from "@/lib/orders";
 import type { OrderStatus } from "@/generated/prisma/client";
 
 export type OrderStatusHistoryEntry = {
@@ -13,6 +14,7 @@ export type OrderStatusHistoryEntry = {
 
 export type OrderSummary = {
   id: string;
+  kind: "IMEI" | "SERVER";
   status: OrderStatus;
   priceCents: number;
   serviceName: string;
@@ -20,6 +22,8 @@ export type OrderSummary = {
   notes: string | null;
   downloadUrl: string | null;
   createdAt: string;
+  /** Submitted values for the service's custom fields, joined to their labels. */
+  fields: { label: string; value: string }[];
   /** Order Workflow (Chapter 11): Date/Comment per status transition. */
   statusHistory: OrderStatusHistoryEntry[];
 };
@@ -36,28 +40,39 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
     const [imeiOrders, serverOrders] = await Promise.all([
       prisma.imeiOrder.findMany({
         where: { userId: user.id },
-        include: { service: true, statusEvents: { orderBy: { createdAt: "asc" } } },
+        include: {
+          service: { include: { fields: true } },
+          statusEvents: { orderBy: { createdAt: "asc" } },
+        },
         orderBy: { createdAt: "desc" },
       }),
       prisma.serverOrder.findMany({
         where: { userId: user.id },
-        include: { service: true, statusEvents: { orderBy: { createdAt: "asc" } } },
+        include: {
+          service: { include: { fields: true } },
+          statusEvents: { orderBy: { createdAt: "asc" } },
+        },
         orderBy: { createdAt: "desc" },
       }),
     ]);
 
-    const toSummary = (order: {
-      id: string;
-      status: OrderStatus;
-      priceCents: number;
-      service: { name: string };
-      tracking: string | null;
-      notes: string | null;
-      downloadUrl: string | null;
-      createdAt: Date;
-      statusEvents: { status: OrderStatus; comment: string | null; createdAt: Date }[];
-    }): OrderSummary => ({
+    const toSummary = (
+      kind: "IMEI" | "SERVER",
+      order: {
+        id: string;
+        status: OrderStatus;
+        priceCents: number;
+        service: { name: string; fields: { id: string; label: string }[] };
+        fieldValues: unknown;
+        tracking: string | null;
+        notes: string | null;
+        downloadUrl: string | null;
+        createdAt: Date;
+        statusEvents: { status: OrderStatus; comment: string | null; createdAt: Date }[];
+      },
+    ): OrderSummary => ({
       id: order.id,
+      kind,
       status: order.status,
       priceCents: order.priceCents,
       serviceName: order.service.name,
@@ -65,6 +80,7 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
       notes: order.notes,
       downloadUrl: order.downloadUrl,
       createdAt: order.createdAt.toISOString(),
+      fields: resolveFieldValues(order.fieldValues, order.service.fields),
       statusHistory: order.statusEvents.map((event) => ({
         status: event.status,
         comment: event.comment,
@@ -74,8 +90,8 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
 
     return {
       ok: true,
-      imei: imeiOrders.map(toSummary),
-      server: serverOrders.map(toSummary),
+      imei: imeiOrders.map((order) => toSummary("IMEI", order)),
+      server: serverOrders.map((order) => toSummary("SERVER", order)),
     };
   } catch (error) {
     const message =
