@@ -9,6 +9,7 @@ import { RechargeOrderRow } from "@/components/wallet/recharge-order-row";
 import { TransactionRow } from "@/components/wallet/transaction-row";
 import { AdminRechargeQueue } from "@/components/wallet/admin-recharge-queue";
 import { RechargeMethodForm } from "@/components/wallet/recharge-method-form";
+import { RechargeMethodManager } from "@/components/wallet/recharge-method-manager";
 import { Role } from "@/generated/prisma/browser";
 import { formatUsd } from "@/lib/ui";
 
@@ -59,6 +60,7 @@ export default function WalletPage() {
       {isAdmin ? (
         <div className="flex flex-col gap-3">
           <AdminRechargeQueue initData={initData} />
+          <RechargeMethodManager initData={initData} />
           <RechargeMethodForm initData={initData} />
         </div>
       ) : null}

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
@@ -16,6 +17,12 @@ function buildContactUrl(method: RechargeMethodSummary, message: string) {
 
   const username = method.contactValue.replace(/^@/, "");
   return `https://t.me/${username}?text=${encodeURIComponent(message)}`;
+}
+
+function notifyHaptic(type: "success" | "error") {
+  if (hapticFeedbackNotificationOccurred.isAvailable()) {
+    hapticFeedbackNotificationOccurred(type);
+  }
 }
 
 export function RechargeMethodCard({
@@ -62,6 +69,7 @@ export function RechargeMethodCard({
     if (!result.ok) {
       setError(result.error);
       contactWindow?.close();
+      notifyHaptic("error");
       return;
     }
 
@@ -69,11 +77,37 @@ export function RechargeMethodCard({
       contactWindow.location.href = contactUrl;
     }
 
+    notifyHaptic("success");
     setSuccess(true);
     setOpen(false);
     setAmount("");
     setProofNote("");
     router.refresh();
+  }
+
+  if (success) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface p-6 text-center">
+        <span className="text-4xl" aria-hidden>
+          ✅
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Request submitted!</p>
+          <p className="mt-1 text-xs text-hint">
+            {method.contactType
+              ? `We've opened ${method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} — send your proof of payment there to complete your request.`
+              : "Your recharge request is awaiting admin approval. You'll be notified once it's reviewed."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSuccess(false)}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
+        >
+          Done
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -91,15 +125,6 @@ export function RechargeMethodCard({
       {method.qrCodeUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- admin-provided QR code
         <img src={method.qrCodeUrl} alt="QR code" className="h-32 w-32 rounded-lg object-contain" />
-      ) : null}
-
-      {success ? (
-        <p className="text-xs text-foreground">
-          Request submitted.{" "}
-          {method.contactType
-            ? "Send your proof of payment in the chat that just opened."
-            : "Awaiting admin approval."}
-        </p>
       ) : null}
 
       {!open ? (
