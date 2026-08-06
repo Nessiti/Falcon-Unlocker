@@ -91,13 +91,12 @@ export function ServerServiceManager() {
     else setError(result.error);
   }
 
-  if (!services) return null;
-
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-foreground">Manage Services (Admin)</h2>
       {error ? <p className="text-xs text-accent">{error}</p> : null}
-      {services.map((service) =>
+      {!services && !error ? <p className="text-sm text-hint">Loading…</p> : null}
+      {services?.map((service) =>
         editingDetail?.id === service.id ? (
           <ServerServiceForm
             key={service.id}

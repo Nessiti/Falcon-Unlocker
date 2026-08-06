@@ -54,17 +54,16 @@ export function RechargeMethodManager({ initData }: { initData: string }) {
     }
   }
 
-  if (!methods) return null;
-
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-foreground">Manage Recharge Methods (Admin)</h2>
       {error ? <p className="text-xs text-accent">{error}</p> : null}
-      {methods.length === 0 ? (
+      {!methods && !error ? <p className="text-sm text-hint">Loading…</p> : null}
+      {methods && methods.length === 0 ? (
         <p className="text-sm text-hint">No recharge methods yet.</p>
       ) : null}
 
-      {methods.map((method) =>
+      {methods?.map((method) =>
         editingMethod?.id === method.id ? (
           <RechargeMethodForm
             key={method.id}
