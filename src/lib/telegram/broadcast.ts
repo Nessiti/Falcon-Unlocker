@@ -5,4 +5,5 @@ import { prisma } from "@/lib/prisma";
 export async function broadcastToAllUsers(send: (telegramId: bigint) => Promise<void>) {
   const users = await prisma.user.findMany({ select: { telegramId: true } });
   await Promise.all(users.map((user) => send(user.telegramId)));
+  return users.length;
 }

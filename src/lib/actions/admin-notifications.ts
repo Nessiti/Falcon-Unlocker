@@ -1,5 +1,6 @@
 "use server";
 
+import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
@@ -23,11 +24,20 @@ export async function sendBroadcastAction(
     if (!message) return { ok: false, error: "Message is required" };
     if (input.kind === "PROMOTION" && !title) return { ok: false, error: "Title is required" };
 
-    if (input.kind === "PROMOTION") {
-      await broadcastToAllUsers((telegramId) => notifyPromotion(telegramId, title, message));
-    } else {
-      await broadcastToAllUsers((telegramId) => notifyMaintenance(telegramId, message));
-    }
+    const recipientCount =
+      input.kind === "PROMOTION"
+        ? await broadcastToAllUsers((telegramId) => notifyPromotion(telegramId, title, message))
+        : await broadcastToAllUsers((telegramId) => notifyMaintenance(telegramId, message));
+
+    await prisma.notification.create({
+      data: {
+        kind: input.kind,
+        title: input.kind === "PROMOTION" ? title : null,
+        message,
+        recipientCount,
+        sentById: staff.id,
+      },
+    });
 
     await logAdminAction(staff.id, "notification.broadcast", `${input.kind}: ${title || message}`);
 
@@ -35,6 +45,50 @@ export async function sendBroadcastAction(
   } catch (error) {
     const message =
       error instanceof TelegramAuthError ? error.message : "Failed to send broadcast";
+    return { ok: false, error: message };
+  }
+}
+
+export type NotificationSummary = {
+  id: string;
+  kind: BroadcastKind;
+  title: string | null;
+  message: string;
+  recipientCount: number;
+  sentByName: string;
+  createdAt: string;
+};
+
+export type ListNotificationsResult =
+  | { ok: true; notifications: NotificationSummary[] }
+  | { ok: false; error: string };
+
+/** Admin Notifications section: history of past broadcasts. */
+export async function listNotificationsAction(initData: string): Promise<ListNotificationsResult> {
+  try {
+    await requireStaff(initData);
+
+    const notifications = await prisma.notification.findMany({
+      include: { sentBy: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return {
+      ok: true,
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        kind: n.kind,
+        title: n.title,
+        message: n.message,
+        recipientCount: n.recipientCount,
+        sentByName: [n.sentBy.firstName, n.sentBy.lastName].filter(Boolean).join(" "),
+        createdAt: n.createdAt.toISOString(),
+      })),
+    };
+  } catch (error) {
+    const message =
+      error instanceof TelegramAuthError ? error.message : "Failed to load notification history";
     return { ok: false, error: message };
   }
 }

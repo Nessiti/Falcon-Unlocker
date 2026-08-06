@@ -66,6 +66,7 @@ model User {
   auditLogs              AuditLog[]
   imeiOrderStatusEvents   ImeiOrderStatusEvent[]
   serverOrderStatusEvents ServerOrderStatusEvent[]
+  sentNotifications       Notification[]
 }
 
 /// Admin action log (Chapter 11).
@@ -427,4 +428,22 @@ model Popup {
   active     Boolean   @default(true)
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
+}
+
+enum NotificationKind {
+  PROMOTION
+  MAINTENANCE
+}
+
+/// Broadcast notification history (Chapter 11): every push sent to all users.
+model Notification {
+  id             String           @id @default(cuid())
+  kind           NotificationKind
+  title          String?
+  message        String
+  recipientCount Int
+  createdAt      DateTime         @default(now())
+
+  sentById String
+  sentBy   User   @relation(fields: [sentById], references: [id])
 }
