@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { closeMiniApp } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
+import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 import { Role } from "@/generated/prisma/browser";
 
 const MAIN_ITEMS = [
@@ -30,7 +31,17 @@ const ADMIN_ITEMS = [
   { label: "Admin Settings", href: "/admin/settings", icon: "🛠️" },
 ];
 
-function NavLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+function NavLink({
+  href,
+  label,
+  icon,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  badge?: number;
+}) {
   const pathname = usePathname();
   const active = pathname === href;
 
@@ -44,7 +55,12 @@ function NavLink({ href, label, icon }: { href: string; label: string; icon: str
       }`}
     >
       <span aria-hidden>{icon}</span>
-      {label}
+      <span className="flex-1">{label}</span>
+      {badge ? (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground ring-2 ring-background">
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -52,9 +68,14 @@ function NavLink({ href, label, icon }: { href: string; label: string; icon: str
 /** Persistent desktop navigation, shown at the lg breakpoint instead of the mobile drawer. */
 export function Sidebar() {
   const auth = useTelegramUser();
+  const alerts = useAdminAlerts();
   const isStaff =
     auth.status === "authenticated" &&
     (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR);
+
+  const badgeByHref: Record<string, number> = alerts
+    ? { "/admin/orders": alerts.newOrders, "/support": alerts.newTickets, "/wallet": alerts.newRecharges }
+    : {};
 
   return (
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-surface p-4">
@@ -67,7 +88,7 @@ export function Sidebar() {
 
       <nav className="flex flex-col gap-1">
         {MAIN_ITEMS.map((item) => (
-          <NavLink key={item.href} {...item} />
+          <NavLink key={item.href} {...item} badge={badgeByHref[item.href]} />
         ))}
       </nav>
 
@@ -78,7 +99,7 @@ export function Sidebar() {
           </p>
           <nav className="flex flex-col gap-1">
             {ADMIN_ITEMS.map((item) => (
-              <NavLink key={item.href} {...item} />
+              <NavLink key={item.href} {...item} badge={badgeByHref[item.href]} />
             ))}
           </nav>
         </>

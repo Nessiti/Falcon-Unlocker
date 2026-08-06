@@ -1,10 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { AuthUser } from "@/lib/actions/auth";
 import { formatUsd } from "@/lib/ui";
+import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
+
+function alertsTarget(alerts: ReturnType<typeof useAdminAlerts>): string | null {
+  if (!alerts || alerts.total === 0) return null;
+  if (alerts.newOrders > 0) return "/admin/orders";
+  if (alerts.newTickets > 0) return "/support";
+  if (alerts.newRecharges > 0) return "/wallet";
+  return null;
+}
 
 /** Top bar for the desktop dashboard layout — the sidebar covers navigation, so no menu button. */
 export function DesktopHeader({ user }: { user: AuthUser }) {
+  const router = useRouter();
+  const alerts = useAdminAlerts();
+  const target = alertsTarget(alerts);
   const initial = user.firstName.charAt(0).toUpperCase();
 
   return (
@@ -20,9 +33,16 @@ export function DesktopHeader({ user }: { user: AuthUser }) {
       <button
         type="button"
         aria-label="Notifications"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground hover:bg-surface"
+        onClick={() => target && router.push(target)}
+        disabled={!target}
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground hover:bg-surface disabled:cursor-default"
       >
         🔔
+        {alerts && alerts.total > 0 ? (
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground ring-2 ring-background">
+            {alerts.total}
+          </span>
+        ) : null}
       </button>
 
       {user.avatarUrl ? (

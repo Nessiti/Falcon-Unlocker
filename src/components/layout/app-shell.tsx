@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { AppMenu } from "@/components/layout/app-menu";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DesktopHeader } from "@/components/layout/desktop-header";
+import { AdminAlertsProvider } from "@/components/admin/admin-alerts-provider";
 
 function CenteredMessage({ children }: { children: ReactNode }) {
   return (
@@ -68,26 +69,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full flex-1 lg:flex-row">
-      {/* Desktop dashboard shell: persistent sidebar (lg breakpoint and up). */}
-      <div className="hidden lg:block">
-        <Sidebar />
-      </div>
-
-      <div className="flex min-h-full flex-1 flex-col">
-        {/* Mobile shell: top bar + drawer menu (below lg). */}
-        <div className="lg:hidden">
-          <Navbar user={auth.user} onMenuClick={() => setMenuOpen(true)} />
-          <AppMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
-        </div>
-
+    <AdminAlertsProvider>
+      <div className="flex min-h-full flex-1 lg:flex-row">
+        {/* Desktop dashboard shell: persistent sidebar (lg breakpoint and up). */}
         <div className="hidden lg:block">
-          <DesktopHeader user={auth.user} />
+          <Sidebar />
         </div>
 
-        {/* Page content mounts once — only the surrounding chrome above switches by breakpoint. */}
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex min-h-full flex-1 flex-col">
+          {/* Mobile shell: top bar + drawer menu (below lg). */}
+          <div className="lg:hidden">
+            <Navbar user={auth.user} onMenuClick={() => setMenuOpen(true)} />
+            <AppMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+          </div>
+
+          <div className="hidden lg:block">
+            <DesktopHeader user={auth.user} />
+          </div>
+
+          {/* Page content mounts once — only the surrounding chrome above switches by breakpoint. */}
+          <div className="flex flex-1 flex-col">{children}</div>
+        </div>
       </div>
-    </div>
+    </AdminAlertsProvider>
   );
 }
