@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { validate } from "@tma.js/init-data-node/web";
 
 export const config = {
-  matcher: ["/api/:path*"],
+  // Excludes /api/telegram/webhook, which Telegram calls directly (no
+  // Mini App initData) and authenticates via its own secret token instead.
+  matcher: ["/api/((?!telegram/webhook).*)"],
 };
 
 export default async function proxy(request: NextRequest) {

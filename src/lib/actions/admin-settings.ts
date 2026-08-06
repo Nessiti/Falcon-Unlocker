@@ -8,6 +8,7 @@ export type AppSettingsStatus = {
   botUsername: string | null;
   adminIdConfigured: boolean;
   appUrlConfigured: boolean;
+  webhookSecretConfigured: boolean;
 };
 
 export type GetAppSettingsResult =
@@ -26,6 +27,7 @@ export async function getAppSettingsStatusAction(initData: string): Promise<GetA
         botUsername: process.env.TELEGRAM_BOT_USERNAME || null,
         adminIdConfigured: Boolean(process.env.TELEGRAM_ADMIN_ID),
         appUrlConfigured: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+        webhookSecretConfigured: Boolean(process.env.TELEGRAM_WEBHOOK_SECRET),
       },
     };
   } catch (error) {

@@ -68,6 +68,14 @@ export function notifyBalanceUpdated(telegramId: bigint, balanceCents: number) {
   );
 }
 
+export function notifyWelcome(telegramId: bigint, firstName: string) {
+  return sendTelegramMessage(
+    telegramId,
+    `👋 <b>Welcome, ${firstName}!</b>\nFalcon Unlocker is the first Telegram-native GSM Server. Open the app to unlock IMEI/server services, manage your wallet, and track your orders.`,
+    [{ text: "Open App", path: "/" }],
+  );
+}
+
 export function notifySupportReply(telegramId: bigint, message: string) {
   return sendTelegramMessage(telegramId, `💬 <b>Support reply</b>\n${message}`, [
     { text: "Open Support", path: "/support" },

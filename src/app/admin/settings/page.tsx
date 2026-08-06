@@ -35,6 +35,12 @@ export default function AdminSettingsPage() {
         ? "Configured"
         : "Not configured (notifications send without buttons)",
     },
+    {
+      label: "Bot Webhook Secret",
+      value: status.webhookSecretConfigured
+        ? "Configured"
+        : "Not configured (/start won't reply)",
+    },
     { label: "Language", value: "English (fixed)" },
     { label: "Currency", value: "USD (fixed)" },
   ];
