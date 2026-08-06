@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ServiceStatus } from "@/generated/prisma/client";
-import { ServerServiceCard } from "@/components/server/server-service-card";
+import { ServerCatalog } from "@/components/server/server-catalog";
 import { ServerServiceForm } from "@/components/server/server-service-form";
 import { ServerServiceManager } from "@/components/server/server-service-manager";
 
@@ -24,15 +24,7 @@ export default async function ServerPage() {
         </p>
       </div>
 
-      {services.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {services.map((service) => (
-            <ServerServiceCard key={service.id} service={service} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-hint">No services available yet.</p>
-      )}
+      <ServerCatalog services={services} />
 
       <ServerServiceManager />
       <ServerServiceForm />

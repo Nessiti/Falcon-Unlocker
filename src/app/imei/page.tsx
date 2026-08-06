@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ServiceStatus } from "@/generated/prisma/client";
-import { ImeiServiceCard } from "@/components/imei/imei-service-card";
+import { ImeiCatalog } from "@/components/imei/imei-catalog";
 import { ImeiServiceForm } from "@/components/imei/imei-service-form";
 import { ImeiServiceManager } from "@/components/imei/imei-service-manager";
 
@@ -22,15 +22,7 @@ export default async function ImeiPage() {
         <p className="text-sm text-hint">Unlock, FRP, and IMEI-based services.</p>
       </div>
 
-      {services.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {services.map((service) => (
-            <ImeiServiceCard key={service.id} service={service} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-hint">No services available yet.</p>
-      )}
+      <ImeiCatalog services={services} />
 
       <ImeiServiceManager />
       <ImeiServiceForm />
