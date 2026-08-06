@@ -27,6 +27,16 @@ import type {
  * convention already used for DhruFusionConnector (GSM-THEME panels are
  * built on that same lineage) — verify against a real test call and adjust
  * if the provider rejects auth.
+ *
+ * Method: POST, not GET. These panels serve a client-rendered storefront
+ * SPA off the same domain, and Laravel's `Route::fallback()` (the usual way
+ * an app serves a SPA's index.html for any unmatched path) only intercepts
+ * GET requests by design — a GET to the real API route can still fall
+ * through to the SPA shell if routing is even slightly off, which is
+ * consistent with what was observed (200 + the homepage HTML, for both `/`
+ * and `/api/public`, action param or not). POST does not fall through a
+ * GET-only fallback, so it's a meaningfully different test, not a guess of
+ * the same kind as the path.
  */
 export class GsmThemeConnector extends BaseConnector {
   private url(action: string, extraParams: Record<string, string> = {}): string {
@@ -71,7 +81,7 @@ export class GsmThemeConnector extends BaseConnector {
 
   async getBalance(): Promise<BalanceResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("accountinfo"), { method: "GET" }, "getBalance");
+      const response = await this.fetchWithTimeout(this.url("accountinfo"), { method: "POST" }, "getBalance");
       const parsed = await this.parseGsmThemeResponse(response);
       if (!parsed.ok) return parsed;
 
@@ -88,7 +98,7 @@ export class GsmThemeConnector extends BaseConnector {
   }
 
   async getServices(): Promise<ConnectorService[]> {
-    const response = await this.fetchWithTimeout(this.url("imeiservicelist"), { method: "GET" }, "getServices");
+    const response = await this.fetchWithTimeout(this.url("imeiservicelist"), { method: "POST" }, "getServices");
     const parsed = await this.parseGsmThemeResponse(response);
     if (!parsed.ok) throw new Error(parsed.error);
 
@@ -143,7 +153,7 @@ export class GsmThemeConnector extends BaseConnector {
 
       const response = await this.fetchWithTimeout(
         this.url("placeimeiorder", { parameters: GsmThemeConnector.buildXmlParams(xmlFields) }),
-        { method: "GET" },
+        { method: "POST" },
         "submitOrder",
       );
       const parsed = await this.parseGsmThemeResponse(response);
@@ -162,7 +172,7 @@ export class GsmThemeConnector extends BaseConnector {
     try {
       const response = await this.fetchWithTimeout(
         this.url("getimeiorder", { parameters: GsmThemeConnector.buildXmlParams({ ID: providerOrderId }) }),
-        { method: "GET" },
+        { method: "POST" },
         "checkOrderStatus",
       );
       const parsed = await this.parseGsmThemeResponse(response);
