@@ -23,6 +23,7 @@ const ADMIN_ITEMS = [
   { label: "Users", href: "/admin/users", icon: "👥" },
   { label: "Categories", href: "/admin/categories", icon: "🗂️" },
   { label: "Providers", href: "/admin/providers", icon: "🔌" },
+  { label: "Monitoring", href: "/admin/monitoring", icon: "📡" },
   { label: "Admin Orders", href: "/admin/orders", icon: "📦" },
   { label: "Queue", href: "/admin/queue", icon: "🔁" },
   { label: "Cron", href: "/admin/cron", icon: "⏱️" },
