@@ -2,12 +2,19 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useRawInitData } from "@telegram-apps/sdk-react";
+import { useRawInitData, hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { createImeiOrderAction } from "@/lib/actions/imei-orders";
 import { ImeiFieldInput } from "@/components/imei/imei-field-input";
+import { OrderSuccessScreen } from "@/components/orders/order-success-screen";
 import type { ServiceFieldType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+
+function notifyHaptic(type: "success" | "error") {
+  if (hapticFeedbackNotificationOccurred.isAvailable()) {
+    hapticFeedbackNotificationOccurred(type);
+  }
+}
 
 type Field = {
   id: string;
@@ -30,6 +37,7 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   if (auth.status !== "authenticated" || !initData) return null;
   const verifiedInitData = initData;
@@ -49,13 +57,20 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
 
     if (!result.ok) {
       setError(result.error);
+      notifyHaptic("error");
       return;
     }
 
+    notifyHaptic("success");
     setOpen(false);
     setValues({});
     setNotes("");
+    setSuccess(true);
     router.refresh();
+  }
+
+  if (success) {
+    return <OrderSuccessScreen onDone={() => setSuccess(false)} />;
   }
 
   if (!open) {
