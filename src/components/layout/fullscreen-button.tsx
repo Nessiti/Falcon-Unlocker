@@ -4,20 +4,20 @@ import { useState } from "react";
 import { useSignal, requestFullscreen, exitFullscreen, isFullscreen } from "@telegram-apps/sdk-react";
 import { useTelegramStatus } from "@/components/telegram-root";
 
+// Telegram's own requestFullscreen only expands the Mini App to fill
+// Telegram's window/panel — it never touches the OS, so the Windows
+// taskbar / macOS menu bar and dock stay visible. The browser's native
+// Fullscreen API is deliberately NOT used as a fallback here: that one
+// takes over the entire screen (hides the taskbar/dock, needs Esc or an
+// explicit exit), which is exactly the intrusive behavior this button is
+// meant to avoid.
 async function enterFullscreen() {
   try {
     if (requestFullscreen.isAvailable()) {
       await requestFullscreen();
-      return;
     }
   } catch (error) {
     console.error("[fullscreen] Telegram requestFullscreen failed", error);
-  }
-
-  try {
-    await document.documentElement.requestFullscreen?.();
-  } catch (error) {
-    console.error("[fullscreen] browser requestFullscreen failed", error);
   }
 }
 
@@ -25,16 +25,9 @@ async function leaveFullscreen() {
   try {
     if (exitFullscreen.isAvailable()) {
       await exitFullscreen();
-      return;
     }
   } catch (error) {
     console.error("[fullscreen] Telegram exitFullscreen failed", error);
-  }
-
-  try {
-    await document.exitFullscreen?.();
-  } catch (error) {
-    console.error("[fullscreen] browser exitFullscreen failed", error);
   }
 }
 
