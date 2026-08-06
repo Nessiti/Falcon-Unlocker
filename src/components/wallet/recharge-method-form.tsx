@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createRechargeMethodAction } from "@/lib/actions/recharge-methods";
+import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
 export function RechargeMethodForm({ initData }: { initData: string }) {
@@ -14,6 +15,8 @@ export function RechargeMethodForm({ initData }: { initData: string }) {
   const [imageUrl, setImageUrl] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [displayOrder, setDisplayOrder] = useState("0");
+  const [contactType, setContactType] = useState<RechargeContactType | "">("");
+  const [contactValue, setContactValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +33,8 @@ export function RechargeMethodForm({ initData }: { initData: string }) {
       imageUrl: imageUrl || null,
       qrCodeUrl: qrCodeUrl || null,
       displayOrder: Number(displayOrder) || 0,
+      contactType: contactType || null,
+      contactValue: contactValue || null,
     });
 
     setSubmitting(false);
@@ -46,6 +51,8 @@ export function RechargeMethodForm({ initData }: { initData: string }) {
     setImageUrl("");
     setQrCodeUrl("");
     setDisplayOrder("0");
+    setContactType("");
+    setContactValue("");
     router.refresh();
   }
 
@@ -101,6 +108,34 @@ export function RechargeMethodForm({ initData }: { initData: string }) {
         value={displayOrder}
         onChange={(e) => setDisplayOrder(e.target.value)}
       />
+
+      <div className="flex flex-col gap-2 border-t border-border pt-2">
+        <p className="text-xs font-medium text-hint">
+          &quot;Send proof of payment&quot; redirects customers here
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <select
+            className={formInputClass}
+            value={contactType}
+            onChange={(e) => setContactType(e.target.value as RechargeContactType | "")}
+          >
+            <option value="">No redirect</option>
+            <option value={RechargeContactType.WHATSAPP}>WhatsApp</option>
+            <option value={RechargeContactType.TELEGRAM}>Telegram</option>
+          </select>
+          <input
+            className={formInputClass}
+            placeholder={
+              contactType === RechargeContactType.WHATSAPP
+                ? "Phone number (e.g. +15551234567)"
+                : "Telegram username (e.g. falconunlocker_admin)"
+            }
+            value={contactValue}
+            onChange={(e) => setContactValue(e.target.value)}
+            disabled={!contactType}
+          />
+        </div>
+      </div>
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}
 

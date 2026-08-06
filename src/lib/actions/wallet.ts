@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { requireAdmin } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
-import { RechargeStatus, WalletTransactionType } from "@/generated/prisma/client";
+import { RechargeContactType, RechargeStatus, WalletTransactionType } from "@/generated/prisma/client";
 import {
   notifyBalanceUpdated,
   notifyPaymentAccepted,
@@ -19,6 +19,8 @@ export type RechargeMethodSummary = {
   customText: string | null;
   imageUrl: string | null;
   qrCodeUrl: string | null;
+  contactType: RechargeContactType | null;
+  contactValue: string | null;
 };
 
 export type RechargeOrderSummary = {
@@ -78,6 +80,8 @@ export async function getWalletDataAction(initData: string): Promise<GetWalletDa
           customText: method.customText,
           imageUrl: method.imageUrl,
           qrCodeUrl: method.qrCodeUrl,
+          contactType: method.contactType,
+          contactValue: method.contactValue,
         })),
         rechargeOrders: rechargeOrders.map((order) => ({
           id: order.id,
@@ -106,13 +110,17 @@ export async function getWalletDataAction(initData: string): Promise<GetWalletDa
 export type CreateRechargeOrderInput = {
   methodId: string;
   amountCents: number;
-  proofUrl: string | null;
   proofNote: string | null;
 };
 
 export type CreateRechargeOrderResult = { ok: true } | { ok: false; error: string };
 
-/** Step 1-2 of the manual recharge flow: customer sends proof of payment. */
+/**
+ * Step 1-2 of the manual recharge flow: creates the pending request. Proof of
+ * payment itself is sent by the customer directly to the admin's WhatsApp/
+ * Telegram contact (see contactType/contactValue on the method) — not
+ * uploaded in-app.
+ */
 export async function createRechargeOrderAction(
   initData: string,
   input: CreateRechargeOrderInput,
@@ -134,7 +142,6 @@ export async function createRechargeOrderAction(
         userId: user.id,
         methodId: method.id,
         amountCents: input.amountCents,
-        proofUrl: input.proofUrl,
         proofNote: input.proofNote,
       },
     });

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
+import { RechargeContactType } from "@/generated/prisma/client";
 
 export type CreateRechargeMethodInput = {
   name: string;
@@ -12,6 +13,8 @@ export type CreateRechargeMethodInput = {
   imageUrl: string | null;
   qrCodeUrl: string | null;
   displayOrder: number;
+  contactType: RechargeContactType | null;
+  contactValue: string | null;
 };
 
 export type CreateRechargeMethodResult = { ok: true } | { ok: false; error: string };
@@ -29,6 +32,11 @@ export async function createRechargeMethodAction(
     if (!name) return { ok: false, error: "Name is required" };
     if (!instructions) return { ok: false, error: "Instructions are required" };
 
+    const contactValue = input.contactValue?.trim() || null;
+    if (input.contactType && !contactValue) {
+      return { ok: false, error: "Enter a contact number/username for the selected contact type" };
+    }
+
     await prisma.rechargeMethod.create({
       data: {
         name,
@@ -38,6 +46,8 @@ export async function createRechargeMethodAction(
         imageUrl: input.imageUrl?.trim() || null,
         qrCodeUrl: input.qrCodeUrl?.trim() || null,
         displayOrder: input.displayOrder,
+        contactType: input.contactType,
+        contactValue,
       },
     });
 

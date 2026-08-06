@@ -277,6 +277,11 @@ model ServerServiceField {
   service   ServerService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 }
 
+enum RechargeContactType {
+  WHATSAPP
+  TELEGRAM
+}
+
 /// Admin-configured manual payment method (Chapter 7).
 model RechargeMethod {
   id             String   @id @default(cuid())
@@ -290,6 +295,11 @@ model RechargeMethod {
   displayOrder   Int      @default(0)
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
+
+  /// "Send proof of payment" redirects to this contact (WhatsApp phone
+  /// number or Telegram username) instead of collecting proof in-app.
+  contactType  RechargeContactType?
+  contactValue String?
 
   rechargeOrders RechargeOrder[]
 }

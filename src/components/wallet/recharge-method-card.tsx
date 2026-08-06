@@ -3,7 +3,20 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
+import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+
+function buildContactUrl(method: RechargeMethodSummary, message: string) {
+  if (!method.contactType || !method.contactValue) return null;
+
+  if (method.contactType === RechargeContactType.WHATSAPP) {
+    const digits = method.contactValue.replace(/\D/g, "");
+    return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  }
+
+  const username = method.contactValue.replace(/^@/, "");
+  return `https://t.me/${username}?text=${encodeURIComponent(message)}`;
+}
 
 export function RechargeMethodCard({
   method,
@@ -15,7 +28,6 @@ export function RechargeMethodCard({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
-  const [proofUrl, setProofUrl] = useState("");
   const [proofNote, setProofNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,24 +43,35 @@ export function RechargeMethodCard({
       return;
     }
 
+    const contactUrl = buildContactUrl(
+      method,
+      `Hi, I'd like to send proof of payment for a recharge of ${amount} USD via ${method.name}.`,
+    );
+    // Opened synchronously (before the await) so browsers don't treat it as a
+    // blocked popup — navigated to the real URL once the order is created.
+    const contactWindow = contactUrl ? window.open("", "_blank") : null;
+
     setSubmitting(true);
     const result = await createRechargeOrderAction(initData, {
       methodId: method.id,
       amountCents,
-      proofUrl: proofUrl.trim() || null,
       proofNote: proofNote.trim() || null,
     });
     setSubmitting(false);
 
     if (!result.ok) {
       setError(result.error);
+      contactWindow?.close();
       return;
+    }
+
+    if (contactWindow && contactUrl) {
+      contactWindow.location.href = contactUrl;
     }
 
     setSuccess(true);
     setOpen(false);
     setAmount("");
-    setProofUrl("");
     setProofNote("");
     router.refresh();
   }
@@ -71,7 +94,12 @@ export function RechargeMethodCard({
       ) : null}
 
       {success ? (
-        <p className="text-xs text-foreground">Request submitted. Awaiting admin approval.</p>
+        <p className="text-xs text-foreground">
+          Request submitted.{" "}
+          {method.contactType
+            ? "Send your proof of payment in the chat that just opened."
+            : "Awaiting admin approval."}
+        </p>
       ) : null}
 
       {!open ? (
@@ -84,6 +112,13 @@ export function RechargeMethodCard({
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-border pt-2">
+          {method.contactType ? (
+            <p className="text-xs text-hint">
+              After submitting, we&apos;ll open{" "}
+              {method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} so you
+              can send your proof directly.
+            </p>
+          ) : null}
           <input
             className={formInputClass}
             type="number"
@@ -93,12 +128,6 @@ export function RechargeMethodCard({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-          />
-          <input
-            className={formInputClass}
-            placeholder="Proof image URL (optional)"
-            value={proofUrl}
-            onChange={(e) => setProofUrl(e.target.value)}
           />
           <input
             className={formInputClass}
@@ -113,7 +142,11 @@ export function RechargeMethodCard({
               disabled={submitting}
               className="flex-1 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit"}
+              {submitting
+                ? "Submitting…"
+                : method.contactType
+                  ? "Submit & Open Chat"
+                  : "Submit"}
             </button>
             <button
               type="button"
