@@ -457,3 +457,55 @@ model Notification {
   sentById String
   sentBy   User   @relation(fields: [sentById], references: [id])
 }
+
+enum ProviderType {
+  DHRU_FUSION
+  PHP_API
+  REST_API
+  JSON_API
+  XML_API
+  CUSTOM_API
+}
+
+/// Provider Gateway (Chapter 12): a single external unlocking/GSM API, isolated
+/// behind the connector interface built in Chapter 13. The core app never
+/// contains provider-specific logic — only this generic record + connector.
+model Provider {
+  id       String       @id @default(cuid())
+  name     String
+  type     ProviderType
+  baseUrl  String
+  username String?
+
+  /// Credentials are never sent to the frontend in full (only masked) — see
+  /// admin-providers.ts. Encryption-at-rest is Chapter 19 (Security Center).
+  apiKey    String?
+  apiSecret String?
+  token     String?
+
+  timeoutMs Int     @default(30000)
+  priority  Int     @default(0)
+  enabled   Boolean @default(true)
+
+  autoSyncEnabled  Boolean  @default(false)
+  lastBalanceCents Int?
+  lastBalanceAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connectionLogs ProviderConnectionLog[]
+}
+
+/// Connection history (Chapter 12): one row per "Test API connection" call.
+model ProviderConnectionLog {
+  id             String   @id @default(cuid())
+  success        Boolean
+  responseTimeMs Int?
+  statusCode     Int?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}

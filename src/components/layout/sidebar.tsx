@@ -21,6 +21,7 @@ const ADMIN_ITEMS = [
   { label: "Admin Dashboard", href: "/admin", icon: "📊" },
   { label: "Users", href: "/admin/users", icon: "👥" },
   { label: "Categories", href: "/admin/categories", icon: "🗂️" },
+  { label: "Providers", href: "/admin/providers", icon: "🔌" },
   { label: "Admin Orders", href: "/admin/orders", icon: "📦" },
   { label: "News", href: "/admin/news", icon: "📰" },
   { label: "Notifications", href: "/admin/notifications", icon: "🔔" },

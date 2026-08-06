@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "IMEI Services", href: "/imei" },
   { label: "Server Services", href: "/server" },
   { label: "Categories", href: "/admin/categories" },
+  { label: "Providers", href: "/admin/providers" },
   { label: "Wallet", href: "/wallet" },
   { label: "Orders", href: "/admin/orders" },
   { label: "News", href: "/admin/news" },
