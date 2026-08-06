@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ImeiServiceCard } from "@/components/imei/imei-service-card";
 import type { Category, ImeiService, ImeiServiceField } from "@/generated/prisma/client";
-import { formInputClass } from "@/lib/ui";
+import { formInputClass, groupByCategory } from "@/lib/ui";
 
 type ServiceWithRelations = ImeiService & {
   category: Category | null;
@@ -70,9 +70,16 @@ export function ImeiCatalog({ services }: { services: ServiceWithRelations[] }) 
       {filtered.length === 0 ? (
         <p className="text-sm text-hint">No services match your search.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((service) => (
-            <ImeiServiceCard key={service.id} service={service} />
+        <div className="flex flex-col gap-6">
+          {groupByCategory(filtered).map((group) => (
+            <div key={group.id} className="flex flex-col gap-3">
+              <h2 className="text-base font-semibold text-foreground">{group.name}</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {group.items.map((service) => (
+                  <ImeiServiceCard key={service.id} service={service} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
