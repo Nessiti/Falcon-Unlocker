@@ -23,8 +23,9 @@ import {
 
 export type TelegramStatus = "booting" | "ready" | "not-telegram" | "error";
 type MountStatus = "booting" | "ready" | "error";
+export type TelegramState = { status: TelegramStatus; error?: string };
 
-const TelegramStatusContext = createContext<TelegramStatus>("booting");
+const TelegramStatusContext = createContext<TelegramState>({ status: "booting" });
 
 /** Whether the Telegram Mini App SDK finished mounting successfully in this session. */
 export function useTelegramStatus() {
@@ -46,6 +47,7 @@ function getServerSnapshot() {
 export function TelegramRoot({ children }: { children: ReactNode }) {
   const inTelegram = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [mountStatus, setMountStatus] = useState<MountStatus>("booting");
+  const [mountError, setMountError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (!inTelegram) return;
@@ -67,7 +69,10 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
         if (!cancelled) setMountStatus("ready");
       } catch (error) {
         console.error("[telegram] failed to initialize Mini App SDK", error);
-        if (!cancelled) setMountStatus("error");
+        if (!cancelled) {
+          setMountError(error instanceof Error ? error.message : String(error));
+          setMountStatus("error");
+        }
       }
     })();
 
@@ -77,9 +82,10 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
   }, [inTelegram]);
 
   const status: TelegramStatus = inTelegram ? mountStatus : "not-telegram";
+  const state: TelegramState = { status, error: mountError };
 
   return (
-    <TelegramStatusContext.Provider value={status}>
+    <TelegramStatusContext.Provider value={state}>
       <div data-telegram-status={status} className="flex min-h-full flex-col">
         {children}
       </div>

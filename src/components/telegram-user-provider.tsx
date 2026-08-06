@@ -48,9 +48,9 @@ function TelegramUserProviderReady({ children }: { children: ReactNode }) {
 }
 
 export function TelegramUserProvider({ children }: { children: ReactNode }) {
-  const telegramStatus = useTelegramStatus();
+  const telegram = useTelegramStatus();
 
-  if (telegramStatus === "booting") {
+  if (telegram.status === "booting") {
     return (
       <TelegramUserContext.Provider value={{ status: "booting" }}>
         {children}
@@ -58,7 +58,17 @@ export function TelegramUserProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  if (telegramStatus !== "ready") {
+  if (telegram.status === "error") {
+    return (
+      <TelegramUserContext.Provider
+        value={{ status: "error", message: telegram.error ?? "Failed to initialize the Telegram SDK" }}
+      >
+        {children}
+      </TelegramUserContext.Provider>
+    );
+  }
+
+  if (telegram.status !== "ready") {
     return (
       <TelegramUserContext.Provider value={{ status: "unavailable" }}>
         {children}

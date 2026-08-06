@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { Navbar } from "@/components/layout/navbar";
 import { AppMenu } from "@/components/layout/app-menu";
@@ -15,23 +15,18 @@ function CenteredMessage({ children }: { children: ReactNode }) {
 }
 
 function DebugInfo() {
-  const [info, setInfo] = useState<string | null>(null);
-
-  useEffect(() => {
+  const [info] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
     const hasTelegramWebApp = typeof (window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp !== "undefined";
-    setInfo(
-      [
-        `href: ${window.location.href}`,
-        `hasHash: ${window.location.hash.length > 0}`,
-        `hash: ${window.location.hash || "(empty)"}`,
-        `search: ${window.location.search || "(empty)"}`,
-        `window.Telegram.WebApp: ${hasTelegramWebApp}`,
-        `userAgent: ${navigator.userAgent}`,
-      ].join("\n"),
-    );
-  }, []);
-
-  if (!info) return null;
+    return [
+      `href: ${window.location.href}`,
+      `hasHash: ${window.location.hash.length > 0}`,
+      `hash: ${window.location.hash || "(empty)"}`,
+      `search: ${window.location.search || "(empty)"}`,
+      `window.Telegram.WebApp: ${hasTelegramWebApp}`,
+      `userAgent: ${navigator.userAgent}`,
+    ].join("\n");
+  });
 
   return (
     <pre className="mt-4 max-w-full overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-surface p-3 text-left text-[10px] text-hint">
@@ -57,6 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <CenteredMessage>
         <p className="text-sm text-accent">Sign-in failed: {auth.message}</p>
+        <DebugInfo />
       </CenteredMessage>
     );
   }
