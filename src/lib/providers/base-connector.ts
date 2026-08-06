@@ -158,7 +158,21 @@ export abstract class BaseConnector implements ProviderConnector {
     const startedAt = Date.now();
 
     try {
-      const response = await fetch(url, { ...init, signal: controller.signal });
+      // Some providers' hosting (WAF/anti-bot rules) blocks requests with no
+      // User-Agent or a client that doesn't look like a browser, returning a
+      // 403 before the request ever reaches their API logic — independent
+      // of whether the credentials are correct. A generic browser-like
+      // default here (callers can still override it) fixes that without
+      // any provider-specific code.
+      const headers = new Headers(init.headers);
+      if (!headers.has("User-Agent")) {
+        headers.set(
+          "User-Agent",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        );
+      }
+
+      const response = await fetch(url, { ...init, headers, signal: controller.signal });
       const responseTimeMs = Date.now() - startedAt;
       void this.logApiCall({
         operation,
