@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { label: "Orders", href: "/admin/orders" },
   { label: "News", href: "/admin/news" },
   { label: "Notifications", href: "/admin/notifications" },
+  { label: "API Logs", href: "/admin/api-logs" },
   { label: "Logs", href: "/admin/logs" },
   { label: "Settings", href: "/admin/settings" },
   { label: "Support", href: "/support" },

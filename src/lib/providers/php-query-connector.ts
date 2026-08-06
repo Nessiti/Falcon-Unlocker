@@ -29,7 +29,7 @@ export class PhpQueryConnector extends BaseConnector {
 
   async getBalance(): Promise<BalanceResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("balance"), { method: "GET" });
+      const response = await this.fetchWithTimeout(this.url("balance"), { method: "GET" }, "getBalance");
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = (await response.json()) as { balance?: number };
@@ -43,7 +43,7 @@ export class PhpQueryConnector extends BaseConnector {
   }
 
   async getServices(): Promise<ConnectorService[]> {
-    const response = await this.fetchWithTimeout(this.url("servicelist"), { method: "GET" });
+    const response = await this.fetchWithTimeout(this.url("servicelist"), { method: "GET" }, "getServices");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = (await response.json()) as {
@@ -64,7 +64,7 @@ export class PhpQueryConnector extends BaseConnector {
       const params: Record<string, string> = { serviceid: input.providerServiceId };
       for (const [key, value] of Object.entries(input.fieldValues)) params[`field_${key}`] = value;
 
-      const response = await this.fetchWithTimeout(this.url("placeorder", params), { method: "GET" });
+      const response = await this.fetchWithTimeout(this.url("placeorder", params), { method: "GET" }, "submitOrder");
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = (await response.json()) as { orderId?: string };
@@ -80,6 +80,7 @@ export class PhpQueryConnector extends BaseConnector {
       const response = await this.fetchWithTimeout(
         this.url("orderstatus", { orderid: providerOrderId }),
         { method: "GET" },
+        "checkOrderStatus",
       );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
@@ -97,6 +98,7 @@ export class PhpQueryConnector extends BaseConnector {
       const response = await this.fetchWithTimeout(
         this.url("cancelorder", { orderid: providerOrderId }),
         { method: "GET" },
+        "cancelOrder",
       );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
       return { ok: true };

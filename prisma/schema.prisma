@@ -531,6 +531,7 @@ model Provider {
   updatedAt DateTime @updatedAt
 
   connectionLogs ProviderConnectionLog[]
+  apiLogs        ApiLog[]
   imeiMappings   ImeiServiceMapping[]
   serverMappings ServerServiceMapping[]
 }
@@ -546,6 +547,32 @@ model ProviderConnectionLog {
 
   providerId String
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+/// API Logs (Chapter 17): every outbound HTTP call any connector makes,
+/// captured once at the shared fetchWithTimeout chokepoint (base-connector.ts)
+/// so every provider type is logged identically without provider-specific code.
+model ApiLog {
+  id             String   @id @default(cuid())
+  /// Which ProviderConnector method this call was made from (e.g.
+  /// "getBalance", "submitOrder") — lets "Retry Request" safely re-invoke
+  /// the same operation instead of raw-replaying stored bytes, which would
+  /// require storing credentials alongside the log.
+  operation      String
+  endpoint       String
+  method         String
+  requestBody    String?
+  responseBody   String?
+  statusCode     Int?
+  responseTimeMs Int
+  success        Boolean
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, createdAt])
 }
 
 /// Service Mapping (Chapter 14): links a Falcon IMEI service to one or more

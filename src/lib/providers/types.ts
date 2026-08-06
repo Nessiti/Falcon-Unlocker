@@ -16,6 +16,19 @@ export interface ProviderConnector {
   syncServices(): Promise<SyncServicesResult>;
 }
 
+/**
+ * API Logs (Chapter 17): tags every fetchWithTimeout call with which
+ * connector method it came from, so a logged request can be safely retried
+ * by re-invoking the same method rather than raw-replaying stored bytes.
+ */
+export type ApiLogOperation =
+  | "testConnection"
+  | "getBalance"
+  | "getServices"
+  | "submitOrder"
+  | "checkOrderStatus"
+  | "cancelOrder";
+
 export type ConnectionTestResult = {
   success: boolean;
   responseTimeMs: number;

@@ -49,7 +49,7 @@ export class DhruFusionConnector extends BaseConnector {
 
   async getBalance(): Promise<BalanceResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("balance"), { method: "GET" });
+      const response = await this.fetchWithTimeout(this.url("balance"), { method: "GET" }, "getBalance");
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const parsed = await this.parseDhruResponse(response);
@@ -67,7 +67,7 @@ export class DhruFusionConnector extends BaseConnector {
   }
 
   async getServices(): Promise<ConnectorService[]> {
-    const response = await this.fetchWithTimeout(this.url("imeiservicelist"), { method: "GET" });
+    const response = await this.fetchWithTimeout(this.url("imeiservicelist"), { method: "GET" }, "getServices");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const json = (await response.json()) as {
@@ -92,6 +92,7 @@ export class DhruFusionConnector extends BaseConnector {
       const response = await this.fetchWithTimeout(
         this.url("placeimeiorder", { serviceid: input.providerServiceId, ...input.fieldValues }),
         { method: "GET" },
+        "submitOrder",
       );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
@@ -111,6 +112,7 @@ export class DhruFusionConnector extends BaseConnector {
       const response = await this.fetchWithTimeout(
         this.url("imeiorderstatus", { orderid: providerOrderId }),
         { method: "GET" },
+        "checkOrderStatus",
       );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
@@ -130,6 +132,7 @@ export class DhruFusionConnector extends BaseConnector {
       const response = await this.fetchWithTimeout(
         this.url("cancelimeiorder", { orderid: providerOrderId }),
         { method: "GET" },
+        "cancelOrder",
       );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 

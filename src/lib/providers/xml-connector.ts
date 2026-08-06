@@ -38,10 +38,11 @@ export class XmlConnector extends BaseConnector {
 
   async getBalance(): Promise<BalanceResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("balance"), {
-        method: "GET",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url("balance"),
+        { method: "GET", headers: this.authHeaders() },
+        "getBalance",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = await this.parseXml(response);
@@ -55,10 +56,11 @@ export class XmlConnector extends BaseConnector {
   }
 
   async getServices(): Promise<ConnectorService[]> {
-    const response = await this.fetchWithTimeout(this.url("services"), {
-      method: "GET",
-      headers: this.authHeaders(),
-    });
+    const response = await this.fetchWithTimeout(
+      this.url("services"),
+      { method: "GET", headers: this.authHeaders() },
+      "getServices",
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await this.parseXml(response);
@@ -83,10 +85,11 @@ export class XmlConnector extends BaseConnector {
       url.searchParams.set("serviceId", input.providerServiceId);
       for (const [key, value] of Object.entries(input.fieldValues)) url.searchParams.set(key, value);
 
-      const response = await this.fetchWithTimeout(url.toString(), {
-        method: "POST",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        url.toString(),
+        { method: "POST", headers: this.authHeaders() },
+        "submitOrder",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = await this.parseXml(response);
@@ -100,10 +103,11 @@ export class XmlConnector extends BaseConnector {
 
   async checkOrderStatus(providerOrderId: string): Promise<OrderStatusResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url(`orders/${providerOrderId}`), {
-        method: "GET",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url(`orders/${providerOrderId}`),
+        { method: "GET", headers: this.authHeaders() },
+        "checkOrderStatus",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = await this.parseXml(response);
@@ -118,10 +122,11 @@ export class XmlConnector extends BaseConnector {
 
   async cancelOrder(providerOrderId: string): Promise<CancelOrderResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url(`orders/${providerOrderId}/cancel`), {
-        method: "POST",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url(`orders/${providerOrderId}/cancel`),
+        { method: "POST", headers: this.authHeaders() },
+        "cancelOrder",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
       return { ok: true };
     } catch (error) {

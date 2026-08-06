@@ -33,10 +33,11 @@ export class GenericJsonConnector extends BaseConnector {
 
   async getBalance(): Promise<BalanceResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("balance"), {
-        method: "GET",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url("balance"),
+        { method: "GET", headers: this.authHeaders() },
+        "getBalance",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = (await response.json()) as { balance?: number };
@@ -50,10 +51,11 @@ export class GenericJsonConnector extends BaseConnector {
   }
 
   async getServices(): Promise<ConnectorService[]> {
-    const response = await this.fetchWithTimeout(this.url("services"), {
-      method: "GET",
-      headers: this.authHeaders(),
-    });
+    const response = await this.fetchWithTimeout(
+      this.url("services"),
+      { method: "GET", headers: this.authHeaders() },
+      "getServices",
+    );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = (await response.json()) as {
@@ -71,11 +73,15 @@ export class GenericJsonConnector extends BaseConnector {
 
   async submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url("orders"), {
-        method: "POST",
-        headers: { ...this.authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceId: input.providerServiceId, fields: input.fieldValues }),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url("orders"),
+        {
+          method: "POST",
+          headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ serviceId: input.providerServiceId, fields: input.fieldValues }),
+        },
+        "submitOrder",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = (await response.json()) as { orderId?: string };
@@ -88,10 +94,11 @@ export class GenericJsonConnector extends BaseConnector {
 
   async checkOrderStatus(providerOrderId: string): Promise<OrderStatusResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url(`orders/${providerOrderId}`), {
-        method: "GET",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url(`orders/${providerOrderId}`),
+        { method: "GET", headers: this.authHeaders() },
+        "checkOrderStatus",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
       const data = (await response.json()) as { status?: string; result?: string };
@@ -105,10 +112,11 @@ export class GenericJsonConnector extends BaseConnector {
 
   async cancelOrder(providerOrderId: string): Promise<CancelOrderResult> {
     try {
-      const response = await this.fetchWithTimeout(this.url(`orders/${providerOrderId}/cancel`), {
-        method: "POST",
-        headers: this.authHeaders(),
-      });
+      const response = await this.fetchWithTimeout(
+        this.url(`orders/${providerOrderId}/cancel`),
+        { method: "POST", headers: this.authHeaders() },
+        "cancelOrder",
+      );
       if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
       return { ok: true };
     } catch (error) {
