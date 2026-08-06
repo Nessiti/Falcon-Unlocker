@@ -16,11 +16,7 @@ import {
   bindViewportCssVars,
   expandViewport,
   miniAppReady,
-  requestFullscreen,
-  retrieveLaunchParams,
 } from "@telegram-apps/sdk-react";
-
-const PHONE_PLATFORMS = new Set(["android", "android_x", "ios"]);
 
 export type TelegramStatus = "booting" | "ready" | "not-telegram" | "error";
 type MountStatus = "booting" | "ready" | "error";
@@ -102,20 +98,6 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
           expandViewport();
         }
         miniAppReady();
-
-        // Best-effort auto-fullscreen on desktop/tablet launch. This calls
-        // only Telegram's own requestFullscreen (expands the Mini App
-        // within Telegram's window — the OS taskbar/menu bar/dock stay
-        // visible), never the browser's native Fullscreen API, and never
-        // on phones. Never allowed to block reaching "ready".
-        try {
-          const platform = retrieveLaunchParams(true).tgWebAppPlatform;
-          if (!PHONE_PLATFORMS.has(platform) && requestFullscreen.isAvailable()) {
-            requestFullscreen().catch(() => {});
-          }
-        } catch {
-          // No launch params yet, or the platform check failed — skip silently.
-        }
 
         if (!cancelled) setMountStatus("ready");
       } catch (error) {
