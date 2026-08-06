@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { listFaqAction, createFaqAction, type FaqItemSummary } from "@/lib/actions/faq";
 import { formInputClass } from "@/lib/ui";
+import { MarkdownField } from "@/components/ui/markdown-field";
+import { Markdown } from "@/components/ui/markdown";
 
 export function FaqTab({ initData, isAdmin }: { initData: string; isAdmin: boolean }) {
   const [items, setItems] = useState<FaqItemSummary[] | null>(null);
@@ -44,7 +46,7 @@ export function FaqTab({ initData, isAdmin }: { initData: string; isAdmin: boole
       {items?.map((item) => (
         <div key={item.id} className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-sm font-semibold text-foreground">{item.question}</p>
-          <p className="mt-1 text-sm text-hint">{item.answer}</p>
+          <Markdown text={item.answer} className="mt-1" />
         </div>
       ))}
 
@@ -61,13 +63,7 @@ export function FaqTab({ initData, isAdmin }: { initData: string; isAdmin: boole
             onChange={(e) => setQuestion(e.target.value)}
             required
           />
-          <textarea
-            className={formInputClass}
-            placeholder="Answer"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            required
-          />
+          <MarkdownField value={answer} onChange={setAnswer} placeholder="Answer" required />
           {error ? <p className="text-xs text-accent">{error}</p> : null}
           <button
             type="submit"

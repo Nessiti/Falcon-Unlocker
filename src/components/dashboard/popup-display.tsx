@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getActivePopupAction, type PopupSummary } from "@/lib/actions/admin-popups";
+import { Markdown } from "@/components/ui/markdown";
 
 export function PopupDisplay() {
   const [popup, setPopup] = useState<PopupSummary | null>(null);
@@ -28,7 +29,7 @@ export function PopupDisplay() {
           />
         ) : null}
         <h2 className="text-base font-semibold text-foreground">{popup.title}</h2>
-        <p className="text-sm text-hint">{popup.message}</p>
+        <Markdown text={popup.message} />
         <div className="flex justify-center gap-2">
           {popup.buttonText && popup.buttonUrl ? (
             <a

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { getAboutAction, updateAboutAction } from "@/lib/actions/about";
-import { formInputClass } from "@/lib/ui";
+import { MarkdownField } from "@/components/ui/markdown-field";
+import { Markdown } from "@/components/ui/markdown";
 
 export function AboutContent({
   initData,
@@ -49,11 +50,7 @@ export function AboutContent({
         onSubmit={handleSave}
         className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4"
       >
-        <textarea
-          className={`${formInputClass} min-h-[160px]`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
+        <MarkdownField value={draft} onChange={setDraft} rows={10} />
         {error ? <p className="text-xs text-accent">{error}</p> : null}
         <div className="flex gap-2">
           <button
@@ -80,11 +77,7 @@ export function AboutContent({
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
-      {content ? (
-        <p className="whitespace-pre-line text-sm text-hint">{content}</p>
-      ) : (
-        <p className="text-sm text-hint">No About content yet.</p>
-      )}
+      {content ? <Markdown text={content} /> : <p className="text-sm text-hint">No About content yet.</p>}
       {isAdmin ? (
         <button
           type="button"

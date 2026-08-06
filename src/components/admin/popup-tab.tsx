@@ -8,6 +8,8 @@ import {
   type PopupSummary,
 } from "@/lib/actions/admin-popups";
 import { formInputClass } from "@/lib/ui";
+import { MarkdownField } from "@/components/ui/markdown-field";
+import { Markdown } from "@/components/ui/markdown";
 
 export function PopupTab({ initData }: { initData: string }) {
   const [active, setActive] = useState<PopupSummary | null | undefined>(undefined);
@@ -74,7 +76,7 @@ export function PopupTab({ initData }: { initData: string }) {
       {active ? (
         <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
           <p className="font-medium text-foreground">Active: {active.title}</p>
-          <p className="mt-1 text-hint">{active.message}</p>
+          <Markdown text={active.message} className="mt-1" />
           <button
             type="button"
             onClick={() => handleDeactivate(active.id)}
@@ -99,13 +101,7 @@ export function PopupTab({ initData }: { initData: string }) {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <textarea
-          className={formInputClass}
-          placeholder="Message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-        />
+        <MarkdownField value={message} onChange={setMessage} placeholder="Message" required />
         <div className="grid grid-cols-2 gap-2">
           <input
             className={formInputClass}

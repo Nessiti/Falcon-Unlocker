@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { listNewsAction, createNewsAction, type NewsPostSummary } from "@/lib/actions/admin-news";
 import { formInputClass } from "@/lib/ui";
+import { MarkdownField } from "@/components/ui/markdown-field";
+import { Markdown } from "@/components/ui/markdown";
 
 export function NewsTab({ initData }: { initData: string }) {
   const [posts, setPosts] = useState<NewsPostSummary[] | null>(null);
@@ -59,13 +61,7 @@ export function NewsTab({ initData }: { initData: string }) {
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <textarea
-          className={formInputClass}
-          placeholder="Body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          required
-        />
+        <MarkdownField value={body} onChange={setBody} placeholder="Body" required />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1 text-xs text-hint">
             <input
@@ -100,7 +96,7 @@ export function NewsTab({ initData }: { initData: string }) {
             {post.pinned ? "📌 " : ""}
             {post.title}
           </p>
-          <p className="mt-1 text-hint">{post.body}</p>
+          <Markdown text={post.body} className="mt-1" />
         </div>
       ))}
     </div>
