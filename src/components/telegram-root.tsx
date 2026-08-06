@@ -11,9 +11,13 @@ import {
 import {
   init,
   isTMA,
-  mountMiniApp,
-  mountThemeParams,
+  mountMiniAppSync,
+  isMiniAppMounted,
+  mountThemeParamsSync,
+  isThemeParamsMounted,
   mountViewport,
+  isViewportMounted,
+  isViewportMounting,
   bindMiniAppCssVars,
   bindThemeParamsCssVars,
   bindViewportCssVars,
@@ -57,7 +61,16 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
     (async () => {
       try {
         init();
-        await Promise.all([mountMiniApp(), mountThemeParams(), mountViewport()]);
+
+        if (mountMiniAppSync.isAvailable() && !isMiniAppMounted()) {
+          mountMiniAppSync();
+        }
+        if (mountThemeParamsSync.isAvailable() && !isThemeParamsMounted()) {
+          mountThemeParamsSync();
+        }
+        if (mountViewport.isAvailable() && !isViewportMounted() && !isViewportMounting()) {
+          await mountViewport();
+        }
 
         bindMiniAppCssVars();
         bindThemeParamsCssVars();
