@@ -93,13 +93,14 @@ export default function OrdersPage() {
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
-          className={`${formInputClass} sm:flex-1`}
+          type="search"
+          className={`${formInputClass} w-full min-w-0 sm:flex-1`}
           placeholder="Search by service or order ID"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className={formInputClass}
+          className={`${formInputClass} w-full shrink-0 sm:w-48`}
           value={status}
           onChange={(e) => setStatus(e.target.value as (typeof STATUS_OPTIONS)[number])}
         >

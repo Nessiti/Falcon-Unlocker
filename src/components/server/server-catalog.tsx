@@ -60,13 +60,14 @@ export function ServerCatalog({ services }: { services: ServiceWithRelations[] }
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
-          className={`${formInputClass} sm:flex-1`}
+          type="search"
+          className={`${formInputClass} w-full min-w-0 sm:flex-1`}
           placeholder="Search services…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className={formInputClass}
+          className={`${formInputClass} w-full shrink-0 sm:w-40`}
           value={type}
           onChange={(e) => setType(e.target.value as ServerServiceType | "ALL")}
         >
@@ -78,7 +79,7 @@ export function ServerCatalog({ services }: { services: ServiceWithRelations[] }
         </select>
         {categories.length > 0 ? (
           <select
-            className={formInputClass}
+            className={`${formInputClass} w-full shrink-0 sm:w-56`}
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
           >
