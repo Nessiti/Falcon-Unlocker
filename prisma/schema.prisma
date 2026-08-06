@@ -133,8 +133,9 @@ model ImeiService {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  fields ImeiServiceField[]
-  orders ImeiOrder[]
+  fields   ImeiServiceField[]
+  orders   ImeiOrder[]
+  mappings ImeiServiceMapping[]
 }
 
 model ImeiServiceField {
@@ -226,8 +227,9 @@ model ServerService {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
-  fields ServerServiceField[]
-  orders ServerOrder[]
+  fields   ServerServiceField[]
+  orders   ServerOrder[]
+  mappings ServerServiceMapping[]
 }
 
 model ServerOrder {
@@ -495,6 +497,8 @@ model Provider {
   updatedAt DateTime @updatedAt
 
   connectionLogs ProviderConnectionLog[]
+  imeiMappings   ImeiServiceMapping[]
+  serverMappings ServerServiceMapping[]
 }
 
 /// Connection history (Chapter 12): one row per "Test API connection" call.
@@ -508,4 +512,43 @@ model ProviderConnectionLog {
 
   providerId String
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+/// Service Mapping (Chapter 14): links a Falcon IMEI service to one or more
+/// provider services. Multiple providers per Falcon service, priority-ordered
+/// (Chapter 15's routing engine picks among enabled mappings by priority).
+model ImeiServiceMapping {
+  id                  String   @id @default(cuid())
+  providerServiceId   String
+  /// Cached label from the provider's service list, refreshed on sync (Chapter 16).
+  providerServiceName String?
+  priority            Int      @default(0)
+  enabled             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  imeiServiceId String
+  imeiService   ImeiService @relation(fields: [imeiServiceId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([imeiServiceId, providerId, providerServiceId])
+}
+
+/// Service Mapping (Chapter 14): the Server-service equivalent of ImeiServiceMapping.
+model ServerServiceMapping {
+  id                  String   @id @default(cuid())
+  providerServiceId   String
+  providerServiceName String?
+  priority            Int      @default(0)
+  enabled             Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  serverServiceId String
+  serverService   ServerService @relation(fields: [serverServiceId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([serverServiceId, providerId, providerServiceId])
 }

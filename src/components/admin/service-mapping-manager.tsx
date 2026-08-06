@@ -1,0 +1,325 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  listServiceMappingsAction,
+  createServiceMappingAction,
+  updateServiceMappingAction,
+  deleteServiceMappingAction,
+  fetchProviderServicesAction,
+  autoMapServiceAction,
+  type MappingKind,
+  type ServiceMappingSummary,
+  type ProviderServiceOption,
+} from "@/lib/actions/admin-service-mappings";
+import { listProvidersAction, type ProviderSummary } from "@/lib/actions/admin-providers";
+import { formatUsd } from "@/lib/ui";
+
+export function ServiceMappingManager({
+  initData,
+  kind,
+  falconServiceId,
+  falconServiceName,
+}: {
+  initData: string;
+  kind: MappingKind;
+  falconServiceId: string;
+  falconServiceName: string;
+}) {
+  const [mappings, setMappings] = useState<ServiceMappingSummary[] | null>(null);
+  const [providers, setProviders] = useState<ProviderSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [selectedProviderId, setSelectedProviderId] = useState("");
+  const [catalog, setCatalog] = useState<ProviderServiceOption[] | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
+  const [manualProviderServiceId, setManualProviderServiceId] = useState("");
+  const [addPriority, setAddPriority] = useState(0);
+  const [adding, setAdding] = useState(false);
+
+  const [autoMapProviderIds, setAutoMapProviderIds] = useState<string[]>([]);
+  const [autoMapping, setAutoMapping] = useState(false);
+  const [autoMapSummary, setAutoMapSummary] = useState<string | null>(null);
+
+  function refresh() {
+    listServiceMappingsAction(initData, kind, falconServiceId).then((result) => {
+      if (result.ok) setMappings(result.mappings);
+      else setError(result.error);
+    });
+  }
+
+  useEffect(() => {
+    refresh();
+    listProvidersAction(initData).then((result) => {
+      if (result.ok) setProviders(result.providers);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initData, kind, falconServiceId]);
+
+  async function handleBrowseCatalog() {
+    if (!selectedProviderId) return;
+    setLoadingCatalog(true);
+    setCatalogError(null);
+    setCatalog(null);
+    const result = await fetchProviderServicesAction(initData, selectedProviderId);
+    setLoadingCatalog(false);
+    if (result.ok) setCatalog(result.services);
+    else setCatalogError(result.error);
+  }
+
+  async function handleAddMapping() {
+    if (!selectedProviderId) return;
+    const providerServiceId = selectedProviderServiceId || manualProviderServiceId.trim();
+    if (!providerServiceId) return;
+    const matched = catalog?.find((service) => service.providerServiceId === providerServiceId);
+
+    setAdding(true);
+    const result = await createServiceMappingAction(initData, kind, falconServiceId, {
+      providerId: selectedProviderId,
+      providerServiceId,
+      providerServiceName: matched?.name ?? null,
+      priority: addPriority,
+    });
+    setAdding(false);
+    if (result.ok) {
+      setSelectedProviderServiceId("");
+      setManualProviderServiceId("");
+      setAddPriority(0);
+      refresh();
+    } else {
+      setError(result.error);
+    }
+  }
+
+  async function handleToggleEnabled(mapping: ServiceMappingSummary) {
+    setBusyId(mapping.id);
+    const result = await updateServiceMappingAction(initData, kind, mapping.id, {
+      providerServiceId: mapping.providerServiceId,
+      providerServiceName: mapping.providerServiceName,
+      priority: mapping.priority,
+      enabled: !mapping.enabled,
+    });
+    setBusyId(null);
+    if (result.ok) refresh();
+    else setError(result.error);
+  }
+
+  async function handlePriorityChange(mapping: ServiceMappingSummary, priority: number) {
+    setBusyId(mapping.id);
+    const result = await updateServiceMappingAction(initData, kind, mapping.id, {
+      providerServiceId: mapping.providerServiceId,
+      providerServiceName: mapping.providerServiceName,
+      priority,
+      enabled: mapping.enabled,
+    });
+    setBusyId(null);
+    if (result.ok) refresh();
+    else setError(result.error);
+  }
+
+  async function handleDelete(mapping: ServiceMappingSummary) {
+    setBusyId(mapping.id);
+    const result = await deleteServiceMappingAction(initData, kind, mapping.id);
+    setBusyId(null);
+    if (result.ok) refresh();
+    else setError(result.error);
+  }
+
+  function toggleAutoMapProvider(id: string) {
+    setAutoMapProviderIds((current) =>
+      current.includes(id) ? current.filter((p) => p !== id) : [...current, id],
+    );
+  }
+
+  async function handleAutoMap() {
+    if (autoMapProviderIds.length === 0) return;
+    setAutoMapping(true);
+    setAutoMapSummary(null);
+    const result = await autoMapServiceAction(initData, kind, falconServiceId, autoMapProviderIds);
+    setAutoMapping(false);
+    if (result.ok) {
+      const parts = [`${result.created} mapping${result.created === 1 ? "" : "s"} created`];
+      if (result.skipped.length > 0) {
+        parts.push(
+          `skipped: ${result.skipped.map((s) => `${s.providerName} (${s.reason})`).join(", ")}`,
+        );
+      }
+      setAutoMapSummary(parts.join(" — "));
+      refresh();
+    } else {
+      setAutoMapSummary(`Failed: ${result.error}`);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-3 text-xs">
+      <p className="font-semibold text-foreground">Provider Mappings — {falconServiceName}</p>
+      {error ? <p className="text-accent">{error}</p> : null}
+      {!mappings && !error ? <p className="text-hint">Loading…</p> : null}
+      {mappings && mappings.length === 0 ? (
+        <p className="text-hint">No provider mapped yet. This service cannot be auto-routed (Chapter 15) until mapped.</p>
+      ) : null}
+
+      {mappings?.map((mapping) => (
+        <div
+          key={mapping.id}
+          className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-2"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-foreground">{mapping.providerName}</p>
+            <span className={mapping.enabled ? "text-foreground" : "text-hint"}>
+              {mapping.enabled ? "Enabled" : "Disabled"}
+            </span>
+          </div>
+          <p className="text-hint">
+            {mapping.providerServiceName ?? mapping.providerServiceId}
+            {mapping.providerServiceName ? ` (#${mapping.providerServiceId})` : ""}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1 text-hint">
+              Priority
+              <input
+                type="number"
+                value={mapping.priority}
+                disabled={busyId === mapping.id}
+                onChange={(e) => handlePriorityChange(mapping, Number(e.target.value))}
+                className="w-14 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={busyId === mapping.id}
+              onClick={() => handleToggleEnabled(mapping)}
+              className="rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
+            >
+              {mapping.enabled ? "Disable" : "Enable"}
+            </button>
+            <button
+              type="button"
+              disabled={busyId === mapping.id}
+              onClick={() => handleDelete(mapping)}
+              className="rounded border border-border px-2 py-1 text-accent disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-2">
+        <p className="font-semibold text-foreground">Add Mapping</p>
+        <select
+          value={selectedProviderId}
+          onChange={(e) => {
+            setSelectedProviderId(e.target.value);
+            setCatalog(null);
+            setCatalogError(null);
+            setSelectedProviderServiceId("");
+          }}
+          className="rounded border border-border bg-background px-2 py-1 text-foreground"
+        >
+          <option value="">Select a provider…</option>
+          {providers?.map((provider) => (
+            <option key={provider.id} value={provider.id}>
+              {provider.name}
+            </option>
+          ))}
+        </select>
+
+        {selectedProviderId ? (
+          <>
+            <button
+              type="button"
+              disabled={loadingCatalog}
+              onClick={handleBrowseCatalog}
+              className="self-start rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
+            >
+              {loadingCatalog ? "Loading catalog…" : "Browse Provider Catalog"}
+            </button>
+            {catalogError ? <p className="text-accent">{catalogError}</p> : null}
+            {catalog ? (
+              catalog.length === 0 ? (
+                <p className="text-hint">Provider returned no services.</p>
+              ) : (
+                <select
+                  value={selectedProviderServiceId}
+                  onChange={(e) => setSelectedProviderServiceId(e.target.value)}
+                  className="rounded border border-border bg-background px-2 py-1 text-foreground"
+                >
+                  <option value="">Select a service…</option>
+                  {catalog.map((service) => (
+                    <option key={service.providerServiceId} value={service.providerServiceId}>
+                      {service.name}
+                      {service.priceCents != null ? ` — ${formatUsd(service.priceCents)}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )
+            ) : null}
+
+            <label className="flex flex-col gap-1 text-hint">
+              Or enter provider service ID manually
+              <input
+                type="text"
+                value={manualProviderServiceId}
+                onChange={(e) => setManualProviderServiceId(e.target.value)}
+                placeholder="Provider service ID"
+                className="rounded border border-border bg-background px-2 py-1 text-foreground"
+              />
+            </label>
+
+            <label className="flex items-center gap-1 text-hint">
+              Priority
+              <input
+                type="number"
+                value={addPriority}
+                onChange={(e) => setAddPriority(Number(e.target.value))}
+                className="w-14 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+
+            <button
+              type="button"
+              disabled={adding || (!selectedProviderServiceId && !manualProviderServiceId.trim())}
+              onClick={handleAddMapping}
+              className="self-start rounded bg-accent px-3 py-1 text-accent-foreground disabled:opacity-50"
+            >
+              {adding ? "Adding…" : "Add Mapping"}
+            </button>
+          </>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-2">
+        <p className="font-semibold text-foreground">Auto-Map by Name</p>
+        <p className="text-hint">
+          Matches this service&apos;s name against each selected provider&apos;s live catalog and maps automatically.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {providers?.map((provider) => (
+            <label key={provider.id} className="flex items-center gap-1 text-hint">
+              <input
+                type="checkbox"
+                checked={autoMapProviderIds.includes(provider.id)}
+                onChange={() => toggleAutoMapProvider(provider.id)}
+              />
+              {provider.name}
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          disabled={autoMapping || autoMapProviderIds.length === 0}
+          onClick={handleAutoMap}
+          className="self-start rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
+        >
+          {autoMapping ? "Auto-mapping…" : "Auto-Map Selected Providers"}
+        </button>
+        {autoMapSummary ? <p className="text-hint">{autoMapSummary}</p> : null}
+      </div>
+    </div>
+  );
+}

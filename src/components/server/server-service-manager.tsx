@@ -16,6 +16,7 @@ import {
 import { Role, ServiceStatus } from "@/generated/prisma/browser";
 import { formatUsd } from "@/lib/ui";
 import { ServerServiceForm } from "@/components/server/server-service-form";
+import { ServiceMappingManager } from "@/components/admin/service-mapping-manager";
 
 const STATUS_OPTIONS: ServiceStatus[] = [
   ServiceStatus.ONLINE,
@@ -32,6 +33,7 @@ export function ServerServiceManager() {
   const [error, setError] = useState<string | null>(null);
   const [editingDetail, setEditingDetail] = useState<ServerServiceDetail | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+  const [mappingsOpenId, setMappingsOpenId] = useState<string | null>(null);
 
   function refresh() {
     if (!initData) return;
@@ -152,6 +154,15 @@ export function ServerServiceManager() {
               </button>
               <button
                 type="button"
+                onClick={() =>
+                  setMappingsOpenId((current) => (current === service.id ? null : service.id))
+                }
+                className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+              >
+                {mappingsOpenId === service.id ? "Hide Mappings" : "Mappings"}
+              </button>
+              <button
+                type="button"
                 disabled={busyId === service.id}
                 onClick={() => handleDelete(service.id)}
                 className="rounded-lg border border-border px-2 py-1 text-xs text-accent disabled:opacity-50"
@@ -159,6 +170,14 @@ export function ServerServiceManager() {
                 Delete
               </button>
             </div>
+            {mappingsOpenId === service.id ? (
+              <ServiceMappingManager
+                initData={verifiedInitData}
+                kind="SERVER"
+                falconServiceId={service.id}
+                falconServiceName={service.name}
+              />
+            ) : null}
           </div>
         ),
       )}
