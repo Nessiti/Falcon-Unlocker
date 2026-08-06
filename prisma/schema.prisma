@@ -631,6 +631,13 @@ model ImeiServiceMapping {
   enabled               Boolean  @default(true)
   createdAt             DateTime @default(now())
 
+  /// Margin (Chapter 23): overrides PricingSettings' default for this
+  /// mapping specifically. Null falls back to the default. Only ever used
+  /// to compute a *suggested* selling price shown to the admin — never
+  /// applied to ImeiService.priceCents on its own.
+  marginPercent Int?
+  marginCents   Int?
+
   imeiServiceId String
   imeiService   ImeiService @relation(fields: [imeiServiceId], references: [id], onDelete: Cascade)
 
@@ -655,6 +662,13 @@ model ServerServiceMapping {
   priority              Int      @default(0)
   enabled               Boolean  @default(true)
   createdAt             DateTime @default(now())
+
+  /// Margin (Chapter 23): overrides PricingSettings' default for this
+  /// mapping specifically. Null falls back to the default. Only ever used
+  /// to compute a *suggested* selling price shown to the admin — never
+  /// applied to ServerService.priceCents on its own.
+  marginPercent Int?
+  marginCents   Int?
 
   serverServiceId String
   serverService   ServerService @relation(fields: [serverServiceId], references: [id], onDelete: Cascade)

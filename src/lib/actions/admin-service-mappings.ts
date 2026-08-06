@@ -9,6 +9,7 @@ import { buildRoutingPlan, type RoutingPlan } from "@/lib/providers/routing-engi
 export type { RoutingPlan, RoutingCandidate } from "@/lib/providers/routing-engine";
 import type { ConnectorService } from "@/lib/providers/types";
 import { RoutingStrategy } from "@/generated/prisma/client";
+import { applyMargin } from "@/lib/pricing/pricing-engine";
 
 export type MappingKind = "IMEI" | "SERVER";
 
@@ -23,6 +24,11 @@ export type ServiceMappingSummary = {
   providerCategory: string | null;
   priority: number;
   enabled: boolean;
+  /** Margin (Chapter 23): null means "use the PricingSettings default". */
+  marginPercent: number | null;
+  marginCents: number | null;
+  /** providerPriceCents with the effective margin (this mapping's override, or the default) applied. Null when there's no provider price to base it on. */
+  suggestedPriceCents: number | null;
 };
 
 export type ListServiceMappingsResult =
@@ -58,6 +64,8 @@ export async function listServiceMappingsAction(
           ]);
     if (!falconService) return { ok: false, error: "Service not found" };
 
+    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { id: "singleton" } });
+
     return {
       ok: true,
       mappings: rows.map((row) => ({
@@ -71,6 +79,16 @@ export async function listServiceMappingsAction(
         providerCategory: row.providerCategory,
         priority: row.priority,
         enabled: row.enabled,
+        marginPercent: row.marginPercent,
+        marginCents: row.marginCents,
+        suggestedPriceCents:
+          row.providerPriceCents != null
+            ? applyMargin({
+                costCents: row.providerPriceCents,
+                marginPercent: row.marginPercent ?? pricingSettings?.defaultMarginPercent,
+                marginCents: row.marginCents ?? pricingSettings?.defaultMarginCents,
+              })
+            : null,
       })),
       routingStrategy: falconService.routingStrategy,
     };
@@ -88,6 +106,8 @@ export type CreateServiceMappingInput = {
   providerEstimatedTime: string | null;
   providerCategory: string | null;
   priority: number;
+  marginPercent: number | null;
+  marginCents: number | null;
 };
 
 export type CreateServiceMappingResult = { ok: true } | { ok: false; error: string };
@@ -117,6 +137,8 @@ export async function createServiceMappingAction(
           providerEstimatedTime: input.providerEstimatedTime,
           providerCategory: input.providerCategory,
           priority: input.priority,
+          marginPercent: input.marginPercent,
+          marginCents: input.marginCents,
         },
       });
     } else {
@@ -130,6 +152,8 @@ export async function createServiceMappingAction(
           providerEstimatedTime: input.providerEstimatedTime,
           providerCategory: input.providerCategory,
           priority: input.priority,
+          marginPercent: input.marginPercent,
+          marginCents: input.marginCents,
         },
       });
     }
@@ -157,6 +181,8 @@ export type UpdateServiceMappingInput = {
   providerCategory: string | null;
   priority: number;
   enabled: boolean;
+  marginPercent: number | null;
+  marginCents: number | null;
 };
 
 export type UpdateServiceMappingResult = { ok: true } | { ok: false; error: string };
@@ -182,6 +208,8 @@ export async function updateServiceMappingAction(
       providerCategory: input.providerCategory,
       priority: input.priority,
       enabled: input.enabled,
+      marginPercent: input.marginPercent,
+      marginCents: input.marginCents,
     };
 
     if (kind === "IMEI") {
@@ -424,6 +452,61 @@ export async function getRoutingPreviewAction(
     return { ok: true, plan };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to compute routing preview";
+    return { ok: false, error: message };
+  }
+}
+
+export type ApplySuggestedPriceResult =
+  | { ok: true; priceCents: number }
+  | { ok: false; error: string };
+
+/**
+ * Margin (Chapter 23): recomputes this mapping's suggested price
+ * server-side (never trusts a client-submitted number for something that
+ * changes what customers pay) and sets it as the Falcon service's
+ * priceCents — an explicit admin action, never automatic.
+ */
+export async function applySuggestedPriceAction(
+  initData: string,
+  kind: MappingKind,
+  mappingId: string,
+): Promise<ApplySuggestedPriceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { id: "singleton" } });
+
+    let priceCents: number;
+
+    if (kind === "IMEI") {
+      const mapping = await prisma.imeiServiceMapping.findUnique({ where: { id: mappingId } });
+      if (!mapping) return { ok: false, error: "Mapping not found" };
+      if (mapping.providerPriceCents == null) {
+        return { ok: false, error: "This mapping has no provider price to base a price on" };
+      }
+      priceCents = applyMargin({
+        costCents: mapping.providerPriceCents,
+        marginPercent: mapping.marginPercent ?? pricingSettings?.defaultMarginPercent,
+        marginCents: mapping.marginCents ?? pricingSettings?.defaultMarginCents,
+      });
+      await prisma.imeiService.update({ where: { id: mapping.imeiServiceId }, data: { priceCents } });
+    } else {
+      const mapping = await prisma.serverServiceMapping.findUnique({ where: { id: mappingId } });
+      if (!mapping) return { ok: false, error: "Mapping not found" };
+      if (mapping.providerPriceCents == null) {
+        return { ok: false, error: "This mapping has no provider price to base a price on" };
+      }
+      priceCents = applyMargin({
+        costCents: mapping.providerPriceCents,
+        marginPercent: mapping.marginPercent ?? pricingSettings?.defaultMarginPercent,
+        marginCents: mapping.marginCents ?? pricingSettings?.defaultMarginCents,
+      });
+      await prisma.serverService.update({ where: { id: mapping.serverServiceId }, data: { priceCents } });
+    }
+
+    await logAdminAction(admin.id, "service-mapping.apply-suggested-price", `${kind} ${mappingId} -> ${priceCents}`);
+    return { ok: true, priceCents };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to apply suggested price";
     return { ok: false, error: message };
   }
 }

@@ -10,6 +10,7 @@ import {
   autoMapServiceAction,
   setServiceRoutingStrategyAction,
   getRoutingPreviewAction,
+  applySuggestedPriceAction,
   type MappingKind,
   type ServiceMappingSummary,
   type ProviderServiceOption,
@@ -60,7 +61,10 @@ export function ServiceMappingManager({
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [manualProviderServiceId, setManualProviderServiceId] = useState("");
   const [addPriority, setAddPriority] = useState(0);
+  const [addMarginPercent, setAddMarginPercent] = useState("");
+  const [addMarginCents, setAddMarginCents] = useState("");
   const [adding, setAdding] = useState(false);
+  const [applyingPriceId, setApplyingPriceId] = useState<string | null>(null);
 
   const [autoMapProviderIds, setAutoMapProviderIds] = useState<string[]>([]);
   const [autoMapping, setAutoMapping] = useState(false);
@@ -136,19 +140,26 @@ export function ServiceMappingManager({
       providerEstimatedTime: matched?.estimatedTime ?? null,
       providerCategory: matched?.category ?? null,
       priority: addPriority,
+      marginPercent: addMarginPercent.trim() ? Number(addMarginPercent) : null,
+      marginCents: addMarginCents.trim() ? Math.round(Number(addMarginCents) * 100) : null,
     });
     setAdding(false);
     if (result.ok) {
       setSelectedProviderServiceId("");
       setManualProviderServiceId("");
       setAddPriority(0);
+      setAddMarginPercent("");
+      setAddMarginCents("");
       refresh();
     } else {
       setError(result.error);
     }
   }
 
-  async function handleToggleEnabled(mapping: ServiceMappingSummary) {
+  async function handleUpdateMapping(
+    mapping: ServiceMappingSummary,
+    patch: Partial<Pick<ServiceMappingSummary, "priority" | "enabled" | "marginPercent" | "marginCents">>,
+  ) {
     setBusyId(mapping.id);
     const result = await updateServiceMappingAction(initData, kind, mapping.id, {
       providerServiceId: mapping.providerServiceId,
@@ -157,27 +168,21 @@ export function ServiceMappingManager({
       providerEstimatedTime: mapping.providerEstimatedTime,
       providerCategory: mapping.providerCategory,
       priority: mapping.priority,
-      enabled: !mapping.enabled,
+      enabled: mapping.enabled,
+      marginPercent: mapping.marginPercent,
+      marginCents: mapping.marginCents,
+      ...patch,
     });
     setBusyId(null);
     if (result.ok) refresh();
     else setError(result.error);
   }
 
-  async function handlePriorityChange(mapping: ServiceMappingSummary, priority: number) {
-    setBusyId(mapping.id);
-    const result = await updateServiceMappingAction(initData, kind, mapping.id, {
-      providerServiceId: mapping.providerServiceId,
-      providerServiceName: mapping.providerServiceName,
-      providerPriceCents: mapping.providerPriceCents,
-      providerEstimatedTime: mapping.providerEstimatedTime,
-      providerCategory: mapping.providerCategory,
-      priority,
-      enabled: mapping.enabled,
-    });
-    setBusyId(null);
-    if (result.ok) refresh();
-    else setError(result.error);
+  async function handleApplySuggestedPrice(mapping: ServiceMappingSummary) {
+    setApplyingPriceId(mapping.id);
+    const result = await applySuggestedPriceAction(initData, kind, mapping.id);
+    setApplyingPriceId(null);
+    if (!result.ok) setError(result.error);
   }
 
   async function handleDelete(mapping: ServiceMappingSummary) {
@@ -261,7 +266,7 @@ export function ServiceMappingManager({
           <p className="text-hint">
             {mapping.providerServiceName ?? mapping.providerServiceId}
             {mapping.providerServiceName ? ` (#${mapping.providerServiceId})` : ""}
-            {mapping.providerPriceCents != null ? ` · ${formatUsd(mapping.providerPriceCents)}` : ""}
+            {mapping.providerPriceCents != null ? ` · cost ${formatUsd(mapping.providerPriceCents)}` : ""}
             {mapping.providerEstimatedTime ? ` · ${mapping.providerEstimatedTime}` : ""}
             {mapping.providerCategory ? ` · ${mapping.providerCategory}` : ""}
           </p>
@@ -272,14 +277,14 @@ export function ServiceMappingManager({
                 type="number"
                 value={mapping.priority}
                 disabled={busyId === mapping.id}
-                onChange={(e) => handlePriorityChange(mapping, Number(e.target.value))}
+                onChange={(e) => handleUpdateMapping(mapping, { priority: Number(e.target.value) })}
                 className="w-14 rounded border border-border bg-background px-1 py-0.5 text-foreground"
               />
             </label>
             <button
               type="button"
               disabled={busyId === mapping.id}
-              onClick={() => handleToggleEnabled(mapping)}
+              onClick={() => handleUpdateMapping(mapping, { enabled: !mapping.enabled })}
               className="rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
             >
               {mapping.enabled ? "Disable" : "Enable"}
@@ -292,6 +297,60 @@ export function ServiceMappingManager({
             >
               Delete
             </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
+            <label className="flex items-center gap-1 text-hint">
+              Margin %
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="default"
+                value={mapping.marginPercent ?? ""}
+                disabled={busyId === mapping.id}
+                onChange={(e) =>
+                  handleUpdateMapping(mapping, {
+                    marginPercent: e.target.value.trim() ? Number(e.target.value) : null,
+                  })
+                }
+                className="w-16 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-hint">
+              Margin $
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="default"
+                value={mapping.marginCents != null ? mapping.marginCents / 100 : ""}
+                disabled={busyId === mapping.id}
+                onChange={(e) =>
+                  handleUpdateMapping(mapping, {
+                    marginCents: e.target.value.trim() ? Math.round(Number(e.target.value) * 100) : null,
+                  })
+                }
+                className="w-16 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+            {mapping.suggestedPriceCents != null ? (
+              <>
+                <span className="text-foreground">
+                  Suggested price: {formatUsd(mapping.suggestedPriceCents)}
+                </span>
+                <button
+                  type="button"
+                  disabled={applyingPriceId === mapping.id}
+                  onClick={() => handleApplySuggestedPrice(mapping)}
+                  className="rounded bg-accent px-2 py-1 text-accent-foreground disabled:opacity-50"
+                >
+                  {applyingPriceId === mapping.id ? "Applying…" : "Apply to service price"}
+                </button>
+              </>
+            ) : (
+              <span className="text-hint">No provider price cached yet — sync to get a suggestion.</span>
+            )}
           </div>
         </div>
       ))}
@@ -365,6 +424,30 @@ export function ServiceMappingManager({
                 value={addPriority}
                 onChange={(e) => setAddPriority(Number(e.target.value))}
                 className="w-14 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-hint">
+              Margin %
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="default"
+                value={addMarginPercent}
+                onChange={(e) => setAddMarginPercent(e.target.value)}
+                className="w-16 rounded border border-border bg-background px-1 py-0.5 text-foreground"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-hint">
+              Margin $
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="default"
+                value={addMarginCents}
+                onChange={(e) => setAddMarginCents(e.target.value)}
+                className="w-16 rounded border border-border bg-background px-1 py-0.5 text-foreground"
               />
             </label>
 
