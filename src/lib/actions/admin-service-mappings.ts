@@ -5,7 +5,10 @@ import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { getProviderConnector } from "@/lib/providers/registry";
+import { buildRoutingPlan, type RoutingPlan } from "@/lib/providers/routing-engine";
+export type { RoutingPlan, RoutingCandidate } from "@/lib/providers/routing-engine";
 import type { ConnectorService } from "@/lib/providers/types";
+import { RoutingStrategy } from "@/generated/prisma/client";
 
 export type MappingKind = "IMEI" | "SERVER";
 
@@ -15,12 +18,13 @@ export type ServiceMappingSummary = {
   providerName: string;
   providerServiceId: string;
   providerServiceName: string | null;
+  providerPriceCents: number | null;
   priority: number;
   enabled: boolean;
 };
 
 export type ListServiceMappingsResult =
-  | { ok: true; mappings: ServiceMappingSummary[] }
+  | { ok: true; mappings: ServiceMappingSummary[]; routingStrategy: RoutingStrategy }
   | { ok: false; error: string };
 
 /** Service Mapping (Chapter 14): every provider service linked to one Falcon service. */
@@ -32,18 +36,25 @@ export async function listServiceMappingsAction(
   try {
     await requireStaff(initData);
 
-    const rows =
+    const [rows, falconService] =
       kind === "IMEI"
-        ? await prisma.imeiServiceMapping.findMany({
-            where: { imeiServiceId: falconServiceId },
-            include: { provider: true },
-            orderBy: { priority: "asc" },
-          })
-        : await prisma.serverServiceMapping.findMany({
-            where: { serverServiceId: falconServiceId },
-            include: { provider: true },
-            orderBy: { priority: "asc" },
-          });
+        ? await Promise.all([
+            prisma.imeiServiceMapping.findMany({
+              where: { imeiServiceId: falconServiceId },
+              include: { provider: true },
+              orderBy: { priority: "asc" },
+            }),
+            prisma.imeiService.findUnique({ where: { id: falconServiceId } }),
+          ])
+        : await Promise.all([
+            prisma.serverServiceMapping.findMany({
+              where: { serverServiceId: falconServiceId },
+              include: { provider: true },
+              orderBy: { priority: "asc" },
+            }),
+            prisma.serverService.findUnique({ where: { id: falconServiceId } }),
+          ]);
+    if (!falconService) return { ok: false, error: "Service not found" };
 
     return {
       ok: true,
@@ -53,9 +64,11 @@ export async function listServiceMappingsAction(
         providerName: row.provider.name,
         providerServiceId: row.providerServiceId,
         providerServiceName: row.providerServiceName,
+        providerPriceCents: row.providerPriceCents,
         priority: row.priority,
         enabled: row.enabled,
       })),
+      routingStrategy: falconService.routingStrategy,
     };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to load mappings";
@@ -67,6 +80,7 @@ export type CreateServiceMappingInput = {
   providerId: string;
   providerServiceId: string;
   providerServiceName: string | null;
+  providerPriceCents: number | null;
   priority: number;
 };
 
@@ -93,6 +107,7 @@ export async function createServiceMappingAction(
           providerId: input.providerId,
           providerServiceId,
           providerServiceName: input.providerServiceName,
+          providerPriceCents: input.providerPriceCents,
           priority: input.priority,
         },
       });
@@ -103,6 +118,7 @@ export async function createServiceMappingAction(
           providerId: input.providerId,
           providerServiceId,
           providerServiceName: input.providerServiceName,
+          providerPriceCents: input.providerPriceCents,
           priority: input.priority,
         },
       });
@@ -126,6 +142,7 @@ export async function createServiceMappingAction(
 export type UpdateServiceMappingInput = {
   providerServiceId: string;
   providerServiceName: string | null;
+  providerPriceCents: number | null;
   priority: number;
   enabled: boolean;
 };
@@ -148,6 +165,7 @@ export async function updateServiceMappingAction(
     const data = {
       providerServiceId,
       providerServiceName: input.providerServiceName,
+      providerPriceCents: input.providerPriceCents,
       priority: input.priority,
       enabled: input.enabled,
     };
@@ -269,12 +287,13 @@ export async function autoMapServiceAction(
                 providerServiceId: match.providerServiceId,
               },
             },
-            update: { providerServiceName: match.name },
+            update: { providerServiceName: match.name, providerPriceCents: match.priceCents },
             create: {
               imeiServiceId: falconServiceId,
               providerId: provider.id,
               providerServiceId: match.providerServiceId,
               providerServiceName: match.name,
+              providerPriceCents: match.priceCents,
             },
           });
         } else {
@@ -286,12 +305,13 @@ export async function autoMapServiceAction(
                 providerServiceId: match.providerServiceId,
               },
             },
-            update: { providerServiceName: match.name },
+            update: { providerServiceName: match.name, providerPriceCents: match.priceCents },
             create: {
               serverServiceId: falconServiceId,
               providerId: provider.id,
               providerServiceId: match.providerServiceId,
               providerServiceName: match.name,
+              providerPriceCents: match.priceCents,
             },
           });
         }
@@ -312,6 +332,70 @@ export async function autoMapServiceAction(
     return { ok: true, created, skipped };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to auto-map";
+    return { ok: false, error: message };
+  }
+}
+
+export type SetRoutingStrategyResult = { ok: true } | { ok: false; error: string };
+
+/** Smart Routing (Chapter 15): how this service picks a provider among its mappings. */
+export async function setServiceRoutingStrategyAction(
+  initData: string,
+  kind: MappingKind,
+  falconServiceId: string,
+  strategy: RoutingStrategy,
+): Promise<SetRoutingStrategyResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    if (kind === "IMEI") {
+      await prisma.imeiService.update({ where: { id: falconServiceId }, data: { routingStrategy: strategy } });
+    } else {
+      await prisma.serverService.update({ where: { id: falconServiceId }, data: { routingStrategy: strategy } });
+    }
+
+    await logAdminAction(admin.id, "service-mapping.set-routing-strategy", `${kind} ${falconServiceId} -> ${strategy}`);
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to update routing strategy";
+    return { ok: false, error: message };
+  }
+}
+
+export type RoutingPreviewResult = { ok: true; plan: RoutingPlan } | { ok: false; error: string };
+
+/**
+ * Computes the routing order that would currently be used for this service:
+ * which provider is tried first per its configured strategy, and the
+ * automatic fallback sequence behind it (or none, under MANUAL).
+ */
+export async function getRoutingPreviewAction(
+  initData: string,
+  kind: MappingKind,
+  falconServiceId: string,
+): Promise<RoutingPreviewResult> {
+  try {
+    await requireStaff(initData);
+
+    if (kind === "IMEI") {
+      const service = await prisma.imeiService.findUnique({
+        where: { id: falconServiceId },
+        include: { mappings: { where: { enabled: true }, include: { provider: true } } },
+      });
+      if (!service) return { ok: false, error: "Service not found" };
+      const plan = await buildRoutingPlan(service.routingStrategy, service.mappings);
+      return { ok: true, plan };
+    }
+
+    const service = await prisma.serverService.findUnique({
+      where: { id: falconServiceId },
+      include: { mappings: { where: { enabled: true }, include: { provider: true } } },
+    });
+    if (!service) return { ok: false, error: "Service not found" };
+    const plan = await buildRoutingPlan(service.routingStrategy, service.mappings);
+    return { ok: true, plan };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to compute routing preview";
     return { ok: false, error: message };
   }
 }

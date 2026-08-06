@@ -8,12 +8,32 @@ import {
   deleteServiceMappingAction,
   fetchProviderServicesAction,
   autoMapServiceAction,
+  setServiceRoutingStrategyAction,
+  getRoutingPreviewAction,
   type MappingKind,
   type ServiceMappingSummary,
   type ProviderServiceOption,
+  type RoutingPlan,
 } from "@/lib/actions/admin-service-mappings";
 import { listProvidersAction, type ProviderSummary } from "@/lib/actions/admin-providers";
+import { RoutingStrategy } from "@/generated/prisma/browser";
 import { formatUsd } from "@/lib/ui";
+
+const STRATEGY_LABEL: Record<RoutingStrategy, string> = {
+  CHEAPEST: "Cheapest provider",
+  FASTEST: "Fastest provider",
+  HIGHEST_SUCCESS_RATE: "Highest success rate",
+  PREFERRED: "Preferred provider (priority order)",
+  MANUAL: "Manual selection (no auto-fallback)",
+};
+
+const STRATEGY_OPTIONS: RoutingStrategy[] = [
+  RoutingStrategy.CHEAPEST,
+  RoutingStrategy.FASTEST,
+  RoutingStrategy.HIGHEST_SUCCESS_RATE,
+  RoutingStrategy.PREFERRED,
+  RoutingStrategy.MANUAL,
+];
 
 export function ServiceMappingManager({
   initData,
@@ -27,6 +47,8 @@ export function ServiceMappingManager({
   falconServiceName: string;
 }) {
   const [mappings, setMappings] = useState<ServiceMappingSummary[] | null>(null);
+  const [routingStrategy, setRoutingStrategy] = useState<RoutingStrategy | null>(null);
+  const [savingStrategy, setSavingStrategy] = useState(false);
   const [providers, setProviders] = useState<ProviderSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -44,10 +66,18 @@ export function ServiceMappingManager({
   const [autoMapping, setAutoMapping] = useState(false);
   const [autoMapSummary, setAutoMapSummary] = useState<string | null>(null);
 
+  const [routingPlan, setRoutingPlan] = useState<RoutingPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
   function refresh() {
     listServiceMappingsAction(initData, kind, falconServiceId).then((result) => {
-      if (result.ok) setMappings(result.mappings);
-      else setError(result.error);
+      if (result.ok) {
+        setMappings(result.mappings);
+        setRoutingStrategy(result.routingStrategy);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -58,6 +88,27 @@ export function ServiceMappingManager({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initData, kind, falconServiceId]);
+
+  async function handleStrategyChange(strategy: RoutingStrategy) {
+    setSavingStrategy(true);
+    const result = await setServiceRoutingStrategyAction(initData, kind, falconServiceId, strategy);
+    setSavingStrategy(false);
+    if (result.ok) {
+      setRoutingStrategy(strategy);
+      setRoutingPlan(null);
+    } else {
+      setError(result.error);
+    }
+  }
+
+  async function handlePreviewRouting() {
+    setLoadingPlan(true);
+    setPlanError(null);
+    const result = await getRoutingPreviewAction(initData, kind, falconServiceId);
+    setLoadingPlan(false);
+    if (result.ok) setRoutingPlan(result.plan);
+    else setPlanError(result.error);
+  }
 
   async function handleBrowseCatalog() {
     if (!selectedProviderId) return;
@@ -81,6 +132,7 @@ export function ServiceMappingManager({
       providerId: selectedProviderId,
       providerServiceId,
       providerServiceName: matched?.name ?? null,
+      providerPriceCents: matched?.priceCents ?? null,
       priority: addPriority,
     });
     setAdding(false);
@@ -99,6 +151,7 @@ export function ServiceMappingManager({
     const result = await updateServiceMappingAction(initData, kind, mapping.id, {
       providerServiceId: mapping.providerServiceId,
       providerServiceName: mapping.providerServiceName,
+      providerPriceCents: mapping.providerPriceCents,
       priority: mapping.priority,
       enabled: !mapping.enabled,
     });
@@ -112,6 +165,7 @@ export function ServiceMappingManager({
     const result = await updateServiceMappingAction(initData, kind, mapping.id, {
       providerServiceId: mapping.providerServiceId,
       providerServiceName: mapping.providerServiceName,
+      providerPriceCents: mapping.providerPriceCents,
       priority,
       enabled: mapping.enabled,
     });
@@ -159,8 +213,32 @@ export function ServiceMappingManager({
       <p className="font-semibold text-foreground">Provider Mappings — {falconServiceName}</p>
       {error ? <p className="text-accent">{error}</p> : null}
       {!mappings && !error ? <p className="text-hint">Loading…</p> : null}
+
+      {routingStrategy ? (
+        <label className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-2">
+          <span className="font-semibold text-foreground">Routing Strategy</span>
+          <select
+            value={routingStrategy}
+            disabled={savingStrategy}
+            onChange={(e) => handleStrategyChange(e.target.value as RoutingStrategy)}
+            className="rounded border border-border bg-background px-2 py-1 text-foreground disabled:opacity-50"
+          >
+            {STRATEGY_OPTIONS.map((strategy) => (
+              <option key={strategy} value={strategy}>
+                {STRATEGY_LABEL[strategy]}
+              </option>
+            ))}
+          </select>
+          <span className="text-hint">
+            {routingStrategy === "MANUAL"
+              ? "Only the top-priority provider is used — failures are not retried automatically."
+              : "If the first provider fails, the next one is retried automatically."}
+          </span>
+        </label>
+      ) : null}
+
       {mappings && mappings.length === 0 ? (
-        <p className="text-hint">No provider mapped yet. This service cannot be auto-routed (Chapter 15) until mapped.</p>
+        <p className="text-hint">No provider mapped yet. This service cannot be auto-routed until mapped.</p>
       ) : null}
 
       {mappings?.map((mapping) => (
@@ -177,6 +255,7 @@ export function ServiceMappingManager({
           <p className="text-hint">
             {mapping.providerServiceName ?? mapping.providerServiceId}
             {mapping.providerServiceName ? ` (#${mapping.providerServiceId})` : ""}
+            {mapping.providerPriceCents != null ? ` · ${formatUsd(mapping.providerPriceCents)}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1 text-hint">
@@ -319,6 +398,54 @@ export function ServiceMappingManager({
           {autoMapping ? "Auto-mapping…" : "Auto-Map Selected Providers"}
         </button>
         {autoMapSummary ? <p className="text-hint">{autoMapSummary}</p> : null}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-2">
+        <p className="font-semibold text-foreground">Routing Preview</p>
+        <p className="text-hint">
+          Shows the order providers would be tried in right now, given the current strategy and mappings.
+        </p>
+        <button
+          type="button"
+          disabled={loadingPlan}
+          onClick={handlePreviewRouting}
+          className="self-start rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
+        >
+          {loadingPlan ? "Computing…" : "Preview Routing Order"}
+        </button>
+        {planError ? <p className="text-accent">{planError}</p> : null}
+        {routingPlan ? (
+          routingPlan.order.length === 0 ? (
+            <p className="text-hint">No enabled provider available to route to.</p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <p className="text-hint">
+                {routingPlan.fallbackEnabled
+                  ? "Automatic fallback: tries each provider below in order until one succeeds."
+                  : "Manual mode: only the first provider is used, no automatic fallback."}
+              </p>
+              <ol className="flex flex-col gap-1">
+                {routingPlan.order.map((candidate, index) => (
+                  <li
+                    key={candidate.mappingId}
+                    className="flex items-center justify-between rounded border border-border bg-surface px-2 py-1"
+                  >
+                    <span className="text-foreground">
+                      {index + 1}. {candidate.providerName}
+                    </span>
+                    <span className="text-hint">
+                      {candidate.priceCents != null ? formatUsd(candidate.priceCents) : "price n/a"} ·{" "}
+                      {candidate.successRate != null
+                        ? `${Math.round(candidate.successRate * 100)}% success`
+                        : "no history"}{" "}
+                      · {candidate.avgResponseMs != null ? `${candidate.avgResponseMs}ms` : "no timing"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )
+        ) : null}
       </div>
     </div>
   );

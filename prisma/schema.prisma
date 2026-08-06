@@ -133,6 +133,10 @@ model ImeiService {
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
+  /// Smart Routing (Chapter 15): how to pick among this service's enabled
+  /// provider mappings. See RoutingStrategy for the meaning of each value.
+  routingStrategy RoutingStrategy @default(PREFERRED)
+
   fields   ImeiServiceField[]
   orders   ImeiOrder[]
   mappings ImeiServiceMapping[]
@@ -226,6 +230,10 @@ model ServerService {
 
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+
+  /// Smart Routing (Chapter 15): how to pick among this service's enabled
+  /// provider mappings. See RoutingStrategy for the meaning of each value.
+  routingStrategy RoutingStrategy @default(PREFERRED)
 
   fields   ServerServiceField[]
   orders   ServerOrder[]
@@ -469,6 +477,21 @@ enum ProviderType {
   CUSTOM_API
 }
 
+/// Smart Routing Engine (Chapter 15) strategies for picking a provider among
+/// a service's enabled mappings.
+/// - CHEAPEST: lowest cached providerPriceCents first.
+/// - FASTEST: lowest average response time, from recent ProviderConnectionLog.
+/// - HIGHEST_SUCCESS_RATE: highest success rate, from recent ProviderConnectionLog.
+/// - PREFERRED: mapping.priority order (the admin's explicit ranking).
+/// - MANUAL: only the top-priority mapping is used; no automatic fallback.
+enum RoutingStrategy {
+  CHEAPEST
+  FASTEST
+  HIGHEST_SUCCESS_RATE
+  PREFERRED
+  MANUAL
+}
+
 /// Provider Gateway (Chapter 12): a single external unlocking/GSM API, isolated
 /// behind the connector interface built in Chapter 13. The core app never
 /// contains provider-specific logic — only this generic record + connector.
@@ -522,6 +545,9 @@ model ImeiServiceMapping {
   providerServiceId   String
   /// Cached label from the provider's service list, refreshed on sync (Chapter 16).
   providerServiceName String?
+  /// Cached price from the provider's service list, in USD cents. Powers the
+  /// CHEAPEST routing strategy (Chapter 15); refreshed on sync (Chapter 16).
+  providerPriceCents  Int?
   priority            Int      @default(0)
   enabled             Boolean  @default(true)
   createdAt           DateTime @default(now())
@@ -540,6 +566,9 @@ model ServerServiceMapping {
   id                  String   @id @default(cuid())
   providerServiceId   String
   providerServiceName String?
+  /// Cached price from the provider's service list, in USD cents. Powers the
+  /// CHEAPEST routing strategy (Chapter 15); refreshed on sync (Chapter 16).
+  providerPriceCents  Int?
   priority            Int      @default(0)
   enabled             Boolean  @default(true)
   createdAt           DateTime @default(now())
