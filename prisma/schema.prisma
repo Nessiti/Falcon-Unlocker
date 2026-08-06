@@ -656,11 +656,11 @@ enum QueueStatus {
 
 /// Queue & Retry System (Chapter 18): Order -> Queue -> Provider -> Response.
 /// Created once per order at order-creation time (only when the ordered
-/// service has at least one enabled provider mapping), then walked by
-/// /api/cron/process-queue or a manual "Process Queue Now", trying each
-/// candidate from the Chapter 15 routing plan in order and retrying
-/// automatically on failure until maxRetries or the candidate list (per
-/// triedProviderIds) is exhausted.
+/// service has at least one enabled provider mapping), then walked by the
+/// process-queue cron task (via the unified /api/cron endpoint) or a manual
+/// "Process Queue Now", trying each candidate from the Chapter 15 routing
+/// plan in order and retrying automatically on failure until maxRetries or
+/// the candidate list (per triedProviderIds) is exhausted.
 model OrderQueueEntry {
   id      String @id @default(cuid())
   /// "IMEI" | "SERVER" — matches the OrderKind/MappingKind convention used

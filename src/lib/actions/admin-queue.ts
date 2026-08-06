@@ -208,7 +208,7 @@ export type ProcessQueueNowResult =
   | { ok: true; summary: ProcessQueueSummary }
   | { ok: false; error: string };
 
-/** Manual trigger for the same processing pass /api/cron/process-queue runs on a schedule. */
+/** Manual trigger for the same processing pass the process-queue cron task runs via /api/cron. */
 export async function processQueueNowAction(initData: string): Promise<ProcessQueueNowResult> {
   try {
     const admin = await requireAdmin(initData);

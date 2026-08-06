@@ -23,6 +23,27 @@ function truncateForLog(value: string | null): string | null {
     : value;
 }
 
+// Some provider APIs (PhpQueryConnector, DhruFusionConnector) put the API
+// key/token directly in the query string rather than a header. Redact any
+// query param whose name looks credential-shaped before it ever reaches
+// ApiLog — "No exposed API credentials" (Chapter 21) applies to the API
+// Logs viewer too, not just the frontend forms.
+const SENSITIVE_QUERY_PARAM_PATTERN = /key|secret|token|password|auth/i;
+
+function sanitizeUrlForLog(url: string): string {
+  try {
+    const parsed = new URL(url);
+    for (const name of parsed.searchParams.keys()) {
+      if (SENSITIVE_QUERY_PARAM_PATTERN.test(name)) {
+        parsed.searchParams.set(name, "••••");
+      }
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Shared HTTP plumbing (timeout handling, generic reachability test) that
  * every concrete connector builds on. Per-type request/response shape stays
@@ -187,7 +208,7 @@ export abstract class BaseConnector implements ProviderConnector {
         data: {
           providerId: this.provider.id,
           operation: entry.operation,
-          endpoint: entry.url,
+          endpoint: sanitizeUrlForLog(entry.url),
           method: entry.method,
           requestBody: truncateForLog(entry.requestBody),
           responseBody: truncateForLog(entry.responseBody),

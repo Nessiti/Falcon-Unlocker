@@ -10,6 +10,7 @@ import { TransactionRow } from "@/components/wallet/transaction-row";
 import { AdminRechargeQueue } from "@/components/wallet/admin-recharge-queue";
 import { RechargeMethodForm } from "@/components/wallet/recharge-method-form";
 import { RechargeMethodManager } from "@/components/wallet/recharge-method-manager";
+import { RowListSkeleton } from "@/components/ui/row-skeleton";
 import { Role } from "@/generated/prisma/browser";
 import { formatUsd } from "@/lib/ui";
 
@@ -55,7 +56,7 @@ export default function WalletPage() {
       </div>
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}
-      {!data && !error ? <p className="text-sm text-hint">Loading…</p> : null}
+      {!data && !error ? <RowListSkeleton count={3} className="flex flex-col gap-3" /> : null}
 
       {isAdmin ? (
         <div className="flex flex-col gap-3">

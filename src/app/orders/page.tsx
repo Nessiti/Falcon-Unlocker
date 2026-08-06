@@ -5,6 +5,7 @@ import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { listMyOrdersAction, type OrderSummary } from "@/lib/actions/orders";
 import { OrderRow } from "@/components/orders/order-row";
+import { RowListSkeleton } from "@/components/ui/row-skeleton";
 import { formInputClass } from "@/lib/ui";
 
 type Tab = "IMEI" | "SERVER";
@@ -113,7 +114,9 @@ export default function OrdersPage() {
       </div>
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}
-      {!orders && !error ? <p className="text-sm text-hint">Loading…</p> : null}
+      {!orders && !error ? (
+        <RowListSkeleton className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3" />
+      ) : null}
       {orders && filtered.length === 0 ? (
         <p className="text-sm text-hint">No orders found.</p>
       ) : null}
