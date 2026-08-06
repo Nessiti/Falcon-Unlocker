@@ -35,8 +35,8 @@ enum OrderStatus {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  telegramId  BigInt   @unique
+  id          String     @id @default(cuid())
+  telegramId  BigInt     @unique
   username    String?
   firstName   String
   lastName    String?
@@ -63,7 +63,7 @@ model User {
   supportTickets  SupportTicket[]
   supportMessages SupportMessage[]
 
-  auditLogs              AuditLog[]
+  auditLogs               AuditLog[]
   imeiOrderStatusEvents   ImeiOrderStatusEvent[]
   serverOrderStatusEvents ServerOrderStatusEvent[]
   sentNotifications       Notification[]
@@ -77,7 +77,7 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   actorId String
-  actor   User @relation(fields: [actorId], references: [id])
+  actor   User   @relation(fields: [actorId], references: [id])
 }
 
 enum ServiceStatus {
@@ -172,7 +172,7 @@ model ImeiOrder {
   createdAt   DateTime    @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id])
@@ -192,7 +192,7 @@ model ImeiOrderStatusEvent {
   order   ImeiOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   adminId String
-  admin   User @relation(fields: [adminId], references: [id])
+  admin   User   @relation(fields: [adminId], references: [id])
 }
 
 enum ServerServiceType {
@@ -253,7 +253,7 @@ model ServerOrder {
   createdAt   DateTime    @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id])
@@ -273,7 +273,7 @@ model ServerOrderStatusEvent {
   order   ServerOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   adminId String
-  admin   User @relation(fields: [adminId], references: [id])
+  admin   User   @relation(fields: [adminId], references: [id])
 }
 
 model ServerServiceField {
@@ -331,7 +331,7 @@ model RechargeOrder {
   reviewedAt  DateTime?
 
   userId String
-  user   User @relation("RechargeOrderSubmitter", fields: [userId], references: [id])
+  user   User   @relation("RechargeOrderSubmitter", fields: [userId], references: [id])
 
   methodId String
   method   RechargeMethod @relation(fields: [methodId], references: [id])
@@ -356,7 +356,7 @@ model WalletTransaction {
   createdAt   DateTime              @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   rechargeOrderId String?
   rechargeOrder   RechargeOrder? @relation(fields: [rechargeOrderId], references: [id])
@@ -382,7 +382,7 @@ model SupportTicket {
   createdAt DateTime     @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   messages SupportMessage[]
 }
@@ -396,7 +396,7 @@ model SupportMessage {
   ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   authorId String
-  author   User @relation(fields: [authorId], references: [id])
+  author   User   @relation(fields: [authorId], references: [id])
 }
 
 /// Admin-editable FAQ entries (Chapter 10).
@@ -492,6 +492,15 @@ enum RoutingStrategy {
   MANUAL
 }
 
+/// Automatic Synchronization (Chapter 16): how often a provider's catalog,
+/// prices, and balance are refreshed without an admin manually clicking Sync.
+enum SyncFrequency {
+  MANUAL
+  HOURLY
+  EVERY_6_HOURS
+  DAILY
+}
+
 /// Provider Gateway (Chapter 12): a single external unlocking/GSM API, isolated
 /// behind the connector interface built in Chapter 13. The core app never
 /// contains provider-specific logic — only this generic record + connector.
@@ -512,7 +521,9 @@ model Provider {
   priority  Int     @default(0)
   enabled   Boolean @default(true)
 
-  autoSyncEnabled  Boolean  @default(false)
+  /// Automatic Synchronization (Chapter 16): MANUAL means only "Sync Now" runs it.
+  syncFrequency    SyncFrequency @default(MANUAL)
+  lastSyncAt       DateTime?
   lastBalanceCents Int?
   lastBalanceAt    DateTime?
 
@@ -541,16 +552,20 @@ model ProviderConnectionLog {
 /// provider services. Multiple providers per Falcon service, priority-ordered
 /// (Chapter 15's routing engine picks among enabled mappings by priority).
 model ImeiServiceMapping {
-  id                  String   @id @default(cuid())
-  providerServiceId   String
+  id                    String   @id @default(cuid())
+  providerServiceId     String
   /// Cached label from the provider's service list, refreshed on sync (Chapter 16).
-  providerServiceName String?
+  providerServiceName   String?
   /// Cached price from the provider's service list, in USD cents. Powers the
   /// CHEAPEST routing strategy (Chapter 15); refreshed on sync (Chapter 16).
-  providerPriceCents  Int?
-  priority            Int      @default(0)
-  enabled             Boolean  @default(true)
-  createdAt           DateTime @default(now())
+  providerPriceCents    Int?
+  /// Cached estimated turnaround and category label from the provider's
+  /// service list, refreshed on sync (Chapter 16).
+  providerEstimatedTime String?
+  providerCategory      String?
+  priority              Int      @default(0)
+  enabled               Boolean  @default(true)
+  createdAt             DateTime @default(now())
 
   imeiServiceId String
   imeiService   ImeiService @relation(fields: [imeiServiceId], references: [id], onDelete: Cascade)
@@ -563,15 +578,19 @@ model ImeiServiceMapping {
 
 /// Service Mapping (Chapter 14): the Server-service equivalent of ImeiServiceMapping.
 model ServerServiceMapping {
-  id                  String   @id @default(cuid())
-  providerServiceId   String
-  providerServiceName String?
+  id                    String   @id @default(cuid())
+  providerServiceId     String
+  providerServiceName   String?
   /// Cached price from the provider's service list, in USD cents. Powers the
   /// CHEAPEST routing strategy (Chapter 15); refreshed on sync (Chapter 16).
-  providerPriceCents  Int?
-  priority            Int      @default(0)
-  enabled             Boolean  @default(true)
-  createdAt           DateTime @default(now())
+  providerPriceCents    Int?
+  /// Cached estimated turnaround and category label from the provider's
+  /// service list, refreshed on sync (Chapter 16).
+  providerEstimatedTime String?
+  providerCategory      String?
+  priority              Int      @default(0)
+  enabled               Boolean  @default(true)
+  createdAt             DateTime @default(now())
 
   serverServiceId String
   serverService   ServerService @relation(fields: [serverServiceId], references: [id], onDelete: Cascade)

@@ -7,7 +7,7 @@ import {
   updateProviderAction,
   type ProviderDetail,
 } from "@/lib/actions/admin-providers";
-import { ProviderType } from "@/generated/prisma/browser";
+import { ProviderType, SyncFrequency } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
 const TYPE_OPTIONS: { value: ProviderType; label: string }[] = [
@@ -17,6 +17,13 @@ const TYPE_OPTIONS: { value: ProviderType; label: string }[] = [
   { value: ProviderType.JSON_API, label: "JSON API" },
   { value: ProviderType.XML_API, label: "XML API" },
   { value: ProviderType.CUSTOM_API, label: "Custom API" },
+];
+
+const SYNC_FREQUENCY_OPTIONS: { value: SyncFrequency; label: string }[] = [
+  { value: SyncFrequency.MANUAL, label: "Manual Sync" },
+  { value: SyncFrequency.HOURLY, label: "Every hour" },
+  { value: SyncFrequency.EVERY_6_HOURS, label: "Every 6 hours" },
+  { value: SyncFrequency.DAILY, label: "Daily" },
 ];
 
 export function ProviderForm({
@@ -40,7 +47,9 @@ export function ProviderForm({
   const [token, setToken] = useState("");
   const [timeoutMs, setTimeoutMs] = useState(String(editingProvider?.timeoutMs ?? 30000));
   const [priority, setPriority] = useState(String(editingProvider?.priority ?? 0));
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(editingProvider?.autoSyncEnabled ?? false);
+  const [syncFrequency, setSyncFrequency] = useState<SyncFrequency>(
+    editingProvider?.syncFrequency ?? SyncFrequency.MANUAL,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +73,7 @@ export function ProviderForm({
       token: token || undefined,
       timeoutMs: timeoutValue,
       priority: Number(priority) || 0,
-      autoSyncEnabled,
+      syncFrequency,
     };
 
     setSubmitting(true);
@@ -91,7 +100,7 @@ export function ProviderForm({
       setToken("");
       setTimeoutMs("30000");
       setPriority("0");
-      setAutoSyncEnabled(false);
+      setSyncFrequency(SyncFrequency.MANUAL);
     }
   }
 
@@ -188,13 +197,19 @@ export function ProviderForm({
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          checked={autoSyncEnabled}
-          onChange={(e) => setAutoSyncEnabled(e.target.checked)}
-        />
-        Auto Sync
+      <label className="flex flex-col gap-1 text-sm text-foreground">
+        Sync Frequency
+        <select
+          className={formInputClass}
+          value={syncFrequency}
+          onChange={(e) => setSyncFrequency(e.target.value as SyncFrequency)}
+        >
+          {SYNC_FREQUENCY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}

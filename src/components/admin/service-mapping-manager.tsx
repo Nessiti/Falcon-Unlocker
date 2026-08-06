@@ -133,6 +133,8 @@ export function ServiceMappingManager({
       providerServiceId,
       providerServiceName: matched?.name ?? null,
       providerPriceCents: matched?.priceCents ?? null,
+      providerEstimatedTime: matched?.estimatedTime ?? null,
+      providerCategory: matched?.category ?? null,
       priority: addPriority,
     });
     setAdding(false);
@@ -152,6 +154,8 @@ export function ServiceMappingManager({
       providerServiceId: mapping.providerServiceId,
       providerServiceName: mapping.providerServiceName,
       providerPriceCents: mapping.providerPriceCents,
+      providerEstimatedTime: mapping.providerEstimatedTime,
+      providerCategory: mapping.providerCategory,
       priority: mapping.priority,
       enabled: !mapping.enabled,
     });
@@ -166,6 +170,8 @@ export function ServiceMappingManager({
       providerServiceId: mapping.providerServiceId,
       providerServiceName: mapping.providerServiceName,
       providerPriceCents: mapping.providerPriceCents,
+      providerEstimatedTime: mapping.providerEstimatedTime,
+      providerCategory: mapping.providerCategory,
       priority,
       enabled: mapping.enabled,
     });
@@ -256,6 +262,8 @@ export function ServiceMappingManager({
             {mapping.providerServiceName ?? mapping.providerServiceId}
             {mapping.providerServiceName ? ` (#${mapping.providerServiceId})` : ""}
             {mapping.providerPriceCents != null ? ` · ${formatUsd(mapping.providerPriceCents)}` : ""}
+            {mapping.providerEstimatedTime ? ` · ${mapping.providerEstimatedTime}` : ""}
+            {mapping.providerCategory ? ` · ${mapping.providerCategory}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-1 text-hint">

@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
-import { ProviderType } from "@/generated/prisma/client";
+import { ProviderType, SyncFrequency } from "@/generated/prisma/client";
 import { getProviderConnector } from "@/lib/providers/registry";
+import { syncProvider } from "@/lib/providers/sync-engine";
 
 function maskSecret(value: string | null): string | null {
   if (!value) return null;
@@ -20,7 +21,8 @@ export type ProviderSummary = {
   baseUrl: string;
   priority: number;
   enabled: boolean;
-  autoSyncEnabled: boolean;
+  syncFrequency: SyncFrequency;
+  lastSyncAt: string | null;
   lastBalanceCents: number | null;
   lastBalanceAt: string | null;
   lastConnection: { success: boolean; createdAt: string } | null;
@@ -49,7 +51,8 @@ export async function listProvidersAction(initData: string): Promise<ListProvide
         baseUrl: provider.baseUrl,
         priority: provider.priority,
         enabled: provider.enabled,
-        autoSyncEnabled: provider.autoSyncEnabled,
+        syncFrequency: provider.syncFrequency,
+        lastSyncAt: provider.lastSyncAt?.toISOString() ?? null,
         lastBalanceCents: provider.lastBalanceCents,
         lastBalanceAt: provider.lastBalanceAt?.toISOString() ?? null,
         lastConnection: provider.connectionLogs[0]
@@ -78,7 +81,7 @@ export type ProviderDetail = {
   timeoutMs: number;
   priority: number;
   enabled: boolean;
-  autoSyncEnabled: boolean;
+  syncFrequency: SyncFrequency;
 };
 
 export type GetProviderDetailResult =
@@ -110,7 +113,7 @@ export async function getProviderDetailAction(
         timeoutMs: provider.timeoutMs,
         priority: provider.priority,
         enabled: provider.enabled,
-        autoSyncEnabled: provider.autoSyncEnabled,
+        syncFrequency: provider.syncFrequency,
       },
     };
   } catch (error) {
@@ -130,7 +133,7 @@ export type ProviderInput = {
   token?: string | null;
   timeoutMs: number;
   priority: number;
-  autoSyncEnabled: boolean;
+  syncFrequency: SyncFrequency;
 };
 
 export type CreateProviderResult = { ok: true } | { ok: false; error: string };
@@ -162,7 +165,7 @@ export async function createProviderAction(
         token: input.token?.trim() || null,
         timeoutMs: input.timeoutMs,
         priority: input.priority,
-        autoSyncEnabled: input.autoSyncEnabled,
+        syncFrequency: input.syncFrequency,
       },
     });
 
@@ -205,7 +208,7 @@ export async function updateProviderAction(
         ...(input.token?.trim() ? { token: input.token.trim() } : {}),
         timeoutMs: input.timeoutMs,
         priority: input.priority,
-        autoSyncEnabled: input.autoSyncEnabled,
+        syncFrequency: input.syncFrequency,
       },
     });
 
@@ -358,6 +361,47 @@ export async function refreshProviderBalanceAction(
     return { ok: true, balanceCents: result.balanceCents };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to refresh balance";
+    return { ok: false, error: message };
+  }
+}
+
+export type SyncProviderResult =
+  | {
+      ok: true;
+      connectionOk: boolean;
+      balanceUpdated: boolean;
+      imeiMappingsUpdated: number;
+      serverMappingsUpdated: number;
+      catalogError: string | null;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Automatic Synchronization (Chapter 16), triggered manually via "Sync Now".
+ * Refreshes connection status, balance, and cached mapping data (name,
+ * price, category, estimated time) — never the admin's own service records.
+ * The same logic runs on a schedule via /api/cron/sync-providers.
+ */
+export async function syncProviderAction(
+  initData: string,
+  providerId: string,
+): Promise<SyncProviderResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    if (!provider) return { ok: false, error: "Provider not found" };
+
+    const result = await syncProvider(provider);
+    await logAdminAction(
+      admin.id,
+      "provider.sync",
+      `${provider.name} -> ${result.connectionOk ? "online" : "offline"}, ${result.imeiMappingsUpdated + result.serverMappingsUpdated} mappings refreshed`,
+    );
+
+    return { ok: true, ...result };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to sync provider";
     return { ok: false, error: message };
   }
 }

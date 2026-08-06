@@ -9,6 +9,7 @@ import {
   deleteProviderAction,
   testProviderConnectionAction,
   refreshProviderBalanceAction,
+  syncProviderAction,
   type ProviderSummary,
   type ProviderDetail,
 } from "@/lib/actions/admin-providers";
@@ -25,6 +26,13 @@ const TYPE_LABEL: Record<string, string> = {
   CUSTOM_API: "Custom API",
 };
 
+const SYNC_FREQUENCY_LABEL: Record<string, string> = {
+  MANUAL: "Manual Sync",
+  HOURLY: "Every hour",
+  EVERY_6_HOURS: "Every 6 hours",
+  DAILY: "Daily",
+};
+
 export function ProviderManager({ initData }: { initData: string }) {
   const router = useRouter();
   const [providers, setProviders] = useState<ProviderSummary[] | null>(null);
@@ -34,6 +42,7 @@ export function ProviderManager({ initData }: { initData: string }) {
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, string>>({});
   const [balanceResult, setBalanceResult] = useState<Record<string, string>>({});
+  const [syncResult, setSyncResult] = useState<Record<string, string>>({});
 
   function refresh() {
     listProvidersAction(initData).then((result) => {
@@ -109,6 +118,23 @@ export function ProviderManager({ initData }: { initData: string }) {
     refresh();
   }
 
+  async function handleSyncNow(id: string) {
+    setBusyId(id);
+    setSyncResult((current) => ({ ...current, [id]: "Syncing…" }));
+    const result = await syncProviderAction(initData, id);
+    setBusyId(null);
+    if (!result.ok) {
+      setSyncResult((current) => ({ ...current, [id]: `✗ ${result.error}` }));
+      return;
+    }
+    const mappingsUpdated = result.imeiMappingsUpdated + result.serverMappingsUpdated;
+    setSyncResult((current) => ({
+      ...current,
+      [id]: `${result.connectionOk ? "✓ Online" : "✗ Offline"} · ${mappingsUpdated} mapping${mappingsUpdated === 1 ? "" : "s"} refreshed${result.balanceUpdated ? " · balance updated" : ""}${result.catalogError ? ` · catalog error: ${result.catalogError}` : ""}`,
+    }));
+    refresh();
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-foreground">Manage Providers (Admin)</h2>
@@ -139,8 +165,8 @@ export function ProviderManager({ initData }: { initData: string }) {
               <div>
                 <p className="text-foreground">{provider.name}</p>
                 <p className="text-xs text-hint">
-                  {TYPE_LABEL[provider.type]} · Priority {provider.priority}
-                  {provider.autoSyncEnabled ? " · Auto Sync ON" : ""}
+                  {TYPE_LABEL[provider.type]} · Priority {provider.priority} ·{" "}
+                  {SYNC_FREQUENCY_LABEL[provider.syncFrequency]}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -173,12 +199,19 @@ export function ProviderManager({ initData }: { initData: string }) {
                   }`
                 : "Not fetched yet"}
             </p>
+            <p className="text-xs text-hint">
+              Last sync:{" "}
+              {provider.lastSyncAt ? new Date(provider.lastSyncAt).toLocaleString() : "Never"}
+            </p>
 
             {testResult[provider.id] ? (
               <p className="text-xs text-hint">{testResult[provider.id]}</p>
             ) : null}
             {balanceResult[provider.id] ? (
               <p className="text-xs text-hint">{balanceResult[provider.id]}</p>
+            ) : null}
+            {syncResult[provider.id] ? (
+              <p className="text-xs text-hint">{syncResult[provider.id]}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
@@ -205,6 +238,14 @@ export function ProviderManager({ initData }: { initData: string }) {
                 className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
               >
                 Refresh Balance
+              </button>
+              <button
+                type="button"
+                disabled={busyId === provider.id}
+                onClick={() => handleSyncNow(provider.id)}
+                className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+              >
+                Sync Now
               </button>
               <button
                 type="button"

@@ -19,6 +19,8 @@ export type ServiceMappingSummary = {
   providerServiceId: string;
   providerServiceName: string | null;
   providerPriceCents: number | null;
+  providerEstimatedTime: string | null;
+  providerCategory: string | null;
   priority: number;
   enabled: boolean;
 };
@@ -65,6 +67,8 @@ export async function listServiceMappingsAction(
         providerServiceId: row.providerServiceId,
         providerServiceName: row.providerServiceName,
         providerPriceCents: row.providerPriceCents,
+        providerEstimatedTime: row.providerEstimatedTime,
+        providerCategory: row.providerCategory,
         priority: row.priority,
         enabled: row.enabled,
       })),
@@ -81,6 +85,8 @@ export type CreateServiceMappingInput = {
   providerServiceId: string;
   providerServiceName: string | null;
   providerPriceCents: number | null;
+  providerEstimatedTime: string | null;
+  providerCategory: string | null;
   priority: number;
 };
 
@@ -108,6 +114,8 @@ export async function createServiceMappingAction(
           providerServiceId,
           providerServiceName: input.providerServiceName,
           providerPriceCents: input.providerPriceCents,
+          providerEstimatedTime: input.providerEstimatedTime,
+          providerCategory: input.providerCategory,
           priority: input.priority,
         },
       });
@@ -119,6 +127,8 @@ export async function createServiceMappingAction(
           providerServiceId,
           providerServiceName: input.providerServiceName,
           providerPriceCents: input.providerPriceCents,
+          providerEstimatedTime: input.providerEstimatedTime,
+          providerCategory: input.providerCategory,
           priority: input.priority,
         },
       });
@@ -143,6 +153,8 @@ export type UpdateServiceMappingInput = {
   providerServiceId: string;
   providerServiceName: string | null;
   providerPriceCents: number | null;
+  providerEstimatedTime: string | null;
+  providerCategory: string | null;
   priority: number;
   enabled: boolean;
 };
@@ -166,6 +178,8 @@ export async function updateServiceMappingAction(
       providerServiceId,
       providerServiceName: input.providerServiceName,
       providerPriceCents: input.providerPriceCents,
+      providerEstimatedTime: input.providerEstimatedTime,
+      providerCategory: input.providerCategory,
       priority: input.priority,
       enabled: input.enabled,
     };
@@ -287,13 +301,20 @@ export async function autoMapServiceAction(
                 providerServiceId: match.providerServiceId,
               },
             },
-            update: { providerServiceName: match.name, providerPriceCents: match.priceCents },
+            update: {
+              providerServiceName: match.name,
+              providerPriceCents: match.priceCents,
+              providerEstimatedTime: match.estimatedTime,
+              providerCategory: match.category,
+            },
             create: {
               imeiServiceId: falconServiceId,
               providerId: provider.id,
               providerServiceId: match.providerServiceId,
               providerServiceName: match.name,
               providerPriceCents: match.priceCents,
+              providerEstimatedTime: match.estimatedTime,
+              providerCategory: match.category,
             },
           });
         } else {
@@ -305,13 +326,20 @@ export async function autoMapServiceAction(
                 providerServiceId: match.providerServiceId,
               },
             },
-            update: { providerServiceName: match.name, providerPriceCents: match.priceCents },
+            update: {
+              providerServiceName: match.name,
+              providerPriceCents: match.priceCents,
+              providerEstimatedTime: match.estimatedTime,
+              providerCategory: match.category,
+            },
             create: {
               serverServiceId: falconServiceId,
               providerId: provider.id,
               providerServiceId: match.providerServiceId,
               providerServiceName: match.name,
               providerPriceCents: match.priceCents,
+              providerEstimatedTime: match.estimatedTime,
+              providerCategory: match.category,
             },
           });
         }
