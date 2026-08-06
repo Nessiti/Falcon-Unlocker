@@ -79,14 +79,24 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
           mountThemeParamsSync();
         }
         if (mountViewport.isAvailable() && !isViewportMounted() && !isViewportMounting()) {
-          await mountViewport();
+          try {
+            // Some Telegram clients never reply to this request. Without a
+            // timeout this await hangs forever, stranding the whole app on
+            // "Loading…" — viewport info (safe-area insets, expand) is a
+            // nice-to-have, not required for the app to work, so a
+            // timeout/failure here shouldn't block reaching "ready".
+            await mountViewport({ timeout: 4000 });
+          } catch (error) {
+            console.error("[telegram] viewport mount failed or timed out", error);
+          }
         }
 
         bindMiniAppCssVars();
         bindThemeParamsCssVars();
-        bindViewportCssVars();
-
-        expandViewport();
+        if (isViewportMounted()) {
+          bindViewportCssVars();
+          expandViewport();
+        }
         miniAppReady();
 
         if (!cancelled) setMountStatus("ready");
