@@ -500,6 +500,7 @@ enum ProviderType {
   JSON_API
   XML_API
   CUSTOM_API
+  WEBX
 }
 
 /// Smart Routing Engine (Chapter 15) strategies for picking a provider among

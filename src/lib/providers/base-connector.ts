@@ -7,6 +7,7 @@ import type {
   CancelOrderResult,
   ConnectionTestResult,
   ConnectorService,
+  OrderKind,
   OrderStatusResult,
   ProviderConnector,
   SubmitOrderInput,
@@ -95,8 +96,8 @@ export abstract class BaseConnector implements ProviderConnector {
 
   abstract getServices(): Promise<ConnectorService[]>;
   abstract submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult>;
-  abstract checkOrderStatus(providerOrderId: string): Promise<OrderStatusResult>;
-  abstract cancelOrder(providerOrderId: string): Promise<CancelOrderResult>;
+  abstract checkOrderStatus(providerOrderId: string, kind: OrderKind): Promise<OrderStatusResult>;
+  abstract cancelOrder(providerOrderId: string, kind: OrderKind): Promise<CancelOrderResult>;
   abstract getBalance(): Promise<BalanceResult>;
 
   /**

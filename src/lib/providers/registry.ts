@@ -6,6 +6,7 @@ import { GenericJsonConnector } from "./generic-json-connector";
 import { PhpQueryConnector } from "./php-query-connector";
 import { XmlConnector } from "./xml-connector";
 import { DhruFusionConnector } from "./dhru-fusion-connector";
+import { WebXConnector } from "./webx-connector";
 import { decryptSecret } from "@/lib/security/encryption";
 
 /**
@@ -30,6 +31,8 @@ export function getProviderConnector(provider: Provider): ProviderConnector {
       return new PhpQueryConnector(decrypted);
     case ProviderType.XML_API:
       return new XmlConnector(decrypted);
+    case ProviderType.WEBX:
+      return new WebXConnector(decrypted);
     case ProviderType.REST_API:
     case ProviderType.JSON_API:
     case ProviderType.CUSTOM_API:

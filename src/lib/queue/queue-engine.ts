@@ -174,6 +174,7 @@ export async function processQueueEntry(queueEntryId: string): Promise<ProcessOu
     const result = await connector.submitOrder({
       providerServiceId: candidate.providerServiceId,
       fieldValues: order.fieldValues as Record<string, string>,
+      kind: entry.kind as QueueKind,
     });
 
     await prisma.queueAttemptLog.create({

@@ -10,11 +10,20 @@ export interface ProviderConnector {
   testConnection(): Promise<ConnectionTestResult>;
   getServices(): Promise<ConnectorService[]>;
   submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult>;
-  checkOrderStatus(providerOrderId: string): Promise<OrderStatusResult>;
-  cancelOrder(providerOrderId: string): Promise<CancelOrderResult>;
+  checkOrderStatus(providerOrderId: string, kind: OrderKind): Promise<OrderStatusResult>;
+  cancelOrder(providerOrderId: string, kind: OrderKind): Promise<CancelOrderResult>;
   getBalance(): Promise<BalanceResult>;
   syncServices(): Promise<SyncServicesResult>;
 }
+
+/**
+ * "IMEI" | "SERVER" — matches the convention used everywhere else in the app
+ * (OrderQueueEntry.kind, admin-orders.ts, admin-service-mappings.ts). Some
+ * provider APIs (WebX) have genuinely separate endpoints per order kind, so
+ * it's threaded through the connector interface rather than each connector
+ * guessing it from providerServiceId.
+ */
+export type OrderKind = "IMEI" | "SERVER";
 
 /**
  * API Logs (Chapter 17): tags every fetchWithTimeout call with which
@@ -47,6 +56,7 @@ export type ConnectorService = {
 export type SubmitOrderInput = {
   providerServiceId: string;
   fieldValues: Record<string, string>;
+  kind: OrderKind;
 };
 
 export type SubmitOrderResult =

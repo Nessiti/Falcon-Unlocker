@@ -5,6 +5,7 @@ import type {
   BalanceResult,
   CancelOrderResult,
   ConnectorService,
+  OrderKind,
   OrderStatusResult,
   SubmitOrderInput,
   SubmitOrderResult,
@@ -107,7 +108,8 @@ export class DhruFusionConnector extends BaseConnector {
     }
   }
 
-  async checkOrderStatus(providerOrderId: string): Promise<OrderStatusResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kind is part of the shared interface; this API's single endpoint doesn't need it
+  async checkOrderStatus(providerOrderId: string, _kind: OrderKind): Promise<OrderStatusResult> {
     try {
       const response = await this.fetchWithTimeout(
         this.url("imeiorderstatus", { orderid: providerOrderId }),
@@ -127,7 +129,8 @@ export class DhruFusionConnector extends BaseConnector {
     }
   }
 
-  async cancelOrder(providerOrderId: string): Promise<CancelOrderResult> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kind is part of the shared interface; this API's single endpoint doesn't need it
+  async cancelOrder(providerOrderId: string, _kind: OrderKind): Promise<CancelOrderResult> {
     try {
       const response = await this.fetchWithTimeout(
         this.url("cancelimeiorder", { orderid: providerOrderId }),

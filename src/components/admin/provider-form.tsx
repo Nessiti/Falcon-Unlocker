@@ -13,6 +13,7 @@ import { formInputClass } from "@/lib/ui";
 const TYPE_OPTIONS: { value: ProviderType; label: string }[] = [
   { value: ProviderType.DHRU_FUSION, label: "DHRU Fusion API" },
   { value: ProviderType.PHP_API, label: "PHP API" },
+  { value: ProviderType.WEBX, label: "WebX Next API" },
   { value: ProviderType.REST_API, label: "REST API" },
   { value: ProviderType.JSON_API, label: "JSON API" },
   { value: ProviderType.XML_API, label: "XML API" },
