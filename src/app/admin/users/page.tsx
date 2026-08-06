@@ -33,7 +33,7 @@ export default function AdminUsersPage() {
   if (!users) return <p className="text-sm text-hint">Loading…</p>;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
       {users.map((user) => (
         <UserRow
           key={user.id}

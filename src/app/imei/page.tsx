@@ -23,7 +23,7 @@ export default async function ImeiPage() {
       </div>
 
       {services.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {services.map((service) => (
             <ImeiServiceCard key={service.id} service={service} />
           ))}

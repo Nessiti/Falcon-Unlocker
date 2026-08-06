@@ -59,7 +59,7 @@ export default function Home() {
         <p className="text-sm text-hint">Here&apos;s what&apos;s happening with your account.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((card) => (
           <HomeCard key={card.label} label={card.label} value={card.value} />
         ))}

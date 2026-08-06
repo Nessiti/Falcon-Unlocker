@@ -57,14 +57,16 @@ export default function AdminOrdersPage() {
 
       {filtered.length === 0 ? <p className="text-sm text-hint">No orders.</p> : null}
 
-      {filtered.map((order) => (
-        <AdminOrderRow
-          key={`${order.kind}-${order.id}`}
-          order={order}
-          initData={initData}
-          onChanged={refresh}
-        />
-      ))}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {filtered.map((order) => (
+          <AdminOrderRow
+            key={`${order.kind}-${order.id}`}
+            order={order}
+            initData={initData}
+            onChanged={refresh}
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -25,7 +25,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <h1 className="text-lg font-semibold text-foreground">Admin Panel</h1>
         <p className="text-sm text-hint">Manage the platform.</p>
       </div>
-      <AdminNav />
+      <div className="lg:hidden">
+        <AdminNav />
+      </div>
       {children}
     </div>
   );
