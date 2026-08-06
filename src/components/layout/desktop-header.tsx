@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { AuthUser } from "@/lib/actions/auth";
 import { formatUsd } from "@/lib/ui";
 import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
+import { FullscreenButton } from "@/components/layout/fullscreen-button";
 
 function alertsTarget(alerts: ReturnType<typeof useAdminAlerts>): string | null {
   if (!alerts || alerts.total === 0) return null;
@@ -29,6 +30,8 @@ export function DesktopHeader({ user }: { user: AuthUser }) {
       <span className="shrink-0 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-foreground">
         {formatUsd(user.balanceCents)}
       </span>
+
+      <FullscreenButton />
 
       <button
         type="button"
