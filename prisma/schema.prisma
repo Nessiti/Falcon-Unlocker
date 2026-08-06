@@ -191,8 +191,11 @@ model ImeiOrderStatusEvent {
   orderId String
   order   ImeiOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  adminId String
-  admin   User   @relation(fields: [adminId], references: [id])
+  /// Null for system-triggered transitions (Chapter 18's Queue & Retry System
+  /// advancing an order after a successful automatic provider submission) —
+  /// every other transition is an admin action and always sets this.
+  adminId String?
+  admin   User?   @relation(fields: [adminId], references: [id])
 }
 
 enum ServerServiceType {
@@ -272,8 +275,11 @@ model ServerOrderStatusEvent {
   orderId String
   order   ServerOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  adminId String
-  admin   User   @relation(fields: [adminId], references: [id])
+  /// Null for system-triggered transitions (Chapter 18's Queue & Retry System
+  /// advancing an order after a successful automatic provider submission) —
+  /// every other transition is an admin action and always sets this.
+  adminId String?
+  admin   User?   @relation(fields: [adminId], references: [id])
 }
 
 model ServerServiceField {
@@ -530,10 +536,12 @@ model Provider {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  connectionLogs ProviderConnectionLog[]
-  apiLogs        ApiLog[]
-  imeiMappings   ImeiServiceMapping[]
-  serverMappings ServerServiceMapping[]
+  connectionLogs   ProviderConnectionLog[]
+  apiLogs          ApiLog[]
+  imeiMappings     ImeiServiceMapping[]
+  serverMappings   ServerServiceMapping[]
+  queueEntries     OrderQueueEntry[]
+  queueAttemptLogs QueueAttemptLog[]
 }
 
 /// Connection history (Chapter 12): one row per "Test API connection" call.
@@ -626,4 +634,78 @@ model ServerServiceMapping {
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([serverServiceId, providerId, providerServiceId])
+}
+
+/// Queue & Retry System (Chapter 18) lifecycle for one queue entry.
+enum QueueStatus {
+  QUEUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+/// Queue & Retry System (Chapter 18): Order -> Queue -> Provider -> Response.
+/// Created once per order at order-creation time (only when the ordered
+/// service has at least one enabled provider mapping), then walked by
+/// /api/cron/process-queue or a manual "Process Queue Now", trying each
+/// candidate from the Chapter 15 routing plan in order and retrying
+/// automatically on failure until maxRetries or the candidate list (per
+/// triedProviderIds) is exhausted.
+model OrderQueueEntry {
+  id      String @id @default(cuid())
+  /// "IMEI" | "SERVER" — matches the OrderKind/MappingKind convention used
+  /// elsewhere (admin-orders.ts, admin-service-mappings.ts) rather than a
+  /// redundant Prisma enum. No FK to ImeiOrder/ServerOrder for the same
+  /// reason those actions already join by kind + id instead of a relation.
+  kind    String
+  orderId String
+
+  status            QueueStatus @default(QUEUED)
+  attempts          Int         @default(0)
+  maxRetries        Int
+  retryDelaySeconds Int
+  nextAttemptAt     DateTime    @default(now())
+  /// Provider ids already tried in the current retry cycle — reset to empty
+  /// by a manual retry so a fresh pass can try every mapped provider again.
+  triedProviderIds  String[]    @default([])
+  lastError         String?
+  providerOrderId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  currentProviderId String?
+  currentProvider   Provider? @relation(fields: [currentProviderId], references: [id])
+
+  attemptLogs QueueAttemptLog[]
+
+  /// Prevents duplicate submissions at the source: an order can only ever
+  /// have one queue entry, no matter how many times enqueueing is attempted.
+  @@unique([kind, orderId])
+  @@index([status, nextAttemptAt])
+}
+
+/// One row per provider submission attempt for a queue entry — the visible retry history.
+model QueueAttemptLog {
+  id           String   @id @default(cuid())
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  queueEntryId String
+  queueEntry   OrderQueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+/// Global retry defaults (Chapter 18), admin-configurable. Single row, id
+/// fixed to "singleton" — Timeout is already configured per-provider
+/// (Provider.timeoutMs, Chapter 12), so it isn't duplicated here.
+model QueueSettings {
+  id                String   @id @default("singleton")
+  maxRetries        Int      @default(3)
+  retryDelaySeconds Int      @default(60)
+  updatedAt         DateTime @updatedAt
 }

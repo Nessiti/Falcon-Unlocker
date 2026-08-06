@@ -7,6 +7,7 @@ import { ServiceStatus, WalletTransactionType } from "@/generated/prisma/client"
 import { notifyOrderReceived, notifyAdminNewOrder } from "@/lib/telegram/notifications";
 import { notifyAllStaff } from "@/lib/telegram/broadcast";
 import { resolveFieldValues } from "@/lib/orders";
+import { enqueueOrder } from "@/lib/queue/queue-engine";
 
 export type CreateImeiOrderInput = {
   serviceId: string;
@@ -48,8 +49,9 @@ export async function createImeiOrderAction(
       }
     }
 
+    let orderId: string;
     try {
-      await prisma.$transaction(async (tx) => {
+      orderId = await prisma.$transaction(async (tx) => {
         const { count } = await tx.user.updateMany({
           where: { id: user.id, balanceCents: { gte: service.priceCents } },
           data: { balanceCents: { decrement: service.priceCents } },
@@ -77,6 +79,8 @@ export async function createImeiOrderAction(
             imeiOrderId: order.id,
           },
         });
+
+        return order.id;
       });
     } catch (error) {
       if (error instanceof Error && error.message === "INSUFFICIENT_BALANCE") {
@@ -85,6 +89,7 @@ export async function createImeiOrderAction(
       throw error;
     }
 
+    await enqueueOrder("IMEI", orderId);
     await notifyOrderReceived(user.telegramId, service.name, service.priceCents);
 
     const customerName = [user.firstName, user.lastName].filter(Boolean).join(" ");

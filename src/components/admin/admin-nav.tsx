@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: "Providers", href: "/admin/providers" },
   { label: "Wallet", href: "/wallet" },
   { label: "Orders", href: "/admin/orders" },
+  { label: "Queue", href: "/admin/queue" },
   { label: "News", href: "/admin/news" },
   { label: "Notifications", href: "/admin/notifications" },
   { label: "API Logs", href: "/admin/api-logs" },
