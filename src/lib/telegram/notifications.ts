@@ -12,6 +12,22 @@ export function notifyOrderReceived(telegramId: bigint, serviceName: string, pri
   );
 }
 
+/** Alerts staff (Admin/Moderator) of a new order, with the customer's submitted details. */
+export function notifyAdminNewOrder(
+  telegramId: bigint,
+  customerName: string,
+  serviceName: string,
+  priceCents: number,
+  details: { label: string; value: string }[],
+) {
+  const detailLines = details.map((detail) => `• ${detail.label}: ${detail.value}`).join("\n");
+  return sendTelegramMessage(
+    telegramId,
+    `🆕 <b>New order</b>\n${customerName} — ${serviceName} (${formatUsd(priceCents)})${detailLines ? `\n${detailLines}` : ""}`,
+    [{ text: "Open Admin Orders", path: "/admin/orders" }],
+  );
+}
+
 export function notifyPaymentAccepted(telegramId: bigint, amountCents: number) {
   return sendTelegramMessage(
     telegramId,

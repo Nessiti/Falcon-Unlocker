@@ -4,11 +4,17 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
-import { createImeiServiceAction, type CreateImeiServiceField } from "@/lib/actions/imei-services";
+import {
+  createImeiServiceAction,
+  updateImeiServiceAction,
+  type CreateImeiServiceField,
+  type ImeiServiceDetail,
+} from "@/lib/actions/imei-services";
 import { Role, ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/browser";
 import { formInputClass as inputClass } from "@/lib/ui";
 
 type FieldDraft = {
+  id?: string;
   label: string;
   type: ServiceFieldType;
   options: string;
@@ -46,21 +52,43 @@ const FIELD_TYPE_OPTIONS: { value: ServiceFieldType; label: string }[] = [
   { value: ServiceFieldType.JSON, label: "JSON" },
 ];
 
-export function ImeiServiceForm() {
+export function ImeiServiceForm({
+  editingService,
+  onSaved,
+  onCancel,
+}: {
+  editingService?: ImeiServiceDetail;
+  onSaved?: () => void;
+  onCancel?: () => void;
+} = {}) {
   const auth = useTelegramUser();
   const initData = useRawInitData();
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [estimatedTime, setEstimatedTime] = useState("");
-  const [status, setStatus] = useState<ServiceStatus>(ServiceStatus.ONLINE);
-  const [badge, setBadge] = useState<ServiceBadge | "">("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [displayOrder, setDisplayOrder] = useState("0");
-  const [fields, setFields] = useState<FieldDraft[]>([]);
+  const [name, setName] = useState(editingService?.name ?? "");
+  const [price, setPrice] = useState(
+    editingService ? String(editingService.priceCents / 100) : "",
+  );
+  const [description, setDescription] = useState(editingService?.description ?? "");
+  const [estimatedTime, setEstimatedTime] = useState(editingService?.estimatedTime ?? "");
+  const [status, setStatus] = useState<ServiceStatus>(editingService?.status ?? ServiceStatus.ONLINE);
+  const [badge, setBadge] = useState<ServiceBadge | "">(editingService?.badge ?? "");
+  const [imageUrl, setImageUrl] = useState(editingService?.imageUrl ?? "");
+  const [categoryName, setCategoryName] = useState(editingService?.categoryName ?? "");
+  const [displayOrder, setDisplayOrder] = useState(String(editingService?.displayOrder ?? 0));
+  const [fields, setFields] = useState<FieldDraft[]>(
+    () =>
+      editingService?.fields.map((field) => ({
+        id: field.id,
+        label: field.label,
+        type: field.type,
+        options: field.options ?? "",
+        regex: field.regex ?? "",
+        placeholder: field.placeholder ?? "",
+        defaultValue: field.defaultValue ?? "",
+        required: field.required,
+      })) ?? [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,9 +126,10 @@ export function ImeiServiceForm() {
       return;
     }
 
-    const fieldPayload: CreateImeiServiceField[] = fields
+    const fieldPayload: (CreateImeiServiceField & { id?: string })[] = fields
       .filter((field) => field.label.trim())
       .map((field, index) => ({
+        id: field.id,
         label: field.label,
         type: field.type,
         options: field.type === ServiceFieldType.SELECT ? field.options : null,
@@ -111,8 +140,7 @@ export function ImeiServiceForm() {
         displayOrder: index,
       }));
 
-    setSubmitting(true);
-    const result = await createImeiServiceAction(verifiedInitData, {
+    const payload = {
       name,
       priceCents,
       description,
@@ -123,7 +151,12 @@ export function ImeiServiceForm() {
       categoryName: categoryName || null,
       displayOrder: Number(displayOrder) || 0,
       fields: fieldPayload,
-    });
+    };
+
+    setSubmitting(true);
+    const result = editingService
+      ? await updateImeiServiceAction(verifiedInitData, editingService.id, payload)
+      : await createImeiServiceAction(verifiedInitData, payload);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -131,8 +164,12 @@ export function ImeiServiceForm() {
       return;
     }
 
-    resetForm();
     router.refresh();
+    if (editingService) {
+      onSaved?.();
+    } else {
+      resetForm();
+    }
   }
 
   return (
@@ -140,7 +177,9 @@ export function ImeiServiceForm() {
       onSubmit={handleSubmit}
       className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
     >
-      <h2 className="text-sm font-semibold text-foreground">Add IMEI Service (Admin)</h2>
+      <h2 className="text-sm font-semibold text-foreground">
+        {editingService ? `Edit ${editingService.name} (Admin)` : "Add IMEI Service (Admin)"}
+      </h2>
 
       <input
         className={inputClass}
@@ -300,13 +339,30 @@ export function ImeiServiceForm() {
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
-      >
-        {submitting ? "Creating…" : "Create Service"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
+        >
+          {submitting
+            ? editingService
+              ? "Saving…"
+              : "Creating…"
+            : editingService
+              ? "Save Changes"
+              : "Create Service"}
+        </button>
+        {editingService ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground"
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

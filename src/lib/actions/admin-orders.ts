@@ -6,6 +6,7 @@ import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyOrderCompleted, notifyOrderStatusChanged } from "@/lib/telegram/notifications";
 import { OrderStatus } from "@/generated/prisma/client";
+import { resolveFieldValues } from "@/lib/orders";
 
 export type OrderKind = "IMEI" | "SERVER";
 
@@ -16,6 +17,8 @@ export type AdminOrderSummary = {
   priceCents: number;
   serviceName: string;
   customerName: string;
+  notes: string | null;
+  details: { label: string; value: string }[];
   createdAt: string;
 };
 
@@ -29,11 +32,11 @@ export async function listAdminOrdersAction(initData: string): Promise<ListAdmin
 
     const [imeiOrders, serverOrders] = await Promise.all([
       prisma.imeiOrder.findMany({
-        include: { service: true, user: true },
+        include: { service: { include: { fields: true } }, user: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.serverOrder.findMany({
-        include: { service: true, user: true },
+        include: { service: { include: { fields: true } }, user: true },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -46,6 +49,8 @@ export async function listAdminOrdersAction(initData: string): Promise<ListAdmin
         priceCents: order.priceCents,
         serviceName: order.service.name,
         customerName: [order.user.firstName, order.user.lastName].filter(Boolean).join(" "),
+        notes: order.notes,
+        details: resolveFieldValues(order.fieldValues, order.service.fields),
         createdAt: order.createdAt.toISOString(),
       })),
       ...serverOrders.map((order) => ({
@@ -55,6 +60,8 @@ export async function listAdminOrdersAction(initData: string): Promise<ListAdmin
         priceCents: order.priceCents,
         serviceName: order.service.name,
         customerName: [order.user.firstName, order.user.lastName].filter(Boolean).join(" "),
+        notes: order.notes,
+        details: resolveFieldValues(order.fieldValues, order.service.fields),
         createdAt: order.createdAt.toISOString(),
       })),
     ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

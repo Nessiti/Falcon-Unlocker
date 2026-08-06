@@ -90,6 +90,157 @@ export async function createServerServiceAction(
   }
 }
 
+export type ServerServiceFieldDetail = CreateServerServiceField & { id: string };
+
+export type ServerServiceDetail = {
+  id: string;
+  name: string;
+  priceCents: number;
+  description: string;
+  estimatedTime: string;
+  status: ServiceStatus;
+  badge: ServiceBadge | null;
+  imageUrl: string | null;
+  categoryName: string | null;
+  displayOrder: number;
+  type: ServerServiceType;
+  fields: ServerServiceFieldDetail[];
+};
+
+export type GetServerServiceDetailResult =
+  | { ok: true; service: ServerServiceDetail }
+  | { ok: false; error: string };
+
+/** Loads a single service (with its fields) to prefill the admin edit form. */
+export async function getServerServiceDetailAction(
+  initData: string,
+  serviceId: string,
+): Promise<GetServerServiceDetailResult> {
+  try {
+    await requireStaff(initData);
+
+    const service = await prisma.serverService.findUnique({
+      where: { id: serviceId },
+      include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
+    });
+    if (!service) return { ok: false, error: "Service not found" };
+
+    return {
+      ok: true,
+      service: {
+        id: service.id,
+        name: service.name,
+        priceCents: service.priceCents,
+        description: service.description,
+        estimatedTime: service.estimatedTime,
+        status: service.status,
+        badge: service.badge,
+        imageUrl: service.imageUrl,
+        categoryName: service.category?.name ?? null,
+        displayOrder: service.displayOrder,
+        type: service.type,
+        fields: service.fields.map((field) => ({
+          id: field.id,
+          label: field.label,
+          type: field.type,
+          required: field.required,
+          displayOrder: field.displayOrder,
+        })),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to load service";
+    return { ok: false, error: message };
+  }
+}
+
+export type UpdateServerServiceField = CreateServerServiceField & { id?: string };
+export type UpdateServerServiceInput = Omit<CreateServerServiceInput, "fields"> & {
+  fields: UpdateServerServiceField[];
+};
+export type UpdateServerServiceResult = { ok: true } | { ok: false; error: string };
+
+/** Edits an existing Server service. Fields keep their id when possible, so past
+ * orders' submitted values (keyed by field id) still resolve to a label. */
+export async function updateServerServiceAction(
+  initData: string,
+  serviceId: string,
+  input: UpdateServerServiceInput,
+): Promise<UpdateServerServiceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name is required" };
+    if (!Number.isInteger(input.priceCents) || input.priceCents < 0) {
+      return { ok: false, error: "Price must be a positive amount" };
+    }
+
+    const categoryName = input.categoryName?.trim() || null;
+
+    await prisma.$transaction(async (tx) => {
+      const categoryId = categoryName
+        ? (
+            await tx.category.upsert({
+              where: { name: categoryName },
+              update: {},
+              create: { name: categoryName },
+            })
+          ).id
+        : null;
+
+      const existingFields = await tx.serverServiceField.findMany({ where: { serviceId } });
+      const keepIds = new Set(
+        input.fields.map((field) => field.id).filter((id): id is string => Boolean(id)),
+      );
+      const staleIds = existingFields
+        .map((field) => field.id)
+        .filter((id) => !keepIds.has(id));
+      if (staleIds.length > 0) {
+        await tx.serverServiceField.deleteMany({ where: { id: { in: staleIds } } });
+      }
+
+      for (const field of input.fields) {
+        if (!field.label.trim()) continue;
+        const data = {
+          label: field.label.trim(),
+          type: field.type,
+          required: field.required,
+          displayOrder: field.displayOrder,
+        };
+        if (field.id) {
+          await tx.serverServiceField.update({ where: { id: field.id }, data });
+        } else {
+          await tx.serverServiceField.create({ data: { ...data, serviceId } });
+        }
+      }
+
+      await tx.serverService.update({
+        where: { id: serviceId },
+        data: {
+          name,
+          priceCents: input.priceCents,
+          description: input.description.trim(),
+          estimatedTime: input.estimatedTime.trim(),
+          status: input.status,
+          badge: input.badge,
+          imageUrl: input.imageUrl?.trim() || null,
+          displayOrder: input.displayOrder,
+          type: input.type,
+          categoryId,
+        },
+      });
+    });
+
+    await logAdminAction(admin.id, "service.update", `Server ${name}`);
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof TelegramAuthError ? error.message : "Failed to update service";
+    return { ok: false, error: message };
+  }
+}
+
 export type AdminServerServiceSummary = {
   id: string;
   name: string;

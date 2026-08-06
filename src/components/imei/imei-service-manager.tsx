@@ -9,10 +9,13 @@ import {
   setImeiServiceStatusAction,
   deleteImeiServiceAction,
   duplicateImeiServiceAction,
+  getImeiServiceDetailAction,
   type AdminImeiServiceSummary,
+  type ImeiServiceDetail,
 } from "@/lib/actions/imei-services";
 import { Role, ServiceStatus } from "@/generated/prisma/browser";
 import { formatUsd } from "@/lib/ui";
+import { ImeiServiceForm } from "@/components/imei/imei-service-form";
 
 const STATUS_OPTIONS: ServiceStatus[] = [
   ServiceStatus.ONLINE,
@@ -27,6 +30,8 @@ export function ImeiServiceManager() {
   const [services, setServices] = useState<AdminImeiServiceSummary[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingDetail, setEditingDetail] = useState<ImeiServiceDetail | null>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
 
   function refresh() {
     if (!initData) return;
@@ -78,58 +83,86 @@ export function ImeiServiceManager() {
     else setError(result.error);
   }
 
+  async function handleEdit(id: string) {
+    setLoadingEditId(id);
+    const result = await getImeiServiceDetailAction(verifiedInitData, id);
+    setLoadingEditId(null);
+    if (result.ok) setEditingDetail(result.service);
+    else setError(result.error);
+  }
+
   if (!services) return null;
 
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-foreground">Manage Services (Admin)</h2>
       {error ? <p className="text-xs text-accent">{error}</p> : null}
-      {services.map((service) => (
-        <div
-          key={service.id}
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-sm"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-foreground">{service.name}</p>
-            <span className="text-xs text-hint">
-              {formatUsd(service.priceCents)} · {service.fieldCount} fields
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map((status) => (
+      {services.map((service) =>
+        editingDetail?.id === service.id ? (
+          <ImeiServiceForm
+            key={service.id}
+            editingService={editingDetail}
+            onSaved={() => {
+              setEditingDetail(null);
+              refresh();
+            }}
+            onCancel={() => setEditingDetail(null)}
+          />
+        ) : (
+          <div
+            key={service.id}
+            className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-sm"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-foreground">{service.name}</p>
+              <span className="text-xs text-hint">
+                {formatUsd(service.priceCents)} · {service.fieldCount} fields
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  disabled={busyId === service.id}
+                  onClick={() => handleStatus(service.id, status)}
+                  className={`rounded-lg px-2 py-1 text-xs disabled:opacity-50 ${
+                    service.status === status
+                      ? "bg-accent text-accent-foreground"
+                      : "border border-border text-foreground"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
               <button
-                key={status}
+                type="button"
+                disabled={loadingEditId === service.id}
+                onClick={() => handleEdit(service.id)}
+                className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+              >
+                {loadingEditId === service.id ? "Loading…" : "Edit"}
+              </button>
+              <button
                 type="button"
                 disabled={busyId === service.id}
-                onClick={() => handleStatus(service.id, status)}
-                className={`rounded-lg px-2 py-1 text-xs disabled:opacity-50 ${
-                  service.status === status
-                    ? "bg-accent text-accent-foreground"
-                    : "border border-border text-foreground"
-                }`}
+                onClick={() => handleDuplicate(service.id)}
+                className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
               >
-                {status}
+                Duplicate
               </button>
-            ))}
-            <button
-              type="button"
-              disabled={busyId === service.id}
-              onClick={() => handleDuplicate(service.id)}
-              className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
-            >
-              Duplicate
-            </button>
-            <button
-              type="button"
-              disabled={busyId === service.id}
-              onClick={() => handleDelete(service.id)}
-              className="rounded-lg border border-border px-2 py-1 text-xs text-accent disabled:opacity-50"
-            >
-              Delete
-            </button>
+              <button
+                type="button"
+                disabled={busyId === service.id}
+                onClick={() => handleDelete(service.id)}
+                className="rounded-lg border border-border px-2 py-1 text-xs text-accent disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ),
+      )}
     </div>
   );
 }

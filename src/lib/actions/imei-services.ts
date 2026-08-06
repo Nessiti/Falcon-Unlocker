@@ -97,6 +97,162 @@ export async function createImeiServiceAction(
   }
 }
 
+export type ImeiServiceFieldDetail = CreateImeiServiceField & { id: string };
+
+export type ImeiServiceDetail = {
+  id: string;
+  name: string;
+  priceCents: number;
+  description: string;
+  estimatedTime: string;
+  status: ServiceStatus;
+  badge: ServiceBadge | null;
+  imageUrl: string | null;
+  categoryName: string | null;
+  displayOrder: number;
+  fields: ImeiServiceFieldDetail[];
+};
+
+export type GetImeiServiceDetailResult =
+  | { ok: true; service: ImeiServiceDetail }
+  | { ok: false; error: string };
+
+/** Loads a single service (with its fields) to prefill the admin edit form. */
+export async function getImeiServiceDetailAction(
+  initData: string,
+  serviceId: string,
+): Promise<GetImeiServiceDetailResult> {
+  try {
+    await requireStaff(initData);
+
+    const service = await prisma.imeiService.findUnique({
+      where: { id: serviceId },
+      include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
+    });
+    if (!service) return { ok: false, error: "Service not found" };
+
+    return {
+      ok: true,
+      service: {
+        id: service.id,
+        name: service.name,
+        priceCents: service.priceCents,
+        description: service.description,
+        estimatedTime: service.estimatedTime,
+        status: service.status,
+        badge: service.badge,
+        imageUrl: service.imageUrl,
+        categoryName: service.category?.name ?? null,
+        displayOrder: service.displayOrder,
+        fields: service.fields.map((field) => ({
+          id: field.id,
+          label: field.label,
+          type: field.type,
+          options: field.options,
+          regex: field.regex,
+          placeholder: field.placeholder,
+          defaultValue: field.defaultValue,
+          required: field.required,
+          displayOrder: field.displayOrder,
+        })),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to load service";
+    return { ok: false, error: message };
+  }
+}
+
+export type UpdateImeiServiceField = CreateImeiServiceField & { id?: string };
+export type UpdateImeiServiceInput = Omit<CreateImeiServiceInput, "fields"> & {
+  fields: UpdateImeiServiceField[];
+};
+export type UpdateImeiServiceResult = { ok: true } | { ok: false; error: string };
+
+/** Edits an existing IMEI service. Fields keep their id when possible, so past
+ * orders' submitted values (keyed by field id) still resolve to a label. */
+export async function updateImeiServiceAction(
+  initData: string,
+  serviceId: string,
+  input: UpdateImeiServiceInput,
+): Promise<UpdateImeiServiceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Name is required" };
+    if (!Number.isInteger(input.priceCents) || input.priceCents < 0) {
+      return { ok: false, error: "Price must be a positive amount" };
+    }
+
+    const categoryName = input.categoryName?.trim() || null;
+
+    await prisma.$transaction(async (tx) => {
+      const categoryId = categoryName
+        ? (
+            await tx.category.upsert({
+              where: { name: categoryName },
+              update: {},
+              create: { name: categoryName },
+            })
+          ).id
+        : null;
+
+      const existingFields = await tx.imeiServiceField.findMany({ where: { serviceId } });
+      const keepIds = new Set(
+        input.fields.map((field) => field.id).filter((id): id is string => Boolean(id)),
+      );
+      const staleIds = existingFields
+        .map((field) => field.id)
+        .filter((id) => !keepIds.has(id));
+      if (staleIds.length > 0) {
+        await tx.imeiServiceField.deleteMany({ where: { id: { in: staleIds } } });
+      }
+
+      for (const field of input.fields) {
+        if (!field.label.trim()) continue;
+        const data = {
+          label: field.label.trim(),
+          type: field.type,
+          options: field.type === ServiceFieldType.SELECT ? field.options : null,
+          regex: field.regex?.trim() || null,
+          placeholder: field.placeholder?.trim() || null,
+          defaultValue: field.defaultValue?.trim() || null,
+          required: field.required,
+          displayOrder: field.displayOrder,
+        };
+        if (field.id) {
+          await tx.imeiServiceField.update({ where: { id: field.id }, data });
+        } else {
+          await tx.imeiServiceField.create({ data: { ...data, serviceId } });
+        }
+      }
+
+      await tx.imeiService.update({
+        where: { id: serviceId },
+        data: {
+          name,
+          priceCents: input.priceCents,
+          description: input.description.trim(),
+          estimatedTime: input.estimatedTime.trim(),
+          status: input.status,
+          badge: input.badge,
+          imageUrl: input.imageUrl?.trim() || null,
+          displayOrder: input.displayOrder,
+          categoryId,
+        },
+      });
+    });
+
+    await logAdminAction(admin.id, "service.update", `IMEI ${name}`);
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof TelegramAuthError ? error.message : "Failed to update service";
+    return { ok: false, error: message };
+  }
+}
+
 export type AdminImeiServiceSummary = {
   id: string;
   name: string;

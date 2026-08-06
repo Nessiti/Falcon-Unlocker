@@ -66,6 +66,23 @@ export function AdminOrderRow({
         </span>
       </div>
 
+      {order.details.length > 0 || order.notes ? (
+        <dl className="flex flex-col gap-1 rounded-lg bg-background p-2 text-xs">
+          {order.details.map((detail) => (
+            <div key={detail.label} className="flex gap-2">
+              <dt className="shrink-0 text-hint">{detail.label}:</dt>
+              <dd className="break-all text-foreground">{detail.value}</dd>
+            </div>
+          ))}
+          {order.notes ? (
+            <div className="flex gap-2">
+              <dt className="shrink-0 text-hint">Notes:</dt>
+              <dd className="break-all text-foreground">{order.notes}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         <select
           className={`${formInputClass} w-auto`}

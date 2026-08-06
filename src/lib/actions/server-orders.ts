@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { ServiceStatus, WalletTransactionType } from "@/generated/prisma/client";
-import { notifyOrderReceived } from "@/lib/telegram/notifications";
+import { notifyOrderReceived, notifyAdminNewOrder } from "@/lib/telegram/notifications";
+import { notifyAllStaff } from "@/lib/telegram/broadcast";
+import { resolveFieldValues } from "@/lib/orders";
 
 export type CreateServerOrderInput = {
   serviceId: string;
@@ -74,6 +76,13 @@ export async function createServerOrderAction(
     }
 
     await notifyOrderReceived(user.telegramId, service.name, service.priceCents);
+
+    const customerName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+    const details = resolveFieldValues(input.fieldValues, service.fields);
+    if (input.notes?.trim()) details.push({ label: "Notes", value: input.notes.trim() });
+    await notifyAllStaff((telegramId) =>
+      notifyAdminNewOrder(telegramId, customerName, service.name, service.priceCents, details),
+    );
 
     return { ok: true };
   } catch (error) {

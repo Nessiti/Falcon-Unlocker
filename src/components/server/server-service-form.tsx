@@ -6,7 +6,9 @@ import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import {
   createServerServiceAction,
+  updateServerServiceAction,
   type CreateServerServiceField,
+  type ServerServiceDetail,
 } from "@/lib/actions/server-services";
 import {
   Role,
@@ -18,6 +20,7 @@ import {
 import { formInputClass as inputClass } from "@/lib/ui";
 
 type FieldDraft = {
+  id?: string;
   label: string;
   type: ServerFieldType;
   required: boolean;
@@ -47,22 +50,42 @@ const FIELD_TYPE_OPTIONS: { value: ServerFieldType; label: string }[] = [
   { value: ServerFieldType.CUSTOM_TEXTBOX, label: "Custom Textbox" },
 ];
 
-export function ServerServiceForm() {
+export function ServerServiceForm({
+  editingService,
+  onSaved,
+  onCancel,
+}: {
+  editingService?: ServerServiceDetail;
+  onSaved?: () => void;
+  onCancel?: () => void;
+} = {}) {
   const auth = useTelegramUser();
   const initData = useRawInitData();
   const router = useRouter();
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [estimatedTime, setEstimatedTime] = useState("");
-  const [type, setType] = useState<ServerServiceType>(ServerServiceType.UNLOCK);
-  const [status, setStatus] = useState<ServiceStatus>(ServiceStatus.ONLINE);
-  const [badge, setBadge] = useState<ServiceBadge | "">("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [displayOrder, setDisplayOrder] = useState("0");
-  const [fields, setFields] = useState<FieldDraft[]>([]);
+  const [name, setName] = useState(editingService?.name ?? "");
+  const [price, setPrice] = useState(
+    editingService ? String(editingService.priceCents / 100) : "",
+  );
+  const [description, setDescription] = useState(editingService?.description ?? "");
+  const [estimatedTime, setEstimatedTime] = useState(editingService?.estimatedTime ?? "");
+  const [type, setType] = useState<ServerServiceType>(
+    editingService?.type ?? ServerServiceType.UNLOCK,
+  );
+  const [status, setStatus] = useState<ServiceStatus>(editingService?.status ?? ServiceStatus.ONLINE);
+  const [badge, setBadge] = useState<ServiceBadge | "">(editingService?.badge ?? "");
+  const [imageUrl, setImageUrl] = useState(editingService?.imageUrl ?? "");
+  const [categoryName, setCategoryName] = useState(editingService?.categoryName ?? "");
+  const [displayOrder, setDisplayOrder] = useState(String(editingService?.displayOrder ?? 0));
+  const [fields, setFields] = useState<FieldDraft[]>(
+    () =>
+      editingService?.fields.map((field) => ({
+        id: field.id,
+        label: field.label,
+        type: field.type,
+        required: field.required,
+      })) ?? [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,17 +124,17 @@ export function ServerServiceForm() {
       return;
     }
 
-    const fieldPayload: CreateServerServiceField[] = fields
+    const fieldPayload: (CreateServerServiceField & { id?: string })[] = fields
       .filter((field) => field.label.trim())
       .map((field, index) => ({
+        id: field.id,
         label: field.label,
         type: field.type,
         required: field.required,
         displayOrder: index,
       }));
 
-    setSubmitting(true);
-    const result = await createServerServiceAction(verifiedInitData, {
+    const payload = {
       name,
       priceCents,
       description,
@@ -123,7 +146,12 @@ export function ServerServiceForm() {
       categoryName: categoryName || null,
       displayOrder: Number(displayOrder) || 0,
       fields: fieldPayload,
-    });
+    };
+
+    setSubmitting(true);
+    const result = editingService
+      ? await updateServerServiceAction(verifiedInitData, editingService.id, payload)
+      : await createServerServiceAction(verifiedInitData, payload);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -131,8 +159,12 @@ export function ServerServiceForm() {
       return;
     }
 
-    resetForm();
     router.refresh();
+    if (editingService) {
+      onSaved?.();
+    } else {
+      resetForm();
+    }
   }
 
   return (
@@ -140,7 +172,9 @@ export function ServerServiceForm() {
       onSubmit={handleSubmit}
       className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
     >
-      <h2 className="text-sm font-semibold text-foreground">Add Server Service (Admin)</h2>
+      <h2 className="text-sm font-semibold text-foreground">
+        {editingService ? `Edit ${editingService.name} (Admin)` : "Add Server Service (Admin)"}
+      </h2>
 
       <input
         className={inputClass}
@@ -277,13 +311,30 @@ export function ServerServiceForm() {
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
-      >
-        {submitting ? "Creating…" : "Create Service"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
+        >
+          {submitting
+            ? editingService
+              ? "Saving…"
+              : "Creating…"
+            : editingService
+              ? "Save Changes"
+              : "Create Service"}
+        </button>
+        {editingService ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground"
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }
