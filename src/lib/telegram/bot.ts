@@ -47,3 +47,35 @@ export async function sendTelegramMessage(
     console.error("[telegram] failed to send notification", error);
   }
 }
+
+const CHANNEL_MEMBER_STATUSES = new Set(["creator", "administrator", "member", "restricted"]);
+
+/**
+ * Checks whether a user already belongs to a Telegram channel/chat, via the
+ * Bot API's getChatMember (the bot must be a member of that channel).
+ * Returns null when membership can't be determined (no bot token, channel
+ * unset, network/API error, or the bot isn't in that channel) — callers
+ * should treat null as "unknown" and fail open rather than hide content.
+ */
+export async function isChannelMember(
+  channel: string,
+  telegramId: bigint | number | string,
+): Promise<boolean | null> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token || !channel.trim()) return null;
+
+  try {
+    const url = new URL(`${TELEGRAM_API_BASE}/bot${token}/getChatMember`);
+    url.searchParams.set("chat_id", channel.trim());
+    url.searchParams.set("user_id", telegramId.toString());
+
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!data.ok) return null;
+
+    return CHANNEL_MEMBER_STATUSES.has(data.result?.status);
+  } catch (error) {
+    console.error("[telegram] failed to check channel membership", error);
+    return null;
+  }
+}

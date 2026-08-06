@@ -6,6 +6,8 @@ import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyPromotion } from "@/lib/telegram/notifications";
 import { broadcastToAllUsers } from "@/lib/telegram/broadcast";
+import { isChannelMember } from "@/lib/telegram/bot";
+import { getCurrentUser } from "@/lib/telegram/current-user";
 
 export type PopupSummary = {
   id: string;
@@ -18,8 +20,14 @@ export type PopupSummary = {
   buttonUrl: string | null;
 };
 
-/** The active, not-yet-expired popup to show customers (Chapter 11: Popup). */
-export async function getActivePopupAction(): Promise<PopupSummary | null> {
+/**
+ * The active, not-yet-expired popup to show customers (Chapter 11: Popup).
+ * When the popup has a requiredChannel set, it's skipped for users who
+ * already belong to that channel — initData is optional so existing
+ * anonymous/admin-preview call sites keep working, just without the
+ * membership check (fails open: shown when membership can't be verified).
+ */
+export async function getActivePopupAction(initData?: string | null): Promise<PopupSummary | null> {
   const popup = await prisma.popup.findFirst({
     where: {
       active: true,
@@ -29,6 +37,16 @@ export async function getActivePopupAction(): Promise<PopupSummary | null> {
   });
 
   if (!popup) return null;
+
+  if (popup.requiredChannel && initData) {
+    try {
+      const user = await getCurrentUser(initData);
+      const isMember = await isChannelMember(popup.requiredChannel, user.telegramId);
+      if (isMember) return null;
+    } catch {
+      // Couldn't resolve the user or check membership — fail open.
+    }
+  }
 
   return {
     id: popup.id,
@@ -52,6 +70,8 @@ export type CreatePopupInput = {
   buttonUrl: string | null;
   expiresAt: string | null;
   notifyUsers: boolean;
+  /** Skip this popup for users already in this channel (@username or chat id). */
+  requiredChannel: string | null;
 };
 export type CreatePopupResult = { ok: true } | { ok: false; error: string };
 
@@ -77,6 +97,7 @@ export async function createPopupAction(
         buttonText: input.buttonText?.trim() || null,
         buttonUrl: input.buttonUrl?.trim() || null,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        requiredChannel: input.requiredChannel?.trim() || null,
       },
     });
 

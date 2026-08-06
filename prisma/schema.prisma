@@ -468,6 +468,11 @@ model Popup {
   active     Boolean   @default(true)
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
+
+  /// Optional Telegram channel (@username or numeric chat id, bot must be a
+  /// member) — when set, this popup is skipped for users who already belong
+  /// to that channel instead of nagging them to join again.
+  requiredChannel String?
 }
 
 enum NotificationKind {

@@ -22,15 +22,17 @@ export function PopupTab({ initData }: { initData: string }) {
   const [buttonUrl, setButtonUrl] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [notifyUsers, setNotifyUsers] = useState(true);
+  const [requiredChannel, setRequiredChannel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function refresh() {
-    getActivePopupAction().then(setActive);
+    getActivePopupAction(initData).then(setActive);
   }
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(event: FormEvent) {
@@ -48,6 +50,7 @@ export function PopupTab({ initData }: { initData: string }) {
       buttonUrl: buttonUrl || null,
       expiresAt: expiresAt || null,
       notifyUsers,
+      requiredChannel: requiredChannel || null,
     });
     setSubmitting(false);
 
@@ -63,6 +66,7 @@ export function PopupTab({ initData }: { initData: string }) {
     setButtonText("");
     setButtonUrl("");
     setExpiresAt("");
+    setRequiredChannel("");
     refresh();
   }
 
@@ -143,6 +147,18 @@ export function PopupTab({ initData }: { initData: string }) {
           onChange={(e) => setExpiresAt(e.target.value)}
           title="Expiration date"
         />
+        <div className="flex flex-col gap-1">
+          <input
+            className={formInputClass}
+            placeholder="Required channel (e.g. @FalconUnlockerBotChannel) — optional"
+            value={requiredChannel}
+            onChange={(e) => setRequiredChannel(e.target.value)}
+          />
+          <p className="text-[11px] text-hint">
+            When set, this popup is skipped for users who already belong to that channel. The bot
+            must be a member of it to check.
+          </p>
+        </div>
         <label className="flex items-center gap-1 text-xs text-hint">
           <input
             type="checkbox"

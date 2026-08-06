@@ -28,7 +28,7 @@ export default function Home() {
     listNewsAction().then((result) => {
       if (!cancelled) setNews(result);
     });
-    getActivePopupAction().then((result) => {
+    getActivePopupAction(initData).then((result) => {
       if (!cancelled) setPromotion(result);
     });
 
@@ -51,7 +51,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
-      <PopupDisplay />
+      <PopupDisplay initData={initData ?? null} />
       <div>
         <h1 className="text-lg font-semibold text-foreground">
           Welcome, {user.firstName}

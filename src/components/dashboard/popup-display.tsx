@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { getActivePopupAction, type PopupSummary } from "@/lib/actions/admin-popups";
 import { Markdown } from "@/components/ui/markdown";
 
-export function PopupDisplay() {
+export function PopupDisplay({ initData }: { initData: string | null }) {
   const [popup, setPopup] = useState<PopupSummary | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    getActivePopupAction().then(setPopup);
-  }, []);
+    getActivePopupAction(initData).then(setPopup);
+  }, [initData]);
 
   if (!popup || dismissed) return null;
 
