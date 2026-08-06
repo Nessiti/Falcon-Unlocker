@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   init,
   isTMA,
@@ -36,22 +29,39 @@ export function useTelegramStatus() {
   return useContext(TelegramStatusContext);
 }
 
-function subscribe() {
-  return () => {};
-}
-
-function getSnapshot() {
-  return isTMA();
-}
-
-function getServerSnapshot() {
-  return false;
+/**
+ * The sync isTMA() check only looks at whether launch params are already
+ * sitting in the URL — on some real Telegram clients (notably slower to
+ * inject the bridge, e.g. some Desktop/Android builds) that's not yet true
+ * on first paint, even though the app genuinely is running inside Telegram.
+ * Concluding "not Telegram" from that alone stranded real users on the
+ * "Open this app from Telegram" screen. The async "complete" check actually
+ * pings the Mini App bridge and waits for a real reply, so it's the
+ * fallback here instead of a final verdict.
+ */
+async function detectTelegram(): Promise<boolean> {
+  if (isTMA()) return true;
+  try {
+    return await isTMA("complete", { timeout: 3000 });
+  } catch {
+    return false;
+  }
 }
 
 export function TelegramRoot({ children }: { children: ReactNode }) {
-  const inTelegram = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [inTelegram, setInTelegram] = useState<boolean | null>(null);
   const [mountStatus, setMountStatus] = useState<MountStatus>("booting");
   const [mountError, setMountError] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    detectTelegram().then((result) => {
+      if (!cancelled) setInTelegram(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!inTelegram) return;
@@ -94,7 +104,8 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
     };
   }, [inTelegram]);
 
-  const status: TelegramStatus = inTelegram ? mountStatus : "not-telegram";
+  const status: TelegramStatus =
+    inTelegram === null ? "booting" : inTelegram ? mountStatus : "not-telegram";
   const state: TelegramState = { status, error: mountError };
 
   return (
