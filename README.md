@@ -363,6 +363,348 @@ Each step records: Date, Admin, Comment, History, Telegram Notification
 
 ---
 
+## Provider Gateway — Global Rule
+
+This project must never be built around a specific provider (e.g. DHRU only).
+
+Falcon Unlocker must use a Provider Gateway Architecture, where every provider is isolated in its own connector.
+
+Adding a new provider must never require modifying the core application. The only requirement should be creating a new connector implementing the common provider interface.
+
+The core application must remain independent of provider-specific implementations.
+
+---
+
+## Chapter 12 — Provider Center (Admin)
+
+### Objective
+
+Create a centralized Provider Management module.
+
+The administrator must be able to:
+
+- Add a provider
+- Edit a provider
+- Delete a provider
+- Enable / Disable a provider
+- Test API connection
+- View provider status
+- View provider balance (if supported)
+- Configure automatic synchronization
+- View connection history
+
+### Supported Provider Types
+
+- DHRU Fusion API
+- PHP API
+- REST API
+- JSON API
+- XML API
+- Custom API
+
+Each provider must contain:
+
+- Provider Name
+- Provider Type
+- Base URL
+- Username
+- API Key
+- API Secret
+- Token (optional)
+- Timeout
+- Priority
+- Status
+- Auto Sync (ON/OFF)
+
+---
+
+## Chapter 13 — Provider Connector Engine
+
+### Objective
+
+Create a unified connector architecture.
+
+Every provider connector must expose the exact same interface.
+
+**Required Functions**
+
+- connect()
+- disconnect()
+- testConnection()
+- getServices()
+- submitOrder()
+- checkOrderStatus()
+- cancelOrder()
+- getBalance()
+- syncServices()
+
+The Falcon core must communicate only with these methods.
+
+No provider-specific logic should exist outside the connector.
+
+---
+
+## Chapter 14 — Service Mapping
+
+### Objective
+
+Create a Service Mapping System.
+
+Falcon services and Provider services are independent.
+
+Each Falcon service can be linked to one or multiple provider services.
+
+**Features**
+
+- Manual mapping
+- Automatic mapping
+- Multiple providers per service
+- Provider Service ID
+- Falcon Service ID
+- Priority order
+- Enable / Disable mapping
+
+**Example**
+
+```
+Falcon: Apple FMI OFF
+  ↓
+Provider A → Service ID: 245
+Provider B → Service ID: 889
+```
+
+---
+
+## Chapter 15 — Smart Routing Engine
+
+### Objective
+
+Automatically choose the best provider.
+
+**Routing options**
+
+- Cheapest provider
+- Fastest provider
+- Highest success rate
+- Preferred provider
+- Manual provider selection
+
+**Fallback System**
+
+```
+If Provider A fails
+  ↓
+Automatically retry Provider B
+  ↓
+Then Provider C
+without user intervention.
+```
+
+---
+
+## Chapter 16 — Automatic Synchronization
+
+### Objective
+
+Synchronize provider data automatically.
+
+**Synchronizable data**
+
+- Services
+- Categories
+- Prices
+- Estimated Time
+- Status
+- Provider Balance
+
+**Admin can configure**
+
+- Manual Sync
+- Every hour
+- Every 6 hours
+- Daily
+
+Synchronization must never overwrite administrator customizations unless explicitly allowed.
+
+---
+
+## Chapter 17 — API Logs
+
+### Objective
+
+Create a complete API logging system.
+
+Every API request must be logged.
+
+**Stored data**
+
+- Date
+- Provider
+- Endpoint
+- Request
+- Response
+- Execution Time
+- Status Code
+- Error Message
+
+**Features**
+
+- Search
+- Filters
+- Export
+- Retry Request
+
+---
+
+## Chapter 18 — Queue & Retry System
+
+### Objective
+
+Create a reliable queue system.
+
+**Workflow**
+
+```
+Order → Queue → Provider → Response
+```
+
+If provider fails: retry automatically.
+
+**Retry configuration**
+
+- Maximum retries
+- Retry delay
+- Timeout
+- Cancel queue
+- Manual retry
+
+Queue must prevent duplicate submissions.
+
+---
+
+## Chapter 19 — Security Center
+
+### Objective
+
+Protect every provider integration.
+
+**Requirements**
+
+- Encrypt API Keys
+- Encrypt Secrets
+- Secure Token Storage
+- Audit Logs
+- Admin Action Logs
+- Rate Limiting
+- IP Restrictions (future-ready)
+- Secret Rotation Support
+
+Sensitive credentials must never be exposed to the frontend.
+
+---
+
+## Chapter 20 — Monitoring Dashboard
+
+### Objective
+
+Create a real-time Provider Monitoring Center.
+
+**Metrics**
+
+- Provider Status
+- Online / Offline
+- Success Rate
+- Failed Requests
+- Average Response Time
+- Active Orders
+- Daily Orders
+- Provider Balance
+- Synchronization Status
+
+**Charts**
+
+- Success Rate
+- Error Rate
+- Response Time
+- Orders per Provider
+
+---
+
+## Chapter 21 — Final QA & Production Validation
+
+### Objective
+
+Validate the platform before production.
+
+**Telegram Compatibility**
+
+- Telegram Android
+- Telegram iOS
+- Telegram Desktop Windows
+- Telegram Desktop macOS
+- Telegram Desktop Linux
+
+**Responsive Validation**
+
+Desktop:
+- Adaptive 3-column grid
+- Full-width layout
+- Smooth scrolling
+
+Mobile:
+- Fullscreen only
+- Safe Area support
+- One-card layout
+- Native touch interactions
+
+**Functional Tests**
+
+- Authentication
+- Wallet
+- Orders
+- IMEI Services
+- Server Services
+- Manual Processing
+- Automatic Processing
+- Notifications
+- Provider Gateway
+- Synchronization
+- API Logs
+- Queue
+- Retry System
+
+**Performance**
+
+- Fast loading
+- Serverless optimized
+- Lazy Loading
+- Skeleton Loading
+- Optimized Database Queries
+
+**Production Checklist**
+
+- No hardcoded provider logic
+- No exposed API credentials
+- Complete audit logs
+- Clean error handling
+- Telegram-native UX
+- Stable serverless deployment on Vercel
+- Fully compatible with Neon PostgreSQL
+
+---
+
+## Final Architecture Principle
+
+Falcon Unlocker is not a DHRU clone.
+
+Falcon Unlocker is a Telegram-native GSM Platform built around a modular Provider Gateway architecture.
+
+The system must remain scalable, maintainable, and extensible.
+
+Future providers should be integrated by creating a new connector only, without modifying the core application.
+
+---
+
 ## Responsive Design
 
 ### Mobile
