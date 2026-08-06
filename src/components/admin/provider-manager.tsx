@@ -8,6 +8,7 @@ import {
   setProviderEnabledAction,
   deleteProviderAction,
   testProviderConnectionAction,
+  refreshProviderBalanceAction,
   type ProviderSummary,
   type ProviderDetail,
 } from "@/lib/actions/admin-providers";
@@ -32,6 +33,7 @@ export function ProviderManager({ initData }: { initData: string }) {
   const [editingProvider, setEditingProvider] = useState<ProviderDetail | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, string>>({});
+  const [balanceResult, setBalanceResult] = useState<Record<string, string>>({});
 
   function refresh() {
     listProvidersAction(initData).then((result) => {
@@ -95,6 +97,18 @@ export function ProviderManager({ initData }: { initData: string }) {
     refresh();
   }
 
+  async function handleRefreshBalance(id: string) {
+    setBusyId(id);
+    setBalanceResult((current) => ({ ...current, [id]: "Fetching…" }));
+    const result = await refreshProviderBalanceAction(initData, id);
+    setBusyId(null);
+    setBalanceResult((current) => ({
+      ...current,
+      [id]: result.ok ? `✓ ${formatUsd(result.balanceCents)}` : `✗ ${result.error}`,
+    }));
+    refresh();
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-semibold text-foreground">Manage Providers (Admin)</h2>
@@ -152,12 +166,19 @@ export function ProviderManager({ initData }: { initData: string }) {
             <p className="text-xs text-hint">
               Balance:{" "}
               {provider.lastBalanceCents != null
-                ? formatUsd(provider.lastBalanceCents)
-                : "Not available (requires connector, Chapter 13)"}
+                ? `${formatUsd(provider.lastBalanceCents)}${
+                    provider.lastBalanceAt
+                      ? ` (as of ${new Date(provider.lastBalanceAt).toLocaleString()})`
+                      : ""
+                  }`
+                : "Not fetched yet"}
             </p>
 
             {testResult[provider.id] ? (
               <p className="text-xs text-hint">{testResult[provider.id]}</p>
+            ) : null}
+            {balanceResult[provider.id] ? (
+              <p className="text-xs text-hint">{balanceResult[provider.id]}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">
@@ -176,6 +197,14 @@ export function ProviderManager({ initData }: { initData: string }) {
                 className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
               >
                 Test Connection
+              </button>
+              <button
+                type="button"
+                disabled={busyId === provider.id}
+                onClick={() => handleRefreshBalance(provider.id)}
+                className="rounded-lg border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+              >
+                Refresh Balance
               </button>
               <button
                 type="button"

@@ -5,6 +5,7 @@ import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ProviderType } from "@/generated/prisma/client";
+import { getProviderConnector } from "@/lib/providers/registry";
 
 function maskSecret(value: string | null): string | null {
   if (!value) return null;
@@ -255,10 +256,8 @@ export type TestProviderConnectionResult =
   | { ok: false; error: string };
 
 /**
- * Generic, provider-type-agnostic reachability check: does baseUrl respond at
- * all, and how fast. Per-provider authenticated calls (getBalance, etc.)
- * belong to the connector engine (Chapter 13) — this only proves the URL is
- * live, which is what "Test API connection" means before a connector exists.
+ * Runs through the Chapter 13 connector engine — the core app never talks
+ * to a provider's raw API, only through ProviderConnector.testConnection().
  */
 export async function testProviderConnectionAction(
   initData: string,
@@ -270,26 +269,8 @@ export async function testProviderConnectionAction(
     const provider = await prisma.provider.findUnique({ where: { id: providerId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
-    const startedAt = Date.now();
-    let success = false;
-    let statusCode: number | null = null;
-    let errorMessage: string | null = null;
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), provider.timeoutMs);
-      try {
-        const response = await fetch(provider.baseUrl, { method: "GET", signal: controller.signal });
-        statusCode = response.status;
-        success = response.status < 500;
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : "Connection failed";
-    }
-
-    const responseTimeMs = Date.now() - startedAt;
+    const { success, responseTimeMs, statusCode, errorMessage } =
+      await getProviderConnector(provider).testConnection();
 
     await prisma.providerConnectionLog.create({
       data: { providerId, success, responseTimeMs, statusCode, errorMessage },
@@ -343,6 +324,40 @@ export async function listProviderConnectionLogsAction(
     };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to load history";
+    return { ok: false, error: message };
+  }
+}
+
+export type RefreshProviderBalanceResult =
+  | { ok: true; balanceCents: number }
+  | { ok: false; error: string };
+
+/** "View provider balance" (Chapter 12), now backed by the real connector (Chapter 13). */
+export async function refreshProviderBalanceAction(
+  initData: string,
+  providerId: string,
+): Promise<RefreshProviderBalanceResult> {
+  try {
+    const admin = await requireAdmin(initData);
+
+    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    if (!provider) return { ok: false, error: "Provider not found" };
+
+    const result = await getProviderConnector(provider).getBalance();
+    if (!result.ok) {
+      await logAdminAction(admin.id, "provider.balance-refresh", `${provider.name} -> failed: ${result.error}`);
+      return { ok: false, error: result.error };
+    }
+
+    await prisma.provider.update({
+      where: { id: providerId },
+      data: { lastBalanceCents: result.balanceCents, lastBalanceAt: new Date() },
+    });
+    await logAdminAction(admin.id, "provider.balance-refresh", `${provider.name} -> ${result.balanceCents}`);
+
+    return { ok: true, balanceCents: result.balanceCents };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to refresh balance";
     return { ok: false, error: message };
   }
 }
