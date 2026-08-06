@@ -3,9 +3,10 @@ import { validate } from "@tma.js/init-data-node/web";
 
 export const config = {
   // Excludes /api/telegram/webhook (Telegram calls it directly, no Mini App
-  // initData) and /api/cron/* (Vercel Cron calls it directly, Chapter 16) —
-  // both authenticate via their own secret token instead.
-  matcher: ["/api/((?!telegram/webhook|cron/).*)"],
+  // initData) and /api/cron (the unified cron endpoint — called directly by
+  // an external scheduler, e.g. cron-job.org) — both authenticate via their
+  // own secret token instead.
+  matcher: ["/api/((?!telegram/webhook|cron(?:/|$)).*)"],
 };
 
 export default async function proxy(request: NextRequest) {

@@ -709,3 +709,21 @@ model QueueSettings {
   retryDelaySeconds Int      @default(60)
   updatedAt         DateTime @updatedAt
 }
+
+/// Unified Cron System: one row per task run, written by every task
+/// registered in src/lib/cron/registry.ts regardless of outcome — the
+/// execution audit trail for whatever scheduler (cron-job.org) calls
+/// /api/cron.
+model CronRunLog {
+  id         String   @id @default(cuid())
+  task       String
+  startedAt  DateTime
+  finishedAt DateTime
+  durationMs Int
+  success    Boolean
+  detail     String?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@index([task, createdAt])
+}
