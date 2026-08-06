@@ -518,14 +518,23 @@ model Provider {
   username String?
 
   /// Credentials are never sent to the frontend in full (only masked) — see
-  /// admin-providers.ts. Encryption-at-rest is Chapter 19 (Security Center).
-  apiKey    String?
-  apiSecret String?
-  token     String?
+  /// admin-providers.ts. Encrypted at rest (Chapter 19 — src/lib/security/
+  /// encryption.ts); values written before Chapter 19 that are still
+  /// plaintext keep working (decryptSecret passes them through unchanged)
+  /// until next rotated.
+  apiKey           String?
+  apiSecret        String?
+  token            String?
+  /// Secret Rotation Support (Chapter 19): set whenever apiKey/apiSecret/
+  /// token is actually changed. Null means never rotated since creation.
+  secretsRotatedAt DateTime?
 
-  timeoutMs Int     @default(30000)
-  priority  Int     @default(0)
-  enabled   Boolean @default(true)
+  timeoutMs          Int     @default(30000)
+  priority           Int     @default(0)
+  enabled            Boolean @default(true)
+  /// Rate Limiting (Chapter 19): max outbound calls to this provider per
+  /// minute, enforced in base-connector.ts. Null means unlimited.
+  rateLimitPerMinute Int?
 
   /// Automatic Synchronization (Chapter 16): MANUAL means only "Sync Now" runs it.
   syncFrequency    SyncFrequency @default(MANUAL)
@@ -726,4 +735,18 @@ model CronRunLog {
   createdAt  DateTime @default(now())
 
   @@index([task, createdAt])
+}
+
+/// Security Center (Chapter 19), admin-configurable. Single row.
+model SecuritySettings {
+  id String @id @default("singleton")
+
+  /// IP Restrictions (future-ready): comma/newline-separated IPs or address
+  /// prefixes allowed to use admin/staff actions. Empty/null = disabled (no
+  /// restriction) — this is the safe default so an admin can't lock
+  /// themselves out by leaving it unset. Enforced in requireAdmin/
+  /// requireStaff the moment it's filled in, not just a decorative toggle.
+  adminIpAllowlist String?
+
+  updatedAt DateTime @updatedAt
 }

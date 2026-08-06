@@ -79,21 +79,61 @@ export abstract class BaseConnector implements ProviderConnector {
   abstract getBalance(): Promise<BalanceResult>;
 
   /**
+   * Rate Limiting (Chapter 19): counts this provider's own ApiLog rows from
+   * the last 60 seconds — no extra state to maintain, reuses what Chapter
+   * 17 already records at this exact chokepoint. Protecting the provider's
+   * real API from being hammered (by a runaway sync, a retry storm, or an
+   * admin double-clicking) is the point, so this fails closed on error:
+   * if the count query itself fails, the call is blocked rather than let
+   * through unchecked.
+   */
+  private async isRateLimited(): Promise<boolean> {
+    if (!this.provider.rateLimitPerMinute) return false;
+    try {
+      const count = await prisma.apiLog.count({
+        where: { providerId: this.provider.id, createdAt: { gte: new Date(Date.now() - 60_000) } },
+      });
+      return count >= this.provider.rateLimitPerMinute;
+    } catch (error) {
+      console.error("Rate limit check failed, blocking call", error);
+      return true;
+    }
+  }
+
+  /**
    * API Logs (Chapter 17): the single chokepoint every connector call passes
    * through, regardless of provider type — so every outbound request is
    * logged identically without any provider-specific logging code. A
-   * logging failure never breaks the actual provider call.
+   * logging failure never breaks the actual provider call. Also where
+   * Chapter 19's per-provider rate limit is enforced, before any network
+   * call is made.
    */
   protected async fetchWithTimeout(
     url: string,
     init: RequestInit,
     operation: ApiLogOperation,
   ): Promise<Response> {
+    const method = init.method ?? "GET";
+    const requestBody = typeof init.body === "string" ? init.body : null;
+
+    if (await this.isRateLimited()) {
+      void this.logApiCall({
+        operation,
+        url,
+        method,
+        requestBody,
+        responseBody: null,
+        statusCode: null,
+        responseTimeMs: 0,
+        success: false,
+        errorMessage: `Rate limit exceeded (${this.provider.rateLimitPerMinute}/min)`,
+      });
+      throw new Error(`Rate limit exceeded for ${this.provider.name}`);
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.provider.timeoutMs);
     const startedAt = Date.now();
-    const method = init.method ?? "GET";
-    const requestBody = typeof init.body === "string" ? init.body : null;
 
     try {
       const response = await fetch(url, { ...init, signal: controller.signal });

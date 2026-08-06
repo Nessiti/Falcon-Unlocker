@@ -50,6 +50,9 @@ export function ProviderForm({
   const [syncFrequency, setSyncFrequency] = useState<SyncFrequency>(
     editingProvider?.syncFrequency ?? SyncFrequency.MANUAL,
   );
+  const [rateLimitPerMinute, setRateLimitPerMinute] = useState(
+    editingProvider?.rateLimitPerMinute != null ? String(editingProvider.rateLimitPerMinute) : "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +63,11 @@ export function ProviderForm({
     const timeoutValue = Number(timeoutMs);
     if (!Number.isInteger(timeoutValue) || timeoutValue <= 0) {
       setError("Enter a valid timeout in milliseconds");
+      return;
+    }
+    const rateLimitValue = rateLimitPerMinute.trim() ? Number(rateLimitPerMinute) : null;
+    if (rateLimitValue != null && (!Number.isInteger(rateLimitValue) || rateLimitValue <= 0)) {
+      setError("Rate limit must be a positive whole number, or blank for unlimited");
       return;
     }
 
@@ -74,6 +82,7 @@ export function ProviderForm({
       timeoutMs: timeoutValue,
       priority: Number(priority) || 0,
       syncFrequency,
+      rateLimitPerMinute: rateLimitValue,
     };
 
     setSubmitting(true);
@@ -101,6 +110,7 @@ export function ProviderForm({
       setTimeoutMs("30000");
       setPriority("0");
       setSyncFrequency(SyncFrequency.MANUAL);
+      setRateLimitPerMinute("");
     }
   }
 
@@ -210,6 +220,18 @@ export function ProviderForm({
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-foreground">
+        Rate Limit (calls per minute, blank = unlimited)
+        <input
+          className={formInputClass}
+          type="number"
+          min="1"
+          placeholder="Unlimited"
+          value={rateLimitPerMinute}
+          onChange={(e) => setRateLimitPerMinute(e.target.value)}
+        />
       </label>
 
       {error ? <p className="text-sm text-accent">{error}</p> : null}

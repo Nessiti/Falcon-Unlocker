@@ -7,11 +7,14 @@ import { logAdminAction } from "@/lib/telegram/audit";
 import { ProviderType, SyncFrequency } from "@/generated/prisma/client";
 import { getProviderConnector } from "@/lib/providers/registry";
 import { syncProvider } from "@/lib/providers/sync-engine";
+import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
 
+/** Decrypts (Chapter 19) before masking, so the preview always reflects the real plaintext. */
 function maskSecret(value: string | null): string | null {
   if (!value) return null;
-  if (value.length <= 4) return "••••";
-  return `••••${value.slice(-4)}`;
+  const plaintext = decryptSecret(value);
+  if (plaintext.length <= 4) return "••••";
+  return `••••${plaintext.slice(-4)}`;
 }
 
 export type ProviderSummary = {
@@ -26,6 +29,8 @@ export type ProviderSummary = {
   lastBalanceCents: number | null;
   lastBalanceAt: string | null;
   lastConnection: { success: boolean; createdAt: string } | null;
+  secretsRotatedAt: string | null;
+  rateLimitPerMinute: number | null;
 };
 
 export type ListProvidersResult =
@@ -61,6 +66,8 @@ export async function listProvidersAction(initData: string): Promise<ListProvide
               createdAt: provider.connectionLogs[0].createdAt.toISOString(),
             }
           : null,
+        secretsRotatedAt: provider.secretsRotatedAt?.toISOString() ?? null,
+        rateLimitPerMinute: provider.rateLimitPerMinute,
       })),
     };
   } catch (error) {
@@ -82,6 +89,7 @@ export type ProviderDetail = {
   priority: number;
   enabled: boolean;
   syncFrequency: SyncFrequency;
+  rateLimitPerMinute: number | null;
 };
 
 export type GetProviderDetailResult =
@@ -114,6 +122,7 @@ export async function getProviderDetailAction(
         priority: provider.priority,
         enabled: provider.enabled,
         syncFrequency: provider.syncFrequency,
+        rateLimitPerMinute: provider.rateLimitPerMinute,
       },
     };
   } catch (error) {
@@ -134,6 +143,7 @@ export type ProviderInput = {
   timeoutMs: number;
   priority: number;
   syncFrequency: SyncFrequency;
+  rateLimitPerMinute: number | null;
 };
 
 export type CreateProviderResult = { ok: true } | { ok: false; error: string };
@@ -154,24 +164,31 @@ export async function createProviderAction(
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
 
+    const hasSecret = Boolean(input.apiKey?.trim() || input.apiSecret?.trim() || input.token?.trim());
+
     await prisma.provider.create({
       data: {
         name,
         type: input.type,
         baseUrl,
         username: input.username?.trim() || null,
-        apiKey: input.apiKey?.trim() || null,
-        apiSecret: input.apiSecret?.trim() || null,
-        token: input.token?.trim() || null,
+        apiKey: input.apiKey?.trim() ? encryptSecret(input.apiKey.trim()) : null,
+        apiSecret: input.apiSecret?.trim() ? encryptSecret(input.apiSecret.trim()) : null,
+        token: input.token?.trim() ? encryptSecret(input.token.trim()) : null,
+        secretsRotatedAt: hasSecret ? new Date() : null,
         timeoutMs: input.timeoutMs,
         priority: input.priority,
         syncFrequency: input.syncFrequency,
+        rateLimitPerMinute: input.rateLimitPerMinute,
       },
     });
 
     await logAdminAction(admin.id, "provider.create", name);
     return { ok: true };
   } catch (error) {
+    if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
+      return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to create provider";
     return { ok: false, error: message };
   }
@@ -196,6 +213,10 @@ export async function updateProviderAction(
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
 
+    const rotatingSecret = Boolean(
+      input.apiKey?.trim() || input.apiSecret?.trim() || input.token?.trim(),
+    );
+
     await prisma.provider.update({
       where: { id: providerId },
       data: {
@@ -203,18 +224,23 @@ export async function updateProviderAction(
         type: input.type,
         baseUrl,
         username: input.username?.trim() || null,
-        ...(input.apiKey?.trim() ? { apiKey: input.apiKey.trim() } : {}),
-        ...(input.apiSecret?.trim() ? { apiSecret: input.apiSecret.trim() } : {}),
-        ...(input.token?.trim() ? { token: input.token.trim() } : {}),
+        ...(input.apiKey?.trim() ? { apiKey: encryptSecret(input.apiKey.trim()) } : {}),
+        ...(input.apiSecret?.trim() ? { apiSecret: encryptSecret(input.apiSecret.trim()) } : {}),
+        ...(input.token?.trim() ? { token: encryptSecret(input.token.trim()) } : {}),
+        ...(rotatingSecret ? { secretsRotatedAt: new Date() } : {}),
         timeoutMs: input.timeoutMs,
         priority: input.priority,
         syncFrequency: input.syncFrequency,
+        rateLimitPerMinute: input.rateLimitPerMinute,
       },
     });
 
     await logAdminAction(admin.id, "provider.update", name);
     return { ok: true };
   } catch (error) {
+    if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
+      return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update provider";
     return { ok: false, error: message };
   }
@@ -380,7 +406,8 @@ export type SyncProviderResult =
  * Automatic Synchronization (Chapter 16), triggered manually via "Sync Now".
  * Refreshes connection status, balance, and cached mapping data (name,
  * price, category, estimated time) — never the admin's own service records.
- * The same logic runs on a schedule via /api/cron/sync-providers.
+ * The same logic runs on a schedule as the sync-providers task, invoked via
+ * the unified /api/cron endpoint (see src/lib/cron/).
  */
 export async function syncProviderAction(
   initData: string,

@@ -33,6 +33,15 @@ const SYNC_FREQUENCY_LABEL: Record<string, string> = {
   DAILY: "Daily",
 };
 
+const ROTATION_REMINDER_DAYS = 90;
+
+/** Secret Rotation Support (Chapter 19): flags providers never rotated or overdue. */
+function secretsStale(rotatedAt: string | null): boolean {
+  if (!rotatedAt) return true;
+  const ageMs = Date.now() - new Date(rotatedAt).getTime();
+  return ageMs > ROTATION_REMINDER_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export function ProviderManager({ initData }: { initData: string }) {
   const router = useRouter();
   const [providers, setProviders] = useState<ProviderSummary[] | null>(null);
@@ -202,6 +211,15 @@ export function ProviderManager({ initData }: { initData: string }) {
             <p className="text-xs text-hint">
               Last sync:{" "}
               {provider.lastSyncAt ? new Date(provider.lastSyncAt).toLocaleString() : "Never"}
+            </p>
+            <p className={secretsStale(provider.secretsRotatedAt) ? "text-xs text-accent" : "text-xs text-hint"}>
+              Secrets rotated:{" "}
+              {provider.secretsRotatedAt ? new Date(provider.secretsRotatedAt).toLocaleDateString() : "Never"}
+              {secretsStale(provider.secretsRotatedAt) ? " — rotation recommended" : ""}
+            </p>
+            <p className="text-xs text-hint">
+              Rate limit:{" "}
+              {provider.rateLimitPerMinute != null ? `${provider.rateLimitPerMinute}/min` : "Unlimited"}
             </p>
 
             {testResult[provider.id] ? (

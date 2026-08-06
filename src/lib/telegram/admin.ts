@@ -1,7 +1,26 @@
 import "server-only";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
+import { getClientIp } from "@/lib/security/client-ip";
+import { isIpAllowed } from "@/lib/security/ip-allowlist";
 import { Role, type User } from "@/generated/prisma/client";
+
+/**
+ * IP Restrictions (future-ready, Chapter 19): a no-op until an admin fills
+ * in SecuritySettings.adminIpAllowlist — the safe default so nobody locks
+ * themselves out by leaving it unconfigured.
+ */
+async function enforceIpAllowlist(): Promise<void> {
+  const settings = await prisma.securitySettings.findUnique({ where: { id: "singleton" } });
+  const allowlist = settings?.adminIpAllowlist?.trim();
+  if (!allowlist) return;
+
+  const ip = await getClientIp();
+  if (!ip || !isIpAllowed(ip, allowlist)) {
+    throw new TelegramAuthError("Access denied from this network");
+  }
+}
 
 /**
  * Verifies initData and requires the matching account to have the Admin
@@ -12,6 +31,7 @@ export async function requireAdmin(initData: string): Promise<User> {
   if (user.role !== Role.ADMIN) {
     throw new TelegramAuthError("Admin access required");
   }
+  await enforceIpAllowlist();
   return user;
 }
 
@@ -25,5 +45,6 @@ export async function requireStaff(initData: string): Promise<User> {
   if (user.role !== Role.ADMIN && user.role !== Role.MODERATOR) {
     throw new TelegramAuthError("Staff access required");
   }
+  await enforceIpAllowlist();
   return user;
 }
