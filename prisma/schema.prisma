@@ -161,8 +161,8 @@ model ImeiServiceField {
   /// Field format validation: overrides the type's built-in default length
   /// (e.g. a service-specific SN length), unset falls back to the default
   /// in src/lib/validation/field-formats.ts.
-  minLength Int?
-  maxLength Int?
+  minLength    Int?
+  maxLength    Int?
 
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -300,8 +300,8 @@ model ServerServiceField {
   placeholder  String?
   /// Field format validation: overrides the type's built-in default length,
   /// unset falls back to the default in src/lib/validation/field-formats.ts.
-  minLength Int?
-  maxLength Int?
+  minLength    Int?
+  maxLength    Int?
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -737,6 +737,18 @@ model QueueSettings {
   maxRetries        Int      @default(3)
   retryDelaySeconds Int      @default(60)
   updatedAt         DateTime @updatedAt
+}
+
+/// Margin (Chapter 22): default markup applied on top of a provider's cost
+/// price when suggesting a selling price for a service mapping. Both are
+/// optional and stack (percent applied first, then the flat amount added) —
+/// null means "no default markup of that kind". A mapping's own
+/// marginPercent/marginCents (Chapter 23) overrides these per-mapping.
+model PricingSettings {
+  id                   String   @id @default("singleton")
+  defaultMarginPercent Int?
+  defaultMarginCents   Int?
+  updatedAt            DateTime @updatedAt
 }
 
 /// Unified Cron System: one row per task run, written by every task

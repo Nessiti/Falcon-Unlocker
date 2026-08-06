@@ -3,6 +3,7 @@
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { ProviderManager } from "@/components/admin/provider-manager";
 import { ProviderForm } from "@/components/admin/provider-form";
+import { PricingSettingsPanel } from "@/components/admin/pricing-settings-panel";
 
 export default function AdminProvidersPage() {
   const initData = useRawInitData();
@@ -16,6 +17,7 @@ export default function AdminProvidersPage() {
         specific provider&apos;s API shape. Connector logic (getServices, submitOrder, getBalance,
         etc.) is wired up per provider in Chapter 13.
       </p>
+      <PricingSettingsPanel initData={initData} />
       <ProviderManager initData={initData} />
       <ProviderForm initData={initData} />
     </div>
