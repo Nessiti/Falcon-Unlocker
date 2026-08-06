@@ -61,6 +61,27 @@ export async function clearPinAction(
   }
 }
 
+export type VerifyPinResult = { ok: true } | { ok: false; error: string };
+
+/** Confirms the caller's PIN before letting them proceed with a sensitive action (order, etc). */
+export async function verifyPinAction(initData: string, pin: string): Promise<VerifyPinResult> {
+  try {
+    const user = await getCurrentUser(initData);
+
+    if (!user.pinHash) {
+      return { ok: false, error: "No PIN is set" };
+    }
+    if (!verifyPin(pin, user.pinHash)) {
+      return { ok: false, error: "Incorrect PIN" };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to verify PIN";
+    return { ok: false, error: message };
+  }
+}
+
 export type SetBiometricEnabledResult = { ok: true } | { ok: false; error: string };
 
 /** Persists whether biometric unlock (via the Telegram client's native biometry) is enabled. */

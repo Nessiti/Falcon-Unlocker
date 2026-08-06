@@ -7,6 +7,7 @@ import { useTelegramUser } from "@/components/telegram-user-provider";
 import { createServerOrderAction } from "@/lib/actions/server-orders";
 import { ServerFieldInput } from "@/components/server/server-field-input";
 import { OrderSuccessScreen } from "@/components/orders/order-success-screen";
+import { useSecurityConfirm } from "@/components/security/use-security-confirm";
 import type { ServerFieldType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
@@ -27,6 +28,7 @@ export function ServerOrderButton({ serviceId, fields }: { serviceId: string; fi
   const auth = useTelegramUser();
   const initData = useRawInitData();
   const router = useRouter();
+  const { confirm, modal } = useSecurityConfirm(initData, auth);
 
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -40,9 +42,15 @@ export function ServerOrderButton({ serviceId, fields }: { serviceId: string; fi
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
 
+    const confirmed = await confirm("Confirm this order to place it.");
+    if (!confirmed) {
+      setError("Confirmation was cancelled or failed");
+      return;
+    }
+
+    setSubmitting(true);
     const result = await createServerOrderAction(verifiedInitData, {
       serviceId,
       fieldValues: values,
@@ -83,6 +91,7 @@ export function ServerOrderButton({ serviceId, fields }: { serviceId: string; fi
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-border pt-3">
+      {modal}
       {fields.map((field) => (
         <ServerFieldInput
           key={field.id}

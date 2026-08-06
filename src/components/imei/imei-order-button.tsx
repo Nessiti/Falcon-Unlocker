@@ -7,6 +7,7 @@ import { useTelegramUser } from "@/components/telegram-user-provider";
 import { createImeiOrderAction } from "@/lib/actions/imei-orders";
 import { ImeiFieldInput } from "@/components/imei/imei-field-input";
 import { OrderSuccessScreen } from "@/components/orders/order-success-screen";
+import { useSecurityConfirm } from "@/components/security/use-security-confirm";
 import type { ServiceFieldType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
@@ -31,6 +32,7 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
   const auth = useTelegramUser();
   const initData = useRawInitData();
   const router = useRouter();
+  const { confirm, modal } = useSecurityConfirm(initData, auth);
 
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -44,9 +46,15 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
 
+    const confirmed = await confirm("Confirm this order to place it.");
+    if (!confirmed) {
+      setError("Confirmation was cancelled or failed");
+      return;
+    }
+
+    setSubmitting(true);
     const result = await createImeiOrderAction(verifiedInitData, {
       serviceId,
       fieldValues: values,
@@ -94,6 +102,7 @@ export function ImeiOrderButton({ serviceId, fields }: { serviceId: string; fiel
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-border pt-3">
+      {modal}
       {fields.map((field) => (
         <ImeiFieldInput
           key={field.id}
