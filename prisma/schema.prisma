@@ -501,6 +501,7 @@ enum ProviderType {
   XML_API
   CUSTOM_API
   WEBX
+  GSM_THEME
 }
 
 /// Smart Routing Engine (Chapter 15) strategies for picking a provider among
