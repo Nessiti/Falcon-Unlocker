@@ -31,35 +31,50 @@ export async function capturePendingReferral(
   tenantId: string,
   startParam: string,
 ): Promise<void> {
-  const referrerId = parseReferrerId(startParam);
-  if (!referrerId) return;
+  try {
+    const referrerId = parseReferrerId(startParam);
+    if (!referrerId) return;
 
-  const referrer = await prisma.user.findFirst({
-    where: { id: referrerId, tenantId },
-    select: { id: true, telegramId: true },
-  });
-  if (!referrer || referrer.telegramId === telegramId) return;
+    const referrer = await prisma.user.findFirst({
+      where: { id: referrerId, tenantId },
+      select: { id: true, telegramId: true },
+    });
+    if (!referrer || referrer.telegramId === telegramId) return;
 
-  await prisma.pendingReferral.upsert({
-    where: { telegramId_tenantId: { telegramId, tenantId } },
-    update: { referrerId: referrer.id },
-    create: { telegramId, tenantId, referrerId: referrer.id },
-  });
+    await prisma.pendingReferral.upsert({
+      where: { telegramId_tenantId: { telegramId, tenantId } },
+      update: { referrerId: referrer.id },
+      create: { telegramId, tenantId, referrerId: referrer.id },
+    });
+  } catch (error) {
+    console.error("[referrals] capturePendingReferral failed", error);
+  }
 }
 
-/** Looks up and deletes any pending referral for this (telegramId, tenantId), returning the referrer's userId if one was found. */
+/**
+ * Looks up and deletes any pending referral for this (telegramId, tenantId),
+ * returning the referrer's userId if one was found. Best-effort like the
+ * rest of this module - called unconditionally on every login, so a failure
+ * here (a schema not yet migrated, a transient DB error) must never take
+ * sign-in down with it.
+ */
 export async function consumePendingReferral(
   telegramId: bigint,
   tenantId: string,
 ): Promise<string | null> {
-  const pending = await prisma.pendingReferral.findUnique({
-    where: { telegramId_tenantId: { telegramId, tenantId } },
-    select: { id: true, referrerId: true },
-  });
-  if (!pending) return null;
+  try {
+    const pending = await prisma.pendingReferral.findUnique({
+      where: { telegramId_tenantId: { telegramId, tenantId } },
+      select: { id: true, referrerId: true },
+    });
+    if (!pending) return null;
 
-  await prisma.pendingReferral.delete({ where: { id: pending.id } });
-  return pending.referrerId;
+    await prisma.pendingReferral.delete({ where: { id: pending.id } });
+    return pending.referrerId;
+  } catch (error) {
+    console.error("[referrals] consumePendingReferral failed", error);
+    return null;
+  }
 }
 
 /**
@@ -71,33 +86,37 @@ export async function consumePendingReferral(
  * pays out twice.
  */
 export async function maybeRewardReferral(userId: string, tenantId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { referredById: true, referralRewardPaid: true },
-  });
-  if (!user?.referredById || user.referralRewardPaid) return;
-
-  const claimed = await prisma.user.updateMany({
-    where: { id: userId, referralRewardPaid: false },
-    data: { referralRewardPaid: true },
-  });
-  if (claimed.count === 0) return;
-
-  const referrer = await prisma.$transaction(async (tx) => {
-    const updated = await tx.user.update({
-      where: { id: user.referredById! },
-      data: { balanceCents: { increment: REFERRAL_BONUS_CENTS } },
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { referredById: true, referralRewardPaid: true },
     });
-    await tx.walletTransaction.create({
-      data: {
-        userId: updated.id,
-        type: WalletTransactionType.CREDIT,
-        amountCents: REFERRAL_BONUS_CENTS,
-        reason: "Referral bonus",
-      },
-    });
-    return updated;
-  });
+    if (!user?.referredById || user.referralRewardPaid) return;
 
-  await notifyBalanceUpdated(referrer.telegramId, tenantId, referrer.balanceCents);
+    const claimed = await prisma.user.updateMany({
+      where: { id: userId, referralRewardPaid: false },
+      data: { referralRewardPaid: true },
+    });
+    if (claimed.count === 0) return;
+
+    const referrer = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: user.referredById! },
+        data: { balanceCents: { increment: REFERRAL_BONUS_CENTS } },
+      });
+      await tx.walletTransaction.create({
+        data: {
+          userId: updated.id,
+          type: WalletTransactionType.CREDIT,
+          amountCents: REFERRAL_BONUS_CENTS,
+          reason: "Referral bonus",
+        },
+      });
+      return updated;
+    });
+
+    await notifyBalanceUpdated(referrer.telegramId, tenantId, referrer.balanceCents);
+  } catch (error) {
+    console.error("[referrals] maybeRewardReferral failed", error);
+  }
 }

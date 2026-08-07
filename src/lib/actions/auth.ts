@@ -81,7 +81,9 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     // last clicked before ever signing up, if anyone. Deleted here either
     // way - a brand-new account gets it attached below; an already-existing
     // account (this is just a repeat login) has no use for it, so this also
-    // doubles as cleanup of a stale row.
+    // doubles as cleanup of a stale row. consumePendingReferral is
+    // best-effort internally (never throws) - a referral is a nice-to-have,
+    // not core to authentication, so it can never take sign-in down with it.
     const referrerId = await consumePendingReferral(telegramId, resolvedTenantId);
 
     // Chapter 37: the same Telegram person gets a separate, independent
