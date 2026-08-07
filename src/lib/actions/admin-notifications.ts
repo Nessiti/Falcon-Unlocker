@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyPromotion, notifyMaintenance } from "@/lib/telegram/notifications";
@@ -18,6 +19,7 @@ export async function sendBroadcastAction(
 ): Promise<BroadcastResult> {
   try {
     const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const title = input.title.trim();
     const message = input.message.trim();
@@ -26,8 +28,8 @@ export async function sendBroadcastAction(
 
     const recipientCount =
       input.kind === "PROMOTION"
-        ? await broadcastToAllUsers((telegramId) => notifyPromotion(telegramId, title, message))
-        : await broadcastToAllUsers((telegramId) => notifyMaintenance(telegramId, message));
+        ? await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, title, message))
+        : await broadcastToAllUsers(tenantId, (telegramId) => notifyMaintenance(telegramId, message));
 
     await prisma.notification.create({
       data: {
@@ -36,6 +38,7 @@ export async function sendBroadcastAction(
         message,
         recipientCount,
         sentById: staff.id,
+        tenantId,
       },
     });
 
@@ -66,9 +69,11 @@ export type ListNotificationsResult =
 /** Admin Notifications section: history of past broadcasts. */
 export async function listNotificationsAction(initData: string): Promise<ListNotificationsResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const notifications = await prisma.notification.findMany({
+      where: { tenantId },
       include: { sentBy: true },
       orderBy: { createdAt: "desc" },
       take: 100,

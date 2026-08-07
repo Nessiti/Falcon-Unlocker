@@ -84,11 +84,23 @@ export function notifyBalanceUpdated(telegramId: bigint, balanceCents: number) {
   );
 }
 
-export function notifyWelcome(telegramId: bigint, firstName: string) {
+/**
+ * `tenantName`/`token` let the webhook route (Chapter 33) reply as the
+ * correct brand for a first-ever /start, before any User row exists to
+ * resolve a tenant from automatically — every other caller keeps working
+ * unchanged (defaults to Falcon Unlocker's own copy and bot).
+ */
+export function notifyWelcome(
+  telegramId: bigint,
+  firstName: string,
+  tenantName = "Falcon Unlocker",
+  token?: string,
+) {
   return sendTelegramMessage(
     telegramId,
-    `👋 <b>Welcome, ${firstName}!</b>\nFalcon Unlocker is the first Telegram-native GSM Server. Open the app to unlock IMEI/server services, manage your wallet, and track your orders.`,
+    `👋 <b>Welcome, ${firstName}!</b>\n${tenantName} is the first Telegram-native GSM Server. Open the app to unlock IMEI/server services, manage your wallet, and track your orders.`,
     [{ text: "Open App", path: "/" }],
+    token,
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyPromotion } from "@/lib/telegram/notifications";
@@ -81,6 +82,7 @@ export async function createPopupAction(
 ): Promise<CreatePopupResult> {
   try {
     const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const title = input.title.trim();
     const message = input.message.trim();
@@ -104,7 +106,7 @@ export async function createPopupAction(
     await logAdminAction(staff.id, "popup.create", title);
 
     if (input.notifyUsers) {
-      await broadcastToAllUsers((telegramId) => notifyPromotion(telegramId, title, message));
+      await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, title, message));
     }
 
     return { ok: true };

@@ -106,7 +106,7 @@ export async function createImeiOrderAction(
     const customerName = [user.firstName, user.lastName].filter(Boolean).join(" ");
     const details = resolveFieldValues(input.fieldValues, service.fields);
     if (input.notes?.trim()) details.push({ label: "Notes", value: input.notes.trim() });
-    await notifyAllStaff((telegramId) =>
+    await notifyAllStaff(service.tenantId, (telegramId) =>
       notifyAdminNewOrder(telegramId, customerName, service.name, service.priceCents, details),
     );
 

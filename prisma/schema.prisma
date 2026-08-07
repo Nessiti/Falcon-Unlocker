@@ -81,6 +81,7 @@ model Tenant {
   faqItems               FaqItem[]
   helpArticles           HelpArticle[]
   aboutPage              AboutPage?
+  notifications          Notification[]
 }
 
 enum UserStatus {
@@ -620,6 +621,10 @@ model Notification {
 
   sentById String
   sentBy   User   @relation(fields: [sentById], references: [id])
+
+  /// Tenant isolation (Chapter 33): which brand sent this broadcast.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
 enum ProviderType {
