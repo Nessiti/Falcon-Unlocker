@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { AuthUser } from "@/lib/actions/auth";
-import { formatUsd } from "@/lib/ui";
+import { formatUsdCompact } from "@/lib/ui";
 import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 import { FullscreenButton } from "@/components/layout/fullscreen-button";
 
@@ -49,8 +49,8 @@ export function Navbar({
         <span className="truncate">{user.tenantName}</span>
       </span>
 
-      <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-medium text-foreground">
-        {formatUsd(user.balanceCents)}
+      <span className="shrink-0 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+        {formatUsdCompact(user.balanceCents)}
       </span>
 
       {/* Desktop and tablets only - phones are already fullscreen-equivalent in Telegram. */}

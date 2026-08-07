@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { AuthUser } from "@/lib/actions/auth";
-import { formatUsd } from "@/lib/ui";
+import { formatUsdCompact } from "@/lib/ui";
 import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 import { FullscreenButton } from "@/components/layout/fullscreen-button";
 
@@ -23,12 +23,12 @@ export function DesktopHeader({ user }: { user: AuthUser }) {
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-background/95 px-6 py-4 backdrop-blur">
-      <span className="flex-1 text-sm font-medium text-hint">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-hint">
         Welcome back, {user.firstName}
       </span>
 
-      <span className="shrink-0 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-foreground">
-        {formatUsd(user.balanceCents)}
+      <span className="shrink-0 rounded-full bg-accent/10 px-3 py-1.5 text-sm font-semibold text-accent">
+        {formatUsdCompact(user.balanceCents)}
       </span>
 
       <FullscreenButton />

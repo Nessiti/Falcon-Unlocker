@@ -48,6 +48,23 @@ export function formatUsd(cents: number) {
   );
 }
 
+/**
+ * Compact balance for tight spaces (the Navbar chip) - "$1M" instead of
+ * "$1,000,000.00". A `shrink-0` chip can't wrap or truncate its content, so
+ * an unbounded-width formatted number is exactly what pushes neighboring
+ * elements (the avatar) off the edge of a narrow phone screen once the
+ * balance gets large - bounding the width at the source fixes that instead
+ * of chasing the overflow through every layout that shows a balance.
+ */
+export function formatUsdCompact(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(cents / 100);
+}
+
 export type CategoryGroup<T> = { id: string; name: string; items: T[] };
 
 /**
