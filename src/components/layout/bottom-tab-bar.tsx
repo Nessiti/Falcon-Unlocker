@@ -16,7 +16,7 @@ export function BottomTabBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-background/95 backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-background/95 shadow-[0_-2px_8px_rgba(0,0,0,0.15)] backdrop-blur lg:hidden"
       style={{ paddingBottom: "var(--safe-area-inset-bottom)" }}
     >
       {TABS.map((tab) => {
@@ -25,14 +25,17 @@ export function BottomTabBar() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-              active ? "text-accent" : "text-hint"
-            }`}
+            className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-transform active:scale-95"
           >
-            <span className="text-lg" aria-hidden>
+            <span
+              className={`flex h-8 w-12 items-center justify-center rounded-full text-lg transition-colors ${
+                active ? "bg-accent/15 text-accent" : "text-hint"
+              }`}
+              aria-hidden
+            >
               {tab.icon}
             </span>
-            {tab.label}
+            <span className={active ? "text-accent" : "text-hint"}>{tab.label}</span>
           </Link>
         );
       })}

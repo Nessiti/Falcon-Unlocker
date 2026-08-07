@@ -12,12 +12,12 @@ export function PlaceOrderChooser({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-xl">
         <h2 className="text-base font-semibold text-foreground">What are you ordering?</h2>
         <button
           type="button"
           onClick={() => go("/imei")}
-          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-background"
+          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm font-medium text-foreground transition-colors active:scale-[0.98] hover:bg-background"
         >
           <span>IMEI Services</span>
           <span aria-hidden>📱</span>
@@ -25,7 +25,7 @@ export function PlaceOrderChooser({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={() => go("/server")}
-          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-background"
+          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm font-medium text-foreground transition-colors active:scale-[0.98] hover:bg-background"
         >
           <span>Server Services</span>
           <span aria-hidden>🖥️</span>

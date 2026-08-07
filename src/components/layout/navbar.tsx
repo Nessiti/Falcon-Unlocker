@@ -27,23 +27,23 @@ export function Navbar({
   const initial = user.firstName.charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+    <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
       <button
         type="button"
         onClick={onMenuClick}
         aria-label="Open menu"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground hover:bg-surface"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground transition-colors active:scale-95 hover:bg-surface"
       >
         ☰
       </button>
 
-      <span className="flex flex-1 items-center gap-2 truncate text-sm font-semibold text-foreground">
+      <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground">
         {user.tenantLogoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
           <img
             src={user.tenantLogoUrl}
             alt={user.tenantName}
-            className="h-6 w-6 shrink-0 rounded object-contain"
+            className="h-6 w-6 shrink-0 rounded-full object-cover"
           />
         ) : null}
         <span className="truncate">{user.tenantName}</span>
@@ -61,7 +61,7 @@ export function Navbar({
         aria-label="Notifications"
         onClick={() => target && router.push(target)}
         disabled={!target}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground hover:bg-surface disabled:cursor-default"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground transition-colors active:scale-95 hover:bg-surface disabled:cursor-default disabled:active:scale-100"
       >
         🔔
         {alerts && alerts.total > 0 ? (

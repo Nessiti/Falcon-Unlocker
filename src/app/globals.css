@@ -45,10 +45,17 @@
 
 html {
   height: 100%;
+  /* Clips any single element that overflows its container's width instead
+     of letting the whole page scroll sideways - a component that genuinely
+     needs horizontal scroll (a nav strip, a wide table) opens its own
+     overflow-x-auto container, which still scrolls freely inside this. */
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background: var(--color-background);
   color: var(--color-foreground);
   padding-top: var(--safe-area-inset-top);
