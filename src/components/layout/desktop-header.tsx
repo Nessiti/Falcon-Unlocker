@@ -19,7 +19,6 @@ export function DesktopHeader({ user }: { user: AuthUser }) {
   const router = useRouter();
   const alerts = useAdminAlerts();
   const target = alertsTarget(alerts);
-  const initial = user.firstName.charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-background/95 px-6 py-4 backdrop-blur">
@@ -48,16 +47,19 @@ export function DesktopHeader({ user }: { user: AuthUser }) {
         ) : null}
       </button>
 
-      {user.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- external Telegram-hosted avatar
+      {user.tenantLogoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
         <img
-          src={user.avatarUrl}
-          alt={user.firstName}
-          className="h-9 w-9 shrink-0 rounded-full object-cover"
+          src={user.tenantLogoUrl}
+          alt={user.tenantName}
+          className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-accent/20"
         />
       ) : (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
-          {initial}
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-lg ring-2 ring-accent/20"
+          aria-hidden
+        >
+          🦅
         </span>
       )}
     </header>

@@ -24,7 +24,6 @@ export function Navbar({
   const router = useRouter();
   const alerts = useAdminAlerts();
   const target = alertsTarget(alerts);
-  const initial = user.firstName.charAt(0).toUpperCase();
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
@@ -71,16 +70,19 @@ export function Navbar({
         ) : null}
       </button>
 
-      {user.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- external Telegram-hosted avatar
+      {user.tenantLogoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
         <img
-          src={user.avatarUrl}
-          alt={user.firstName}
-          className="h-8 w-8 shrink-0 rounded-full object-cover"
+          src={user.tenantLogoUrl}
+          alt={user.tenantName}
+          className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-accent/20"
         />
       ) : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
-          {initial}
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-base ring-2 ring-accent/20"
+          aria-hidden
+        >
+          🦅
         </span>
       )}
     </header>
