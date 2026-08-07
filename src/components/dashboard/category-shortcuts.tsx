@@ -15,12 +15,12 @@ export function CategoryShortcuts({ categories }: { categories: DashboardCategor
           View all
         </Link>
       </div>
-      <div className="grid grid-cols-5 gap-2">
+      <div className="flex flex-wrap gap-3">
         {categories.slice(0, 4).map((category) => (
           <Link
             key={category.id}
             href={category.href}
-            className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
+            className="flex w-14 shrink-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-surface text-xl shadow-sm">
               {categoryIcon(category.name)}
@@ -30,7 +30,10 @@ export function CategoryShortcuts({ categories }: { categories: DashboardCategor
             </span>
           </Link>
         ))}
-        <Link href="/imei" className="flex flex-col items-center gap-1.5 transition-transform active:scale-95">
+        <Link
+          href="/imei"
+          className="flex w-14 shrink-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
+        >
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-surface text-xl text-hint shadow-sm">
             ···
           </span>
