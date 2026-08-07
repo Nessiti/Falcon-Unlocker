@@ -22,10 +22,12 @@ export type AuthUser = {
   balanceCents: number;
   hasPin: boolean;
   biometricEnabled: boolean;
-  /** This account's own tenant's brand (Chapter 39) — the app shell reads
-   * these instead of hardcoding Falcon Unlocker's own name/logo. */
+  /** This account's own tenant's brand (Chapters 39-41) — the app shell
+   * reads these instead of hardcoding Falcon Unlocker's own name/logo/
+   * button color. */
   tenantName: string;
   tenantLogoUrl: string | null;
+  tenantPrimaryColor: string | null;
 };
 
 export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: string };
@@ -58,7 +60,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     // updateUserRoleAction requires an existing Admin to grant one.
     const tenant = await prisma.tenant.findUnique({
       where: { id: resolvedTenantId },
-      select: { ownerTelegramId: true, name: true, logoUrl: true },
+      select: { ownerTelegramId: true, name: true, logoUrl: true, primaryColor: true },
     });
     const isTenantOwner = tenant?.ownerTelegramId != null && tenant.ownerTelegramId === telegramId;
 
@@ -137,6 +139,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         biometricEnabled: user.biometricEnabled,
         tenantName: tenant?.name ?? "Falcon Unlocker",
         tenantLogoUrl: tenant?.logoUrl ?? null,
+        tenantPrimaryColor: tenant?.primaryColor ?? null,
       },
     };
   } catch (error) {

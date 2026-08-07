@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { getBrandSettingsAction, updateBrandSettingsAction } from "@/lib/actions/brand-settings";
+import { ColorPickerField } from "@/components/admin/color-picker-field";
 import { formInputClass } from "@/lib/ui";
 
 const EMPTY_FORM = {
   logoUrl: "",
-  primaryColor: "",
-  secondaryColor: "",
+  primaryColor: null as string | null,
+  secondaryColor: null as string | null,
   currency: "USD",
   country: "",
   language: "en",
@@ -31,8 +32,8 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
       setBrandName(result.settings.name);
       setForm({
         logoUrl: result.settings.logoUrl ?? "",
-        primaryColor: result.settings.primaryColor ?? "",
-        secondaryColor: result.settings.secondaryColor ?? "",
+        primaryColor: result.settings.primaryColor,
+        secondaryColor: result.settings.secondaryColor,
         currency: result.settings.currency,
         country: result.settings.country ?? "",
         language: result.settings.language,
@@ -48,8 +49,8 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
 
     const result = await updateBrandSettingsAction(initData, {
       logoUrl: form.logoUrl || null,
-      primaryColor: form.primaryColor || null,
-      secondaryColor: form.secondaryColor || null,
+      primaryColor: form.primaryColor,
+      secondaryColor: form.secondaryColor,
       currency: form.currency,
       country: form.country || null,
       language: form.language,
@@ -81,17 +82,15 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
           value={form.logoUrl}
           onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
         />
-        <input
-          className={formInputClass}
-          placeholder="Primary color (e.g. #6c5ce7)"
+        <ColorPickerField
+          label="Button color"
           value={form.primaryColor}
-          onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
+          onChange={(primaryColor) => setForm({ ...form, primaryColor })}
         />
-        <input
-          className={formInputClass}
-          placeholder="Secondary color"
+        <ColorPickerField
+          label="Secondary color"
           value={form.secondaryColor}
-          onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
+          onChange={(secondaryColor) => setForm({ ...form, secondaryColor })}
         />
         <input
           className={formInputClass}

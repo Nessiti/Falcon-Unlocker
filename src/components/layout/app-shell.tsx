@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { AppMenu } from "@/components/layout/app-menu";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DesktopHeader } from "@/components/layout/desktop-header";
+import { BrandThemeSync } from "@/components/layout/brand-theme-sync";
 import { AdminAlertsProvider } from "@/components/admin/admin-alerts-provider";
 
 function CenteredMessage({ children }: { children: ReactNode }) {
@@ -47,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AdminAlertsProvider>
+      <BrandThemeSync />
       <div className="flex min-h-full flex-1 lg:flex-row">
         {/* Desktop dashboard shell: persistent sidebar (lg breakpoint and up). */}
         <div className="hidden lg:block">
