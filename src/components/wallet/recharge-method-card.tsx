@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
 import { RechargeContactType } from "@/generated/prisma/browser";
@@ -36,9 +37,37 @@ export function RechargeMethodCard({
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [proofNote, setProofNote] = useState("");
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setError(null);
+    setProofUrl(null);
+    setProofPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload/recharge-proof",
+        clientPayload: initData,
+        headers: { "x-telegram-init-data": initData },
+      });
+      setProofUrl(blob.url);
+    } catch {
+      setError("Couldn't upload the image. Try again.");
+      setProofPreview(null);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -47,6 +76,10 @@ export function RechargeMethodCard({
     const amountCents = Math.round(Number(amount) * 100);
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
       setError("Enter a valid amount");
+      return;
+    }
+    if (!proofUrl) {
+      setError("Attach a photo of your payment proof");
       return;
     }
 
@@ -63,6 +96,7 @@ export function RechargeMethodCard({
       methodId: method.id,
       amountCents,
       proofNote: proofNote.trim() || null,
+      proofUrl,
     });
     setSubmitting(false);
 
@@ -82,6 +116,8 @@ export function RechargeMethodCard({
     setOpen(false);
     setAmount("");
     setProofNote("");
+    setProofUrl(null);
+    setProofPreview(null);
     router.refresh();
   }
 
@@ -160,11 +196,33 @@ export function RechargeMethodCard({
             value={proofNote}
             onChange={(e) => setProofNote(e.target.value)}
           />
+
+          <label className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-hint">Photo of your payment proof</span>
+            {proofPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local preview of the file about to be uploaded
+              <img
+                src={proofPreview}
+                alt="Payment proof preview"
+                className="max-h-40 w-full rounded-lg object-contain"
+              />
+            ) : null}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              disabled={uploading}
+              className="text-xs text-foreground file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground"
+              required={!proofUrl}
+            />
+            {uploading ? <p className="text-xs text-hint">Uploading…</p> : null}
+          </label>
+
           {error ? <p className="text-xs text-accent">{error}</p> : null}
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || uploading || !proofUrl}
               className="flex-1 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
             >
               {submitting

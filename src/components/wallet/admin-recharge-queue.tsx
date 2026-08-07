@@ -44,18 +44,23 @@ export function AdminRechargeQueue({ initData }: { initData: string }) {
           key={order.id}
           className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-sm"
         >
-          <p className="font-medium text-foreground">
-            {order.customerName} · {formatUsd(order.amountCents)} · {order.methodName}
-          </p>
+          <div>
+            <p className="font-medium text-foreground">
+              {order.customerName} · {formatUsd(order.amountCents)} · {order.methodName}
+            </p>
+            <p className="text-xs text-hint">
+              {order.customerUsername ? `@${order.customerUsername}` : `ID ${order.customerTelegramId}`}
+            </p>
+          </div>
           {order.proofNote ? <p className="text-xs text-hint">Note: {order.proofNote}</p> : null}
           {order.proofUrl ? (
-            <a
-              href={order.proofUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-medium text-accent"
-            >
-              View proof
+            <a href={order.proofUrl} target="_blank" rel="noreferrer" className="self-start">
+              {/* eslint-disable-next-line @next/next/no-img-element -- customer-uploaded proof photo */}
+              <img
+                src={order.proofUrl}
+                alt="Payment proof"
+                className="max-h-48 rounded-lg border border-border object-contain"
+              />
             </a>
           ) : null}
           <div className="flex gap-2">

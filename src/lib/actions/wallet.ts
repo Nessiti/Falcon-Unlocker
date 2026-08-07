@@ -113,15 +113,19 @@ export type CreateRechargeOrderInput = {
   methodId: string;
   amountCents: number;
   proofNote: string | null;
+  /** Uploaded directly to Vercel Blob by the client before this action runs
+   * (Chapter 40) — see /api/upload/recharge-proof. */
+  proofUrl: string | null;
 };
 
 export type CreateRechargeOrderResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Step 1-2 of the manual recharge flow: creates the pending request. Proof of
- * payment itself is sent by the customer directly to the admin's WhatsApp/
- * Telegram contact (see contactType/contactValue on the method) — not
- * uploaded in-app.
+ * Step 1-2 of the manual recharge flow: creates the pending request, with
+ * the photo of the payment proof attached in-app (Chapter 40). Some
+ * methods also have a WhatsApp/Telegram contact configured (contactType/
+ * contactValue) the customer can additionally reach out to, but the proof
+ * itself no longer has to leave the app for the admin to review it.
  */
 export async function createRechargeOrderAction(
   initData: string,
@@ -133,6 +137,9 @@ export async function createRechargeOrderAction(
 
     if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
       return { ok: false, error: "Enter a valid amount" };
+    }
+    if (!input.proofUrl) {
+      return { ok: false, error: "Attach a photo of your payment proof" };
     }
 
     const method = await prisma.rechargeMethod.findFirst({ where: { id: input.methodId, tenantId } });
@@ -146,6 +153,7 @@ export async function createRechargeOrderAction(
         methodId: method.id,
         amountCents: input.amountCents,
         proofNote: input.proofNote,
+        proofUrl: input.proofUrl,
         tenantId,
       },
     });
@@ -158,7 +166,11 @@ export async function createRechargeOrderAction(
   }
 }
 
-export type AdminRechargeOrderSummary = RechargeOrderSummary & { customerName: string };
+export type AdminRechargeOrderSummary = RechargeOrderSummary & {
+  customerName: string;
+  customerUsername: string | null;
+  customerTelegramId: string;
+};
 
 export type GetAdminRechargeQueueResult =
   | { ok: true; orders: AdminRechargeOrderSummary[] }
@@ -189,6 +201,8 @@ export async function getAdminRechargeQueueAction(
         proofNote: order.proofNote,
         createdAt: order.createdAt.toISOString(),
         customerName: [order.user.firstName, order.user.lastName].filter(Boolean).join(" "),
+        customerUsername: order.user.username,
+        customerTelegramId: order.user.telegramId.toString(),
       })),
     };
   } catch (error) {

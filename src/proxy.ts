@@ -5,8 +5,11 @@ export const config = {
   // Excludes /api/telegram/webhook (Telegram calls it directly, no Mini App
   // initData) and /api/cron (the unified cron endpoint — called directly by
   // an external scheduler, e.g. cron-job.org) — both authenticate via their
-  // own secret token instead.
-  matcher: ["/api/((?!telegram/webhook|cron(?:/|$)).*)"],
+  // own secret token instead. Also excludes /api/upload (Chapter 40): this
+  // gate only ever validates against Falcon Unlocker's own bot token, so a
+  // customer of any other tenant would always be rejected here — the
+  // upload route does its own (tenant-aware) initData verification instead.
+  matcher: ["/api/((?!telegram/webhook|cron(?:/|$)|upload(?:/|$)).*)"],
 };
 
 export default async function proxy(request: NextRequest) {
