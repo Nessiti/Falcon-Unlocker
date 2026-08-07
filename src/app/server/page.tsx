@@ -1,10 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { ServerCatalog } from "@/components/server/server-catalog";
-import { ServerServiceForm } from "@/components/server/server-service-form";
-import { ServerServiceManager } from "@/components/server/server-service-manager";
 import { CatalogSkeleton } from "@/components/ui/catalog-skeleton";
 import { listPublicServerServicesAction, type PublicServerService } from "@/lib/actions/server-services";
 
@@ -12,15 +10,11 @@ export default function ServerPage() {
   const initData = useRawInitData();
   const [services, setServices] = useState<PublicServerService[] | null>(null);
 
-  const refresh = useCallback(() => {
+  useEffect(() => {
     listPublicServerServicesAction(initData).then((result) => {
       if (result.ok) setServices(result.services);
     });
   }, [initData]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
@@ -32,9 +26,6 @@ export default function ServerPage() {
       </div>
 
       {services === null ? <CatalogSkeleton /> : <ServerCatalog services={services} />}
-
-      <ServerServiceManager onChanged={refresh} />
-      <ServerServiceForm onChanged={refresh} />
     </main>
   );
 }

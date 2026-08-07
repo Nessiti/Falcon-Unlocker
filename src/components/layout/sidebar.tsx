@@ -21,6 +21,8 @@ const MAIN_ITEMS = [
 const ADMIN_ITEMS = [
   { label: "Admin Dashboard", href: "/admin", icon: "📊" },
   { label: "Users", href: "/admin/users", icon: "👥" },
+  { label: "IMEI Services", href: "/admin/imei", icon: "📱" },
+  { label: "Server Services", href: "/admin/server", icon: "🖥️" },
   { label: "Categories", href: "/admin/categories", icon: "🗂️" },
   { label: "Providers", href: "/admin/providers", icon: "🔌" },
   { label: "Monitoring", href: "/admin/monitoring", icon: "📡" },

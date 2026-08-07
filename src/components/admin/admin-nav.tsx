@@ -7,8 +7,8 @@ import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin" },
   { label: "Users", href: "/admin/users" },
-  { label: "IMEI Services", href: "/imei" },
-  { label: "Server Services", href: "/server" },
+  { label: "IMEI Services", href: "/admin/imei" },
+  { label: "Server Services", href: "/admin/server" },
   { label: "Categories", href: "/admin/categories" },
   { label: "Providers", href: "/admin/providers" },
   { label: "Monitoring", href: "/admin/monitoring" },
