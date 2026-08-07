@@ -6,6 +6,7 @@ import { useRawInitData, hapticFeedbackNotificationOccurred } from "@telegram-ap
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { getAdminAlertsAction, type AdminAlertCounts } from "@/lib/actions/admin-alerts";
 import { Role } from "@/generated/prisma/browser";
+import { playAdminAlertSound } from "@/lib/sound";
 
 const POLL_INTERVAL_MS = 20000;
 
@@ -22,7 +23,7 @@ function notifyHaptic(type: "warning") {
  * tickets, submitted recharge proofs) so the webapp reflects them live
  * instead of only the admin's Telegram chat (Chapter 9's bot notifications).
  * On an increase, refreshes the current page's server data and gives a
- * haptic nudge. No-ops entirely for non-staff.
+ * haptic nudge plus a short sound. No-ops entirely for non-staff.
  */
 export function AdminAlertsProvider({ children }: { children: ReactNode }) {
   const auth = useTelegramUser();
@@ -46,6 +47,7 @@ export function AdminAlertsProvider({ children }: { children: ReactNode }) {
 
       if (previousTotal.current != null && result.alerts.total > previousTotal.current) {
         notifyHaptic("warning");
+        playAdminAlertSound();
         router.refresh();
       }
       previousTotal.current = result.alerts.total;
