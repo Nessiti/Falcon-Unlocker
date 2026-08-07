@@ -4,6 +4,7 @@ import Link from "next/link";
 import { closeMiniApp } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { Role } from "@/generated/prisma/browser";
+import { PoweredByFooter } from "@/components/layout/powered-by-footer";
 
 const MENU_ITEMS = [
   { label: "Dashboard", href: "/" },
@@ -73,6 +74,7 @@ export function AppMenu({ open, onClose }: { open: boolean; onClose: () => void 
         >
           Logout
         </button>
+        <PoweredByFooter />
       </nav>
     </div>
   );

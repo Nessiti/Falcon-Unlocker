@@ -7,6 +7,19 @@ import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { generateApiCredentials, hashApiSecret } from "@/lib/reseller-api/crypto";
 
+/**
+ * Admin-only surface, so it's safe (and, given how hard this was to
+ * diagnose blind, necessary) to put the real error detail directly in what
+ * the admin sees instead of a generic message with nothing to go on -
+ * still logs server-side too, for anything that also needs a stack trace.
+ */
+function describeError(error: unknown, fallback: string): string {
+  if (error instanceof TelegramAuthError) return error.message;
+  console.error(`[admin-api-keys] ${fallback}`, error);
+  const detail = error instanceof Error ? error.message : String(error);
+  return `${fallback}: ${detail}`;
+}
+
 export type ApiKeySummary = {
   id: string;
   key: string;
@@ -46,11 +59,7 @@ export async function listApiKeysAction(initData: string): Promise<ListApiKeysRe
       })),
     };
   } catch (error) {
-    if (!(error instanceof TelegramAuthError)) {
-      console.error("[admin-api-keys] listApiKeysAction failed", error);
-    }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to load API keys";
-    return { ok: false, error: message };
+    return { ok: false, error: describeError(error, "Failed to load API keys") };
   }
 }
 
@@ -84,11 +93,7 @@ export async function createApiKeyAction(
     await logAdminAction(admin.id, "apikey.create", `for user ${customer.id}`);
     return { ok: true, key, secret };
   } catch (error) {
-    if (!(error instanceof TelegramAuthError)) {
-      console.error("[admin-api-keys] createApiKeyAction failed", error);
-    }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to create API key";
-    return { ok: false, error: message };
+    return { ok: false, error: describeError(error, "Failed to create API key") };
   }
 }
 
@@ -110,11 +115,7 @@ export async function setApiKeyEnabledAction(
     await logAdminAction(admin.id, "apikey.status", `${id} -> ${enabled ? "enabled" : "disabled"}`);
     return { ok: true };
   } catch (error) {
-    if (!(error instanceof TelegramAuthError)) {
-      console.error("[admin-api-keys] setApiKeyEnabledAction failed", error);
-    }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to update API key";
-    return { ok: false, error: message };
+    return { ok: false, error: describeError(error, "Failed to update API key") };
   }
 }
 
@@ -132,10 +133,6 @@ export async function deleteApiKeyAction(initData: string, id: string): Promise<
     await logAdminAction(admin.id, "apikey.delete", id);
     return { ok: true };
   } catch (error) {
-    if (!(error instanceof TelegramAuthError)) {
-      console.error("[admin-api-keys] deleteApiKeyAction failed", error);
-    }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to delete API key";
-    return { ok: false, error: message };
+    return { ok: false, error: describeError(error, "Failed to delete API key") };
   }
 }

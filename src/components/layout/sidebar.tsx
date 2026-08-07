@@ -6,6 +6,7 @@ import { closeMiniApp } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 import { Role } from "@/generated/prisma/browser";
+import { PoweredByFooter } from "@/components/layout/powered-by-footer";
 
 const MAIN_ITEMS = [
   { label: "Dashboard", href: "/", icon: "🏠" },
@@ -143,6 +144,7 @@ export function Sidebar() {
         <span aria-hidden>🚪</span>
         Logout
       </button>
+      <PoweredByFooter />
     </aside>
   );
 }

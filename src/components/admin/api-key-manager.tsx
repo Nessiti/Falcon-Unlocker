@@ -22,8 +22,12 @@ export function ApiKeyManager({ initData }: { initData: string }) {
 
   function refresh() {
     listApiKeysAction(initData).then((result) => {
-      if (result.ok) setKeys(result.keys);
-      else setError(result.error);
+      if (result.ok) {
+        setKeys(result.keys);
+      } else {
+        setError(result.error);
+        setKeys([]);
+      }
     });
   }
 
