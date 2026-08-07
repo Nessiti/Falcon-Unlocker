@@ -1,5 +1,6 @@
 import "server-only";
 import { notifyWelcome } from "@/lib/telegram/notifications";
+import { capturePendingReferral } from "@/lib/referrals";
 
 export type TelegramUpdate = {
   message?: {
@@ -22,13 +23,15 @@ export async function handleTelegramUpdate(
   token?: string,
 ): Promise<void> {
   const message = update.message;
-  if (message?.text?.trim() === "/start") {
-    await notifyWelcome(
-      BigInt(message.chat.id),
-      tenantId,
-      message.from?.first_name ?? "there",
-      tenantName,
-      token,
-    );
+  if (!message) return;
+  const text = message.text?.trim();
+  if (!text || !text.startsWith("/start")) return;
+
+  const telegramId = BigInt(message.chat.id);
+  const startParam = text.slice("/start".length).trim();
+  if (startParam) {
+    await capturePendingReferral(telegramId, tenantId, startParam);
   }
+
+  await notifyWelcome(telegramId, tenantId, message.from?.first_name ?? "there", tenantName, token);
 }

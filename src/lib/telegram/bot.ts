@@ -1,7 +1,44 @@
 import "server-only";
 import { getTenantBotToken } from "@/lib/telegram/tenant-resolution";
+import { prisma } from "@/lib/prisma";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
+
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]+>/g, "");
+}
+
+/**
+ * Mirrors a sent Telegram message into the recipient's in-app notification
+ * feed, when they already have an account in this tenant (a brand-new
+ * signup's very first welcome message doesn't - nothing to mirror it onto
+ * yet). Best-effort: never throws, never blocks the actual Telegram send.
+ */
+async function recordInAppNotification(
+  telegramId: bigint | number | string,
+  tenantId: string,
+  text: string,
+  buttons?: TelegramInlineButton[],
+) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { telegramId_tenantId: { telegramId: BigInt(telegramId), tenantId } },
+      select: { id: true },
+    });
+    if (!user) return;
+
+    await prisma.userNotification.create({
+      data: {
+        userId: user.id,
+        tenantId,
+        message: stripHtml(text),
+        link: buttons?.[0]?.path ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("[telegram] failed to record in-app notification", error);
+  }
+}
 
 export type TelegramInlineButton = {
   text: string;
@@ -58,6 +95,8 @@ export async function sendTelegramMessage(
   } catch (error) {
     console.error("[telegram] failed to send notification", error);
   }
+
+  await recordInAppNotification(telegramId, tenantId, text, buttons);
 }
 
 const CHANNEL_MEMBER_STATUSES = new Set(["creator", "administrator", "member", "restricted"]);

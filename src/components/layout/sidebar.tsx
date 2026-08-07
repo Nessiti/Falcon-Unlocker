@@ -14,6 +14,8 @@ const MAIN_ITEMS = [
   { label: "Orders", href: "/orders", icon: "🧾" },
   { label: "Wallet", href: "/wallet", icon: "💰" },
   { label: "Support", href: "/support", icon: "💬" },
+  { label: "Referrals", href: "/referrals", icon: "🎁" },
+  { label: "Notifications", href: "/notifications", icon: "🔔" },
   { label: "Settings", href: "/settings", icon: "⚙️" },
   { label: "About", href: "/about", icon: "ℹ️" },
 ];

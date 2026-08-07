@@ -83,6 +83,8 @@ model Tenant {
   notifications          Notification[]
   newsPosts              NewsPost[]
   popups                 Popup[]
+  pendingReferrals       PendingReferral[]
+  userNotifications      UserNotification[]
 }
 
 enum UserStatus {
@@ -137,6 +139,21 @@ model User {
   imeiOrderStatusEvents   ImeiOrderStatusEvent[]
   serverOrderStatusEvents ServerOrderStatusEvent[]
   sentNotifications       Notification[]
+  inAppNotifications      UserNotification[]
+
+  /// Referrals: who brought this account in, if anyone (captured from the
+  /// bot's /start ref_<userId> deep link before this row even existed - see
+  /// PendingReferral). Self-relation, so a user can look up both who
+  /// referred them and who they've referred.
+  referredById       String?
+  referredBy         User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals          User[]   @relation("Referrals")
+  /// Guards the one-time referral bonus: flipped true (via an atomic
+  /// updateMany guard) the first time this account's first order completes,
+  /// so a status flapping back to COMPLETED again never pays out twice.
+  referralRewardPaid Boolean  @default(false)
+  /// Referral clicks on this user's own link, not yet claimed by a signup.
+  pendingReferrals   PendingReferral[]
 
   /// Multi-tenant foundation: which brand this account belongs to. Required
   /// (Chapter 37) - a Telegram identity gets its own separate account per
@@ -148,6 +165,40 @@ model User {
   /// different tenant's bot gets its own independent account, never the
   /// account they already have with another brand (Chapter 37).
   @@unique([telegramId, tenantId])
+}
+
+/// Captures a referral click (bot /start ref_<userId>) against the
+/// telegramId before a User row exists for them - consumed and deleted the
+/// moment that person's account is actually created via loginAction.
+model PendingReferral {
+  id         String   @id @default(cuid())
+  telegramId BigInt
+  createdAt  DateTime @default(now())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  referrerId String
+  referrer   User   @relation(fields: [referrerId], references: [id])
+
+  @@unique([telegramId, tenantId])
+}
+
+/// In-app mirror of every Telegram Bot notification (Chapter 9) sent to a
+/// user, so the Mini App has its own notification feed instead of only the
+/// Telegram chat.
+model UserNotification {
+  id        String    @id @default(cuid())
+  message   String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
 /// Admin action log (Chapter 11).

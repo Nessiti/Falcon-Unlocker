@@ -8,6 +8,7 @@ import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyOrderCompleted, notifyOrderStatusChanged } from "@/lib/telegram/notifications";
 import { OrderStatus } from "@/generated/prisma/client";
 import { resolveFieldValues } from "@/lib/orders";
+import { maybeRewardReferral } from "@/lib/referrals";
 
 export type OrderKind = "IMEI" | "SERVER";
 
@@ -98,7 +99,7 @@ async function transitionImeiOrder(adminId: string, tenantId: string, input: Upd
     await tx.imeiOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
+    return { userId: order.user.id, telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
   });
 }
 
@@ -115,7 +116,7 @@ async function transitionServerOrder(adminId: string, tenantId: string, input: U
     await tx.serverOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
+    return { userId: order.user.id, telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
   });
 }
 
@@ -139,6 +140,7 @@ export async function updateOrderStatusAction(
 
     if (input.status === OrderStatus.COMPLETED) {
       await notifyOrderCompleted(outcome.telegramId, outcome.tenantId, outcome.serviceName);
+      await maybeRewardReferral(outcome.userId, outcome.tenantId);
     } else if (input.status !== OrderStatus.PENDING) {
       await notifyOrderStatusChanged(outcome.telegramId, outcome.tenantId, outcome.serviceName, input.status);
     }

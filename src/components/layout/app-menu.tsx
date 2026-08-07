@@ -11,6 +11,8 @@ const MENU_ITEMS = [
   { label: "Server", href: "/server" },
   { label: "Orders", href: "/orders" },
   { label: "Wallet", href: "/wallet" },
+  { label: "Referrals", href: "/referrals" },
+  { label: "Notifications", href: "/notifications" },
   { label: "Settings", href: "/settings" },
   { label: "Support", href: "/support" },
   { label: "About", href: "/about" },

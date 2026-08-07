@@ -6,10 +6,10 @@ const ACTIONS: { label: string; href: string; icon: string }[] = [
   { label: "My Orders", href: "/orders", icon: "🧾" },
   { label: "Wallet", href: "/wallet", icon: "💰" },
   { label: "Tickets", href: "/support?tab=tickets", icon: "💬" },
-  { label: "FAQ", href: "/support?tab=faq", icon: "📋" },
+  { label: "Referrals", href: "/referrals", icon: "🎁" },
+  { label: "Notifications", href: "/notifications", icon: "🔔" },
   { label: "Settings", href: "/settings", icon: "⚙️" },
   { label: "Help Center", href: "/support?tab=help", icon: "❓" },
-  { label: "About", href: "/about", icon: "ℹ️" },
 ];
 
 export function MobileQuickActions({ onNewsClick }: { onNewsClick: () => void }) {
