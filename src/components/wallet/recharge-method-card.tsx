@@ -3,16 +3,23 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
-import { BlobContentTypeNotAllowedError, BlobFileTooLargeError } from "@vercel/blob";
+import { BlobContentTypeNotAllowedError, BlobFileTooLargeError, BlobRequestAbortedError } from "@vercel/blob";
 import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
+// A hung upload used to spin forever with no feedback and no way out —
+// this bounds it so a stalled connection fails cleanly instead.
+const UPLOAD_TIMEOUT_MS = 45_000;
+
 function proofUploadErrorMessage(error: unknown): string {
   if (error instanceof BlobFileTooLargeError) return "This photo is too large. Try a smaller one.";
   if (error instanceof BlobContentTypeNotAllowedError) {
     return "That file type isn't supported. Use a photo (JPG, PNG, or WEBP).";
+  }
+  if (error instanceof BlobRequestAbortedError) {
+    return "Upload timed out. Check your connection and try again.";
   }
   return "Couldn't upload the image. Try again.";
 }
@@ -49,6 +56,7 @@ export function RechargeMethodCard({
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -62,12 +70,18 @@ export function RechargeMethodCard({
     setProofUrl(null);
     setProofPreview(URL.createObjectURL(file));
     setUploading(true);
+    setUploadProgress(0);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
     try {
       const blob = await upload(file.name, file, {
         access: "public",
         handleUploadUrl: "/api/upload/recharge-proof",
         clientPayload: initData,
         headers: { "x-telegram-init-data": initData },
+        abortSignal: controller.signal,
+        onUploadProgress: ({ percentage }) => setUploadProgress(Math.round(percentage)),
       });
       setProofUrl(blob.url);
     } catch (uploadError) {
@@ -75,6 +89,7 @@ export function RechargeMethodCard({
       setError(proofUploadErrorMessage(uploadError));
       setProofPreview(null);
     } finally {
+      clearTimeout(timeout);
       setUploading(false);
     }
   }
@@ -225,7 +240,17 @@ export function RechargeMethodCard({
               className="text-xs text-foreground file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground"
               required={!proofUrl}
             />
-            {uploading ? <p className="text-xs text-hint">Uploading…</p> : null}
+            {uploading ? (
+              <div className="flex flex-col gap-1">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-background">
+                  <div
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-hint">Uploading… {uploadProgress}%</p>
+              </div>
+            ) : null}
           </label>
 
           {error ? <p className="text-xs text-accent">{error}</p> : null}
