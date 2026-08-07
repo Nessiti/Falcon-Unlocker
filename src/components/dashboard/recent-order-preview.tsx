@@ -24,7 +24,7 @@ const STATUS_CLASS: Record<string, string> = {
 
 export function RecentOrderPreview({ order, onSelect }: { order: OrderSummary | null; onSelect: () => void }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex w-full min-w-0 flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">Recent Orders</h2>
         <Link href="/orders" className="text-xs font-medium text-accent">
@@ -36,7 +36,7 @@ export function RecentOrderPreview({ order, onSelect }: { order: OrderSummary | 
         <button
           type="button"
           onClick={onSelect}
-          className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3 text-left shadow-sm transition-transform active:scale-[0.98]"
+          className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-border bg-surface p-3 text-left shadow-sm transition-transform active:scale-[0.98]"
         >
           {order.serviceImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- admin-provided service image

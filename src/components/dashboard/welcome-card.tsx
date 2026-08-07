@@ -13,8 +13,11 @@ export function WelcomeCard({
   avatarUrl: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
-      <Link href="/settings" className="flex items-center gap-3 rounded-xl transition-colors active:bg-background">
+    <div className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
+      <Link
+        href="/settings"
+        className="flex w-full min-w-0 items-center gap-3 rounded-xl transition-colors active:bg-background"
+      >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- Telegram-hosted profile photo
           <img
@@ -36,8 +39,8 @@ export function WelcomeCard({
         </span>
       </Link>
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex w-full min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-hint">Balance</p>
           <p className="truncate text-2xl font-semibold text-foreground">{formatUsd(balanceCents)}</p>
         </div>

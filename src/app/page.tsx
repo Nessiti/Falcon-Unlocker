@@ -85,11 +85,11 @@ export default function Home() {
 
   return (
     <>
-      <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
+      <main className="flex w-full min-w-0 flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
         <PopupDisplay initData={initData ?? null} />
 
         {/* Phones: card-based dashboard. */}
-        <div className="flex flex-col gap-6 lg:hidden">
+        <div className="flex w-full min-w-0 flex-col gap-6 lg:hidden">
           <WelcomeCard
             firstName={user.firstName}
             balanceCents={user.balanceCents}
