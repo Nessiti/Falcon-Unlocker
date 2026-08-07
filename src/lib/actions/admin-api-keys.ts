@@ -46,6 +46,9 @@ export async function listApiKeysAction(initData: string): Promise<ListApiKeysRe
       })),
     };
   } catch (error) {
+    if (!(error instanceof TelegramAuthError)) {
+      console.error("[admin-api-keys] listApiKeysAction failed", error);
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to load API keys";
     return { ok: false, error: message };
   }
@@ -81,6 +84,9 @@ export async function createApiKeyAction(
     await logAdminAction(admin.id, "apikey.create", `for user ${customer.id}`);
     return { ok: true, key, secret };
   } catch (error) {
+    if (!(error instanceof TelegramAuthError)) {
+      console.error("[admin-api-keys] createApiKeyAction failed", error);
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to create API key";
     return { ok: false, error: message };
   }
@@ -104,6 +110,9 @@ export async function setApiKeyEnabledAction(
     await logAdminAction(admin.id, "apikey.status", `${id} -> ${enabled ? "enabled" : "disabled"}`);
     return { ok: true };
   } catch (error) {
+    if (!(error instanceof TelegramAuthError)) {
+      console.error("[admin-api-keys] setApiKeyEnabledAction failed", error);
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update API key";
     return { ok: false, error: message };
   }
@@ -123,6 +132,9 @@ export async function deleteApiKeyAction(initData: string, id: string): Promise<
     await logAdminAction(admin.id, "apikey.delete", id);
     return { ok: true };
   } catch (error) {
+    if (!(error instanceof TelegramAuthError)) {
+      console.error("[admin-api-keys] deleteApiKeyAction failed", error);
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to delete API key";
     return { ok: false, error: message };
   }
