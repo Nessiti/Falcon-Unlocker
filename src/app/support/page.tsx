@@ -11,6 +11,8 @@ import { Role } from "@/generated/prisma/browser";
 
 type Tab = "tickets" | "faq" | "help" | "about";
 
+const VALID_TABS: Tab[] = ["tickets", "faq", "help", "about"];
+
 function tabClass(active: boolean) {
   return `rounded-lg px-3 py-1.5 text-sm font-medium ${
     active ? "bg-accent text-accent-foreground" : "border border-border text-foreground"
@@ -20,7 +22,11 @@ function tabClass(active: boolean) {
 export default function SupportPage() {
   const auth = useTelegramUser();
   const initData = useRawInitData();
-  const [tab, setTab] = useState<Tab>("tickets");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "tickets";
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    return VALID_TABS.includes(requested as Tab) ? (requested as Tab) : "tickets";
+  });
 
   if (auth.status !== "authenticated" || !initData) return null;
   const isAdmin = auth.user.role === Role.ADMIN || auth.user.role === Role.SUPER_ADMIN;

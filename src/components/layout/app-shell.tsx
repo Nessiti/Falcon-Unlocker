@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { AppMenu } from "@/components/layout/app-menu";
 import { Sidebar } from "@/components/layout/sidebar";
 import { DesktopHeader } from "@/components/layout/desktop-header";
+import { BottomTabBar } from "@/components/layout/bottom-tab-bar";
 import { BrandThemeSync } from "@/components/layout/brand-theme-sync";
 import { AdminAlertsProvider } from "@/components/admin/admin-alerts-provider";
 
@@ -67,7 +68,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           {/* Page content mounts once - only the surrounding chrome above switches by breakpoint. */}
-          <div className="flex flex-1 flex-col">{children}</div>
+          <div className="flex flex-1 flex-col pb-[calc(4rem+var(--safe-area-inset-bottom))] lg:pb-0">
+            {children}
+          </div>
+
+          <BottomTabBar />
         </div>
       </div>
     </AdminAlertsProvider>

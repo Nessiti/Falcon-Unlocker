@@ -14,6 +14,34 @@ export function readableTextColor(hex: string): "#000000" | "#ffffff" {
   return luminance > 0.6 ? "#000000" : "#ffffff";
 }
 
+const CATEGORY_ICON_RULES: [RegExp, string][] = [
+  [/iphone|ipad|ios|apple|icloud/i, "🍎"],
+  [/samsung|galaxy/i, "📱"],
+  [/xiaomi|redmi|poco/i, "📱"],
+  [/huawei|honor/i, "📱"],
+  [/oppo|vivo|realme|oneplus/i, "📱"],
+  [/pixel|google/i, "📱"],
+  [/lg|sony|nokia|motorola|moto\b/i, "📱"],
+  [/frp|reset/i, "🔐"],
+  [/unlock/i, "🔓"],
+  [/sim|network|carrier/i, "📶"],
+  [/server|remote|activation|license|credit/i, "🖥️"],
+  [/repair|screen|part/i, "🔧"],
+  [/account|login/i, "👤"],
+];
+
+/**
+ * Picks a reasonably fitting emoji for a category name with no admin setup
+ * required - keyword-matched against common device brands and service
+ * types, falling back to a generic box for anything unrecognized.
+ */
+export function categoryIcon(name: string): string {
+  for (const [pattern, icon] of CATEGORY_ICON_RULES) {
+    if (pattern.test(name)) return icon;
+  }
+  return "📦";
+}
+
 export function formatUsd(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     cents / 100,

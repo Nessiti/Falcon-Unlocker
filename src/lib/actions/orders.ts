@@ -18,6 +18,7 @@ export type OrderSummary = {
   status: OrderStatus;
   priceCents: number;
   serviceName: string;
+  serviceImageUrl: string | null;
   tracking: string | null;
   notes: string | null;
   downloadUrl: string | null;
@@ -62,7 +63,7 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
         id: string;
         status: OrderStatus;
         priceCents: number;
-        service: { name: string; fields: { id: string; label: string }[] };
+        service: { name: string; imageUrl: string | null; fields: { id: string; label: string }[] };
         fieldValues: unknown;
         tracking: string | null;
         notes: string | null;
@@ -76,6 +77,7 @@ export async function listMyOrdersAction(initData: string): Promise<ListMyOrders
       status: order.status,
       priceCents: order.priceCents,
       serviceName: order.service.name,
+      serviceImageUrl: order.service.imageUrl,
       tracking: order.tracking,
       notes: order.notes,
       downloadUrl: order.downloadUrl,

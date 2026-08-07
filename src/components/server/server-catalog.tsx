@@ -23,9 +23,15 @@ const TYPE_OPTIONS: (ServerServiceType | "ALL")[] = [
   ServerServiceType.REPAIR,
 ];
 
-export function ServerCatalog({ services }: { services: ServiceWithRelations[] }) {
+export function ServerCatalog({
+  services,
+  initialCategoryId,
+}: {
+  services: ServiceWithRelations[];
+  initialCategoryId?: string | null;
+}) {
   const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState("ALL");
+  const [categoryId, setCategoryId] = useState(initialCategoryId ?? "ALL");
   const [type, setType] = useState<ServerServiceType | "ALL">("ALL");
 
   const categories = useMemo(() => {

@@ -9,6 +9,9 @@ import { listPublicServerServicesAction, type PublicServerService } from "@/lib/
 export default function ServerPage() {
   const initData = useRawInitData();
   const [services, setServices] = useState<PublicServerService[] | null>(null);
+  const [initialCategoryId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("category"),
+  );
 
   useEffect(() => {
     listPublicServerServicesAction(initData).then((result) => {
@@ -25,7 +28,11 @@ export default function ServerPage() {
         </p>
       </div>
 
-      {services === null ? <CatalogSkeleton /> : <ServerCatalog services={services} />}
+      {services === null ? (
+        <CatalogSkeleton />
+      ) : (
+        <ServerCatalog services={services} initialCategoryId={initialCategoryId} />
+      )}
     </main>
   );
 }

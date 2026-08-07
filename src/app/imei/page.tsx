@@ -9,6 +9,9 @@ import { listPublicImeiServicesAction, type PublicImeiService } from "@/lib/acti
 export default function ImeiPage() {
   const initData = useRawInitData();
   const [services, setServices] = useState<PublicImeiService[] | null>(null);
+  const [initialCategoryId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("category"),
+  );
 
   useEffect(() => {
     listPublicImeiServicesAction(initData).then((result) => {
@@ -23,7 +26,11 @@ export default function ImeiPage() {
         <p className="text-sm text-hint">Unlock, FRP, and IMEI-based services.</p>
       </div>
 
-      {services === null ? <CatalogSkeleton /> : <ImeiCatalog services={services} />}
+      {services === null ? (
+        <CatalogSkeleton />
+      ) : (
+        <ImeiCatalog services={services} initialCategoryId={initialCategoryId} />
+      )}
     </main>
   );
 }

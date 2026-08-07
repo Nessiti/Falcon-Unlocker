@@ -10,9 +10,15 @@ type ServiceWithRelations = ImeiService & {
   fields: ImeiServiceField[];
 };
 
-export function ImeiCatalog({ services }: { services: ServiceWithRelations[] }) {
+export function ImeiCatalog({
+  services,
+  initialCategoryId,
+}: {
+  services: ServiceWithRelations[];
+  initialCategoryId?: string | null;
+}) {
   const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState("ALL");
+  const [categoryId, setCategoryId] = useState(initialCategoryId ?? "ALL");
 
   const categories = useMemo(() => {
     const map = new Map<string, string>();
