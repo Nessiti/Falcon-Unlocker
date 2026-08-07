@@ -22,15 +22,32 @@ export type PopupSummary = {
 };
 
 /**
- * The active, not-yet-expired popup to show customers (Chapter 11: Popup).
+ * The active, not-yet-expired popup to show customers (Chapter 11: Popup),
+ * scoped to the caller's own tenant (Chapter 34) — resolved from initData
+ * when present (every call site is a client component that already has it,
+ * unlike listFaqAction/listNewsAction's server-rendered pages), falling
+ * back to Falcon Unlocker's tenant when it's missing or fails to verify, so
+ * existing anonymous/admin-preview call sites keep working.
+ *
  * When the popup has a requiredChannel set, it's skipped for users who
- * already belong to that channel — initData is optional so existing
- * anonymous/admin-preview call sites keep working, just without the
- * membership check (fails open: shown when membership can't be verified).
+ * already belong to that channel (fails open: shown when membership can't
+ * be verified, e.g. no resolved user at all).
  */
 export async function getActivePopupAction(initData?: string | null): Promise<PopupSummary | null> {
+  let tenantId = "falcon-unlocker";
+  let currentUser: Awaited<ReturnType<typeof getCurrentUser>> | null = null;
+  if (initData) {
+    try {
+      currentUser = await getCurrentUser(initData);
+      if (currentUser.tenantId) tenantId = currentUser.tenantId;
+    } catch {
+      // Couldn't resolve the user — fall back to Falcon Unlocker's tenant.
+    }
+  }
+
   const popup = await prisma.popup.findFirst({
     where: {
+      tenantId,
       active: true,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
@@ -39,13 +56,12 @@ export async function getActivePopupAction(initData?: string | null): Promise<Po
 
   if (!popup) return null;
 
-  if (popup.requiredChannel && initData) {
+  if (popup.requiredChannel && currentUser) {
     try {
-      const user = await getCurrentUser(initData);
-      const isMember = await isChannelMember(popup.requiredChannel, user.telegramId);
+      const isMember = await isChannelMember(popup.requiredChannel, currentUser.telegramId);
       if (isMember) return null;
     } catch {
-      // Couldn't resolve the user or check membership — fail open.
+      // Couldn't check membership — fail open.
     }
   }
 
@@ -100,6 +116,7 @@ export async function createPopupAction(
         buttonUrl: input.buttonUrl?.trim() || null,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
         requiredChannel: input.requiredChannel?.trim() || null,
+        tenantId,
       },
     });
 
@@ -123,8 +140,14 @@ export async function deactivatePopupAction(
   popupId: string,
 ): Promise<DeactivatePopupResult> {
   try {
-    await requireStaff(initData);
-    await prisma.popup.update({ where: { id: popupId }, data: { active: false } });
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+
+    const { count } = await prisma.popup.updateMany({
+      where: { id: popupId, tenantId },
+      data: { active: false },
+    });
+    if (count === 0) return { ok: false, error: "Popup not found" };
     return { ok: true };
   } catch (error) {
     const message =

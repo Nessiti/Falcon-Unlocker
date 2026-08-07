@@ -82,6 +82,8 @@ model Tenant {
   helpArticles           HelpArticle[]
   aboutPage              AboutPage?
   notifications          Notification[]
+  newsPosts              NewsPost[]
+  popups                 Popup[]
 }
 
 enum UserStatus {
@@ -583,6 +585,13 @@ model NewsPost {
   /// When set in the future, the post isn't shown until this time (Schedule).
   publishAt DateTime?
   createdAt DateTime  @default(now())
+
+  /// Tenant isolation (Chapter 34): which brand posted this. listNewsAction
+  /// (public read) still can't resolve a real visitor's tenant — same
+  /// blocker as FaqItem/HelpArticle (Chapter 31) — so it's hardcoded to
+  /// Falcon Unlocker's own tenant there rather than left unfiltered.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
 /// Promotional popup (Chapter 11): Color/Image/Animation/Expiration/Button+Link.
@@ -603,6 +612,10 @@ model Popup {
   /// member) — when set, this popup is skipped for users who already belong
   /// to that channel instead of nagging them to join again.
   requiredChannel String?
+
+  /// Tenant isolation (Chapter 34): which brand owns this popup.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
 enum NotificationKind {
