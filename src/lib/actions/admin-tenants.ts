@@ -2,11 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/telegram/admin";
-import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { TenantStatus, SubscriptionPlan } from "@/generated/prisma/client";
 import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
 import { registerTenantWebhook } from "@/lib/telegram/webhook-registration";
+import { describeActionError } from "@/lib/actions/describe-error";
 
 function maskToken(value: string | null): string | null {
   if (!value) return null;
@@ -68,8 +68,7 @@ export async function listTenantsAction(initData: string): Promise<ListTenantsRe
       })),
     };
   } catch (error) {
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to load tenants";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to load tenants", "admin-tenants") };
   }
 }
 
@@ -143,8 +142,7 @@ export async function createTenantAction(
     if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
       return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
     }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to create tenant";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to create tenant", "admin-tenants") };
   }
 }
 
@@ -175,8 +173,7 @@ export async function registerTenantWebhookAction(
     if (!result.ok) return { ok: false, error: result.error };
     return { ok: true };
   } catch (error) {
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to register webhook";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to register webhook", "admin-tenants") };
   }
 }
 
@@ -198,7 +195,6 @@ export async function setTenantStatusAction(
     await logAdminAction(superAdmin.id, "tenant.status", `${tenant.name} -> ${status}`);
     return { ok: true };
   } catch (error) {
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to update tenant status";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to update tenant status", "admin-tenants") };
   }
 }

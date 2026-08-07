@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
 import { requireTenantId } from "@/lib/telegram/tenant";
-import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
+import { describeActionError } from "@/lib/actions/describe-error";
 
 export type BrandSettings = {
   name: string;
@@ -48,8 +48,7 @@ export async function getBrandSettingsAction(initData: string): Promise<GetBrand
       },
     };
   } catch (error) {
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to load brand settings";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to load brand settings", "brand-settings") };
   }
 }
 
@@ -92,7 +91,6 @@ export async function updateBrandSettingsAction(
     await logAdminAction(admin.id, "brand.settings", `currency=${currency} language=${language}`);
     return { ok: true };
   } catch (error) {
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to update brand settings";
-    return { ok: false, error: message };
+    return { ok: false, error: describeActionError(error, "Failed to update brand settings", "brand-settings") };
   }
 }

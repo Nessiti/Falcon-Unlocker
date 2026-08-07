@@ -3,21 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
 import { requireTenantId } from "@/lib/telegram/tenant";
-import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { generateApiCredentials, hashApiSecret } from "@/lib/reseller-api/crypto";
+import { describeActionError } from "@/lib/actions/describe-error";
 
-/**
- * Admin-only surface, so it's safe (and, given how hard this was to
- * diagnose blind, necessary) to put the real error detail directly in what
- * the admin sees instead of a generic message with nothing to go on -
- * still logs server-side too, for anything that also needs a stack trace.
- */
 function describeError(error: unknown, fallback: string): string {
-  if (error instanceof TelegramAuthError) return error.message;
-  console.error(`[admin-api-keys] ${fallback}`, error);
-  const detail = error instanceof Error ? error.message : String(error);
-  return `${fallback}: ${detail}`;
+  return describeActionError(error, fallback, "admin-api-keys");
 }
 
 export type ApiKeySummary = {
