@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { label: "News", href: "/admin/news" },
   { label: "Notifications", href: "/admin/notifications" },
   { label: "API Logs", href: "/admin/api-logs" },
+  { label: "API Keys", href: "/admin/api-keys" },
   { label: "Logs", href: "/admin/logs" },
   { label: "Settings", href: "/admin/settings" },
   { label: "Support", href: "/support" },

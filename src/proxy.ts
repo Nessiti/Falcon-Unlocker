@@ -9,7 +9,10 @@ export const config = {
   // gate only ever validates against Falcon Unlocker's own bot token, so a
   // customer of any other tenant would always be rejected here - the
   // upload route does its own (tenant-aware) initData verification instead.
-  matcher: ["/api/((?!telegram/webhook|cron(?:/|$)|upload(?:/|$)).*)"],
+  // /api/reseller is the public reseller API: external software calling it
+  // has no Telegram context at all, and authenticates via its own API
+  // key/secret instead (src/lib/reseller-api/auth.ts).
+  matcher: ["/api/((?!telegram/webhook|cron(?:/|$)|upload(?:/|$)|reseller(?:/|$)).*)"],
 };
 
 export default async function proxy(request: NextRequest) {

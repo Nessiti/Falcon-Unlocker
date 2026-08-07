@@ -34,6 +34,7 @@ const ADMIN_ITEMS = [
   { label: "News", href: "/admin/news", icon: "📰" },
   { label: "Notifications", href: "/admin/notifications", icon: "🔔" },
   { label: "API Logs", href: "/admin/api-logs", icon: "🛰️" },
+  { label: "API Keys", href: "/admin/api-keys", icon: "🔑" },
   { label: "Logs", href: "/admin/logs", icon: "📜" },
   { label: "Statistics", href: "/admin/statistics", icon: "📈" },
   { label: "Admin Settings", href: "/admin/settings", icon: "🛠️" },

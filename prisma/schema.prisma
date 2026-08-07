@@ -84,6 +84,7 @@ model Tenant {
   newsPosts              NewsPost[]
   popups                 Popup[]
   userNotifications      UserNotification[]
+  apiKeys                ApiKey[]
 }
 
 enum UserStatus {
@@ -139,6 +140,7 @@ model User {
   serverOrderStatusEvents ServerOrderStatusEvent[]
   sentNotifications       Notification[]
   inAppNotifications      UserNotification[]
+  apiKeys                 ApiKey[]
 
   /// Multi-tenant foundation: which brand this account belongs to. Required
   /// (Chapter 37) - a Telegram identity gets its own separate account per
@@ -161,6 +163,28 @@ model UserNotification {
   link      String?
   readAt    DateTime?
   createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+}
+
+/// Reseller API credentials: lets a tenant's own customer (a reseller of
+/// theirs) place orders and check status programmatically, spending from
+/// that same customer's own wallet balance - the DHRU/GSM Theme-style
+/// public API standard, so existing reseller software integrates without
+/// custom work. One key belongs to exactly one User; that user's own
+/// balance and catalog access apply to every call made with it.
+model ApiKey {
+  id         String    @id @default(cuid())
+  key        String    @unique
+  secretHash String
+  label      String?
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
