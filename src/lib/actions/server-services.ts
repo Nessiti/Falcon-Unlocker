@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ServerFieldType, ServerServiceType, ServiceBadge, ServiceStatus } from "@/generated/prisma/client";
@@ -33,13 +34,14 @@ export type CreateServerServiceInput = {
 
 export type CreateServerServiceResult = { ok: true } | { ok: false; error: string };
 
-/** Server services are "Created by Admin only" (Chapter 5). */
+/** Server services are "Created by Admin only" (Chapter 5), scoped to the admin's own tenant (Chapter 25). */
 export async function createServerServiceAction(
   initData: string,
   input: CreateServerServiceInput,
 ): Promise<CreateServerServiceResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Name is required" };
@@ -53,9 +55,9 @@ export async function createServerServiceAction(
       const categoryId = categoryName
         ? (
             await tx.category.upsert({
-              where: { name: categoryName },
+              where: { tenantId_name: { tenantId, name: categoryName } },
               update: {},
-              create: { name: categoryName },
+              create: { tenantId, name: categoryName },
             })
           ).id
         : null;
@@ -72,6 +74,7 @@ export async function createServerServiceAction(
           displayOrder: input.displayOrder,
           type: input.type,
           categoryId,
+          tenantId,
           fields: {
             create: input.fields
               .filter((field) => field.label.trim())
@@ -124,10 +127,11 @@ export async function getServerServiceDetailAction(
   serviceId: string,
 ): Promise<GetServerServiceDetailResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
-    const service = await prisma.serverService.findUnique({
-      where: { id: serviceId },
+    const service = await prisma.serverService.findFirst({
+      where: { id: serviceId, tenantId },
       include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
     });
     if (!service) return { ok: false, error: "Service not found" };
@@ -179,6 +183,7 @@ export async function updateServerServiceAction(
 ): Promise<UpdateServerServiceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Name is required" };
@@ -186,15 +191,18 @@ export async function updateServerServiceAction(
       return { ok: false, error: "Price must be a positive amount" };
     }
 
+    const owned = await prisma.serverService.findFirst({ where: { id: serviceId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
     const categoryName = input.categoryName?.trim() || null;
 
     await prisma.$transaction(async (tx) => {
       const categoryId = categoryName
         ? (
             await tx.category.upsert({
-              where: { name: categoryName },
+              where: { tenantId_name: { tenantId, name: categoryName } },
               update: {},
-              create: { name: categoryName },
+              create: { tenantId, name: categoryName },
             })
           ).id
         : null;
@@ -269,14 +277,16 @@ export type ListAllServerServicesResult =
   | { ok: true; services: AdminServerServiceSummary[] }
   | { ok: false; error: string };
 
-/** Admin view of every Server service, including Offline/Maintenance ones customers don't see. */
+/** Admin view of every Server service in the staff member's own tenant, including Offline/Maintenance ones customers don't see. */
 export async function listAllServerServicesAction(
   initData: string,
 ): Promise<ListAllServerServicesResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const services = await prisma.serverService.findMany({
+      where: { tenantId },
       include: { category: true, fields: true },
       orderBy: { displayOrder: "asc" },
     });
@@ -310,11 +320,13 @@ export async function setServerServiceStatusAction(
 ): Promise<SetServerServiceStatusResult> {
   try {
     const admin = await requireAdmin(initData);
-    const service = await prisma.serverService.update({
-      where: { id: serviceId },
-      data: { status },
-    });
-    await logAdminAction(admin.id, "service.status", `Server ${service.name} -> ${status}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.serverService.findFirst({ where: { id: serviceId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
+    await prisma.serverService.update({ where: { id: serviceId }, data: { status } });
+    await logAdminAction(admin.id, "service.status", `Server ${owned.name} -> ${status}`);
     return { ok: true };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update status";
@@ -330,8 +342,13 @@ export async function deleteServerServiceAction(
 ): Promise<DeleteServerServiceResult> {
   try {
     const admin = await requireAdmin(initData);
-    const service = await prisma.serverService.delete({ where: { id: serviceId } });
-    await logAdminAction(admin.id, "service.delete", `Server ${service.name}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.serverService.findFirst({ where: { id: serviceId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
+    await prisma.serverService.delete({ where: { id: serviceId } });
+    await logAdminAction(admin.id, "service.delete", `Server ${owned.name}`);
     return { ok: true };
   } catch {
     return {
@@ -349,9 +366,10 @@ export async function duplicateServerServiceAction(
 ): Promise<DuplicateServerServiceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const original = await prisma.serverService.findUnique({
-      where: { id: serviceId },
+    const original = await prisma.serverService.findFirst({
+      where: { id: serviceId, tenantId },
       include: { fields: true },
     });
     if (!original) return { ok: false, error: "Service not found" };
@@ -368,6 +386,7 @@ export async function duplicateServerServiceAction(
         displayOrder: original.displayOrder,
         type: original.type,
         categoryId: original.categoryId,
+        tenantId,
         fields: {
           create: original.fields.map((field) => ({
             label: field.label,

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 export type CategorySummary = { id: string; name: string; imeiCount: number; serverCount: number };
@@ -12,8 +13,11 @@ export type ListCategoriesResult =
 
 export async function listCategoriesAction(initData: string): Promise<ListCategoriesResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+
     const categories = await prisma.category.findMany({
+      where: { tenantId },
       include: { _count: { select: { imeiServices: true, serverServices: true } } },
       orderBy: { name: "asc" },
     });
@@ -41,14 +45,15 @@ export async function createCategoryAction(
   name: string,
 ): Promise<CreateCategoryResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
     const trimmed = name.trim();
     if (!trimmed) return { ok: false, error: "Name is required" };
 
     await prisma.category.upsert({
-      where: { name: trimmed },
+      where: { tenantId_name: { tenantId, name: trimmed } },
       update: {},
-      create: { name: trimmed },
+      create: { tenantId, name: trimmed },
     });
 
     return { ok: true };
@@ -66,8 +71,11 @@ export async function deleteCategoryAction(
   categoryId: string,
 ): Promise<DeleteCategoryResult> {
   try {
-    await requireStaff(initData);
-    await prisma.category.delete({ where: { id: categoryId } });
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+
+    const { count } = await prisma.category.deleteMany({ where: { id: categoryId, tenantId } });
+    if (count === 0) return { ok: false, error: "Category not found" };
     return { ok: true };
   } catch (error) {
     const message =

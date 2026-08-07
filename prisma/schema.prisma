@@ -64,7 +64,10 @@ model Tenant {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  users User[]
+  users          User[]
+  categories     Category[]
+  imeiServices   ImeiService[]
+  serverServices ServerService[]
 }
 
 enum UserStatus {
@@ -172,11 +175,18 @@ enum ServiceFieldType {
 
 model Category {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
   createdAt DateTime @default(now())
+
+  /// Tenant isolation (Chapter 25): category names are unique per tenant,
+  /// not globally — two brands can both have an "Unlock" category.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   imeiServices   ImeiService[]
   serverServices ServerService[]
+
+  @@unique([tenantId, name])
 }
 
 model ImeiService {
@@ -193,6 +203,10 @@ model ImeiService {
 
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+
+  /// Tenant isolation (Chapter 25): which brand owns this catalog entry.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   /// Smart Routing (Chapter 15): how to pick among this service's enabled
   /// provider mappings. See RoutingStrategy for the meaning of each value.
@@ -299,6 +313,10 @@ model ServerService {
 
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+
+  /// Tenant isolation (Chapter 25): which brand owns this catalog entry.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   /// Smart Routing (Chapter 15): how to pick among this service's enabled
   /// provider mappings. See RoutingStrategy for the meaning of each value.

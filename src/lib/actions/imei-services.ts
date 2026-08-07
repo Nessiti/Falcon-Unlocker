@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/client";
@@ -36,13 +37,14 @@ export type CreateImeiServiceInput = {
 
 export type CreateImeiServiceResult = { ok: true } | { ok: false; error: string };
 
-/** IMEI services are "Created by Admin only" (Chapter 4). */
+/** IMEI services are "Created by Admin only" (Chapter 4), scoped to the admin's own tenant (Chapter 25). */
 export async function createImeiServiceAction(
   initData: string,
   input: CreateImeiServiceInput,
 ): Promise<CreateImeiServiceResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Name is required" };
@@ -56,9 +58,9 @@ export async function createImeiServiceAction(
       const categoryId = categoryName
         ? (
             await tx.category.upsert({
-              where: { name: categoryName },
+              where: { tenantId_name: { tenantId, name: categoryName } },
               update: {},
-              create: { name: categoryName },
+              create: { tenantId, name: categoryName },
             })
           ).id
         : null;
@@ -74,6 +76,7 @@ export async function createImeiServiceAction(
           imageUrl: input.imageUrl?.trim() || null,
           displayOrder: input.displayOrder,
           categoryId,
+          tenantId,
           fields: {
             create: input.fields
               .filter((field) => field.label.trim())
@@ -128,10 +131,11 @@ export async function getImeiServiceDetailAction(
   serviceId: string,
 ): Promise<GetImeiServiceDetailResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
-    const service = await prisma.imeiService.findUnique({
-      where: { id: serviceId },
+    const service = await prisma.imeiService.findFirst({
+      where: { id: serviceId, tenantId },
       include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
     });
     if (!service) return { ok: false, error: "Service not found" };
@@ -185,6 +189,7 @@ export async function updateImeiServiceAction(
 ): Promise<UpdateImeiServiceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Name is required" };
@@ -192,15 +197,18 @@ export async function updateImeiServiceAction(
       return { ok: false, error: "Price must be a positive amount" };
     }
 
+    const owned = await prisma.imeiService.findFirst({ where: { id: serviceId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
     const categoryName = input.categoryName?.trim() || null;
 
     await prisma.$transaction(async (tx) => {
       const categoryId = categoryName
         ? (
             await tx.category.upsert({
-              where: { name: categoryName },
+              where: { tenantId_name: { tenantId, name: categoryName } },
               update: {},
-              create: { name: categoryName },
+              create: { tenantId, name: categoryName },
             })
           ).id
         : null;
@@ -276,14 +284,16 @@ export type ListAllImeiServicesResult =
   | { ok: true; services: AdminImeiServiceSummary[] }
   | { ok: false; error: string };
 
-/** Admin view of every IMEI service, including Offline/Maintenance ones customers don't see. */
+/** Admin view of every IMEI service in the staff member's own tenant, including Offline/Maintenance ones customers don't see. */
 export async function listAllImeiServicesAction(
   initData: string,
 ): Promise<ListAllImeiServicesResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const services = await prisma.imeiService.findMany({
+      where: { tenantId },
       include: { category: true, fields: true },
       orderBy: { displayOrder: "asc" },
     });
@@ -316,8 +326,13 @@ export async function setImeiServiceStatusAction(
 ): Promise<SetImeiServiceStatusResult> {
   try {
     const admin = await requireAdmin(initData);
-    const service = await prisma.imeiService.update({ where: { id: serviceId }, data: { status } });
-    await logAdminAction(admin.id, "service.status", `IMEI ${service.name} -> ${status}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.imeiService.findFirst({ where: { id: serviceId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
+    await prisma.imeiService.update({ where: { id: serviceId }, data: { status } });
+    await logAdminAction(admin.id, "service.status", `IMEI ${owned.name} -> ${status}`);
     return { ok: true };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update status";
@@ -333,8 +348,13 @@ export async function deleteImeiServiceAction(
 ): Promise<DeleteImeiServiceResult> {
   try {
     const admin = await requireAdmin(initData);
-    const service = await prisma.imeiService.delete({ where: { id: serviceId } });
-    await logAdminAction(admin.id, "service.delete", `IMEI ${service.name}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.imeiService.findFirst({ where: { id: serviceId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Service not found" };
+
+    await prisma.imeiService.delete({ where: { id: serviceId } });
+    await logAdminAction(admin.id, "service.delete", `IMEI ${owned.name}`);
     return { ok: true };
   } catch {
     return {
@@ -352,9 +372,10 @@ export async function duplicateImeiServiceAction(
 ): Promise<DuplicateImeiServiceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const original = await prisma.imeiService.findUnique({
-      where: { id: serviceId },
+    const original = await prisma.imeiService.findFirst({
+      where: { id: serviceId, tenantId },
       include: { fields: true },
     });
     if (!original) return { ok: false, error: "Service not found" };
@@ -370,6 +391,7 @@ export async function duplicateImeiServiceAction(
         imageUrl: original.imageUrl,
         displayOrder: original.displayOrder,
         categoryId: original.categoryId,
+        tenantId,
         fields: {
           create: original.fields.map((field) => ({
             label: field.label,
