@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/prisma";
 import { TelegramAuthError, verifyTelegramInitData } from "@/lib/telegram/auth";
 import { Role, UserStatus } from "@/generated/prisma/client";
-import { consumePendingReferral } from "@/lib/referrals";
 
 const STATUS_MESSAGE: Record<string, string> = {
   [UserStatus.SUSPENDED]: "Your account is suspended. Contact support for help.",
@@ -77,15 +76,6 @@ export async function loginAction(initData: string): Promise<LoginResult> {
       resolvedTenantId === "falcon-unlocker" &&
       (await prisma.user.count({ where: { tenantId: "falcon-unlocker" } })) === 0;
 
-    // Referrals: whoever's bot /start link (ref_<userId>) this telegramId
-    // last clicked before ever signing up, if anyone. Deleted here either
-    // way - a brand-new account gets it attached below; an already-existing
-    // account (this is just a repeat login) has no use for it, so this also
-    // doubles as cleanup of a stale row. consumePendingReferral is
-    // best-effort internally (never throws) - a referral is a nice-to-have,
-    // not core to authentication, so it can never take sign-in down with it.
-    const referrerId = await consumePendingReferral(telegramId, resolvedTenantId);
-
     // Chapter 37: the same Telegram person gets a separate, independent
     // account per tenant, so this upserts on (telegramId, tenantId), never
     // telegramId alone. A single native INSERT ... ON CONFLICT DO UPDATE -
@@ -114,7 +104,6 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         isFirstUser,
         role: isFirstUser || isConfiguredAdmin || isTenantOwner ? Role.ADMIN : Role.CUSTOMER,
         tenantId: resolvedTenantId,
-        referredById: referrerId ?? undefined,
       },
     });
 
