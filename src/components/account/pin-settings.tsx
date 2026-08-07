@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { setPinAction, clearPinAction } from "@/lib/actions/account";
+import { useRefreshTelegramUser } from "@/components/telegram-user-provider";
 import { formInputClass } from "@/lib/ui";
 
 export function PinSettings({
@@ -11,6 +12,7 @@ export function PinSettings({
   initData: string;
   initialHasPin: boolean;
 }) {
+  const refreshUser = useRefreshTelegramUser();
   const [hasPin, setHasPin] = useState(initialHasPin);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -39,6 +41,7 @@ export function PinSettings({
     setCurrentPin("");
     setNewPin("");
     setMessage(hasPin ? "PIN changed" : "PIN set");
+    refreshUser();
   }
 
   async function handleClearPin() {
@@ -61,6 +64,7 @@ export function PinSettings({
     setHasPin(false);
     setCurrentPin("");
     setMessage("PIN removed");
+    refreshUser();
   }
 
   return (

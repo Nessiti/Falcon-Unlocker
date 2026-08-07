@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getBrandSettingsAction, updateBrandSettingsAction } from "@/lib/actions/brand-settings";
 import { ColorPickerField } from "@/components/admin/color-picker-field";
+import { useRefreshTelegramUser } from "@/components/telegram-user-provider";
 import { formInputClass } from "@/lib/ui";
 
 const EMPTY_FORM = {
@@ -15,6 +16,7 @@ const EMPTY_FORM = {
 };
 
 export function BrandSettingsPanel({ initData }: { initData: string }) {
+  const refreshUser = useRefreshTelegramUser();
   const [brandName, setBrandName] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,7 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
       setError(result.error);
       return;
     }
+    await refreshUser();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }

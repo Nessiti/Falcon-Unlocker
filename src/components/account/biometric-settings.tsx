@@ -11,6 +11,7 @@ import {
   updateBiometryToken,
 } from "@telegram-apps/sdk-react";
 import { setBiometricEnabledAction } from "@/lib/actions/account";
+import { useRefreshTelegramUser } from "@/components/telegram-user-provider";
 
 export function BiometricSettings({
   initData,
@@ -19,6 +20,7 @@ export function BiometricSettings({
   initData: string;
   initialEnabled: boolean;
 }) {
+  const refreshUser = useRefreshTelegramUser();
   const [available, setAvailable] = useState(false);
   const [enabled, setEnabled] = useState(initialEnabled);
   const [busy, setBusy] = useState(false);
@@ -69,6 +71,7 @@ export function BiometricSettings({
         return;
       }
       setEnabled(true);
+      refreshUser();
     } catch {
       setError("Biometric authentication failed");
     } finally {
@@ -89,6 +92,7 @@ export function BiometricSettings({
     const result = await setBiometricEnabledAction(initData, false);
     if (result.ok) {
       setEnabled(false);
+      refreshUser();
     } else {
       setError(result.error);
     }
