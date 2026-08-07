@@ -16,12 +16,6 @@ const EMPTY_FORM = {
   telegramBotToken: "",
   ownerTelegramId: "",
   email: "",
-  currency: "USD",
-  country: "",
-  language: "en",
-  logoUrl: "",
-  primaryColor: "",
-  secondaryColor: "",
 };
 
 export function TenantManager({ initData }: { initData: string }) {
@@ -60,12 +54,6 @@ export function TenantManager({ initData }: { initData: string }) {
       telegramBotToken: form.telegramBotToken || null,
       ownerTelegramId: form.ownerTelegramId || null,
       email: form.email || null,
-      currency: form.currency,
-      country: form.country || null,
-      language: form.language,
-      logoUrl: form.logoUrl || null,
-      primaryColor: form.primaryColor || null,
-      secondaryColor: form.secondaryColor || null,
     });
     setCreating(false);
 
@@ -138,8 +126,9 @@ export function TenantManager({ initData }: { initData: string }) {
       <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
         <h2 className="text-sm font-semibold text-foreground">New Brand</h2>
         <p className="text-xs text-hint">
-          Creates the tenant record. Wiring its own bot webhook, Mini App theming, and catalog
-          isolation lands in later chapters — this establishes the brand itself.
+          Sets only the brand&apos;s identity and bot connection. Logo, colors, currency, country
+          and language are the brand&apos;s own choice — its Admin configures those later from
+          Brand Settings, not the Super Admin.
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -172,42 +161,6 @@ export function TenantManager({ initData }: { initData: string }) {
             placeholder="Email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Currency (e.g. USD)"
-            value={form.currency}
-            onChange={(e) => setForm({ ...form, currency: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Country"
-            value={form.country}
-            onChange={(e) => setForm({ ...form, country: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Language (e.g. en)"
-            value={form.language}
-            onChange={(e) => setForm({ ...form, language: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Logo URL"
-            value={form.logoUrl}
-            onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Primary color (e.g. #6c5ce7)"
-            value={form.primaryColor}
-            onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-          />
-          <input
-            className={formInputClass}
-            placeholder="Secondary color"
-            value={form.secondaryColor}
-            onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
           />
         </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { getAppSettingsStatusAction, type AppSettingsStatus } from "@/lib/actions/admin-settings";
+import { BrandSettingsPanel } from "@/components/admin/brand-settings-panel";
 
 export default function AdminSettingsPage() {
   const initData = useRawInitData();
@@ -41,21 +42,22 @@ export default function AdminSettingsPage() {
         ? "Configured"
         : "Not configured (/start won't reply)",
     },
-    { label: "Language", value: "English (fixed)" },
-    { label: "Currency", value: "USD (fixed)" },
   ];
 
   return (
-    <div className="flex flex-col gap-2">
-      {rows.map((row) => (
-        <div
-          key={row.label}
-          className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4 text-sm"
-        >
-          <span className="text-foreground">{row.label}</span>
-          <span className="text-hint">{row.value}</span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-4">
+      <BrandSettingsPanel initData={initData} />
+      <div className="flex flex-col gap-2">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between rounded-2xl border border-border bg-surface p-4 text-sm"
+          >
+            <span className="text-foreground">{row.label}</span>
+            <span className="text-hint">{row.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

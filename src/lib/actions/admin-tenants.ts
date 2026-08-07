@@ -80,17 +80,19 @@ export type CreateTenantInput = {
   telegramBotToken: string | null;
   ownerTelegramId: string | null;
   email: string | null;
-  currency: string;
-  country: string | null;
-  language: string;
-  logoUrl: string | null;
-  primaryColor: string | null;
-  secondaryColor: string | null;
 };
 
 export type CreateTenantResult = { ok: true } | { ok: false; error: string };
 
-/** Add a new brand (vision chapter 3) — the platform's core self-serve-onboarding primitive. */
+/**
+ * Add a new brand (vision chapter 3) — the platform's core self-serve-onboarding
+ * primitive. Only sets the structural/registration facts (name, bot connection,
+ * owner, contact email): logo, colors, currency, country and language are the
+ * brand's own presentation/locale choices, not the Super Admin's to set — the
+ * brand's own Admin configures those via Brand Settings (src/lib/actions/
+ * brand-settings.ts) once they have access. New tenants get the schema
+ * defaults (USD, English, no logo/colors) until then.
+ */
 export async function createTenantAction(
   initData: string,
   input: CreateTenantInput,
@@ -117,12 +119,6 @@ export async function createTenantAction(
         telegramBotToken: input.telegramBotToken?.trim() ? encryptSecret(input.telegramBotToken.trim()) : null,
         ownerTelegramId,
         email: input.email?.trim() || null,
-        currency: input.currency.trim() || "USD",
-        country: input.country?.trim() || null,
-        language: input.language.trim() || "en",
-        logoUrl: input.logoUrl?.trim() || null,
-        primaryColor: input.primaryColor?.trim() || null,
-        secondaryColor: input.secondaryColor?.trim() || null,
       },
     });
 
