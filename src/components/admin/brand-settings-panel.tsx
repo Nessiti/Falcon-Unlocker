@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBrandSettingsAction, updateBrandSettingsAction } from "@/lib/actions/brand-settings";
 import { ColorPickerField } from "@/components/admin/color-picker-field";
 import { formInputClass } from "@/lib/ui";
@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   currency: "USD",
   country: "",
   language: "en",
+  welcomeMessage: "",
 };
 
 export function BrandSettingsPanel({ initData }: { initData: string }) {
@@ -20,6 +21,10 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [highlightWelcome, setHighlightWelcome] = useState(
+    () => typeof window !== "undefined" && window.location.hash === "#welcome-message",
+  );
+  const welcomeFieldRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     getBrandSettingsAction(initData).then((result) => {
@@ -35,10 +40,23 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
         currency: result.settings.currency,
         country: result.settings.country ?? "",
         language: result.settings.language,
+        welcomeMessage: result.settings.welcomeMessage ?? "",
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Landed here via the bot's "Write Welcome Message" button
+  // (#welcome-message) - the field doesn't exist yet when the browser first
+  // processes the hash (still loading), so scroll to it manually once the
+  // form is actually on screen, and pulse it briefly so it's unmistakable.
+  useEffect(() => {
+    if (loading || !highlightWelcome) return;
+    welcomeFieldRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    welcomeFieldRef.current?.focus();
+    const timeout = setTimeout(() => setHighlightWelcome(false), 2500);
+    return () => clearTimeout(timeout);
+  }, [loading, highlightWelcome]);
 
   async function handleSave() {
     setSaving(true);
@@ -51,6 +69,7 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
       currency: form.currency,
       country: form.country || null,
       language: form.language,
+      welcomeMessage: form.welcomeMessage || null,
     });
     setSaving(false);
 
@@ -101,6 +120,27 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
           placeholder="Language (e.g. en)"
           value={form.language}
           onChange={(e) => setForm({ ...form, language: e.target.value })}
+        />
+      </div>
+
+      <div id="welcome-message" className="flex flex-col gap-1 scroll-mt-20">
+        <label className="text-xs font-medium text-foreground" htmlFor="welcome-message-field">
+          Bot welcome message
+        </label>
+        <p className="text-xs text-hint">
+          Sent by your bot to every new customer on their first /start, instead of the default
+          message. Use <code className="rounded bg-background px-1 py-0.5">{"{firstName}"}</code> to
+          personalize it.
+        </p>
+        <textarea
+          id="welcome-message-field"
+          ref={welcomeFieldRef}
+          className={`${formInputClass} min-h-24 resize-y transition-shadow ${
+            highlightWelcome ? "ring-2 ring-accent" : ""
+          }`}
+          placeholder="👋 Welcome, {firstName}! Glad to have you here - open the app to get started."
+          value={form.welcomeMessage}
+          onChange={(e) => setForm({ ...form, welcomeMessage: e.target.value })}
         />
       </div>
 

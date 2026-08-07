@@ -13,6 +13,7 @@ export type BrandSettings = {
   currency: string;
   country: string | null;
   language: string;
+  welcomeMessage: string | null;
 };
 
 export type GetBrandSettingsResult =
@@ -43,6 +44,7 @@ export async function getBrandSettingsAction(initData: string): Promise<GetBrand
         currency: tenant.currency,
         country: tenant.country,
         language: tenant.language,
+        welcomeMessage: tenant.welcomeMessage,
       },
     };
   } catch (error) {
@@ -57,6 +59,7 @@ export type UpdateBrandSettingsInput = {
   currency: string;
   country: string | null;
   language: string;
+  welcomeMessage: string | null;
 };
 
 export type UpdateBrandSettingsResult = { ok: true } | { ok: false; error: string };
@@ -82,6 +85,7 @@ export async function updateBrandSettingsAction(
         currency,
         country: input.country?.trim() || null,
         language,
+        welcomeMessage: input.welcomeMessage?.trim() || null,
       },
     });
 

@@ -57,6 +57,13 @@ model Tenant {
   language             String           @default("en")
   logoUrl              String?
   primaryColor         String?
+  /// Sent by this tenant's own bot to every new customer on /start, in place
+  /// of the generic default copy. Supports a {firstName} placeholder.
+  welcomeMessage       String?
+  /// Set once this tenant's owner has been sent the one-time nudge (on
+  /// their first login as Admin) to write their own welcomeMessage -
+  /// guards against re-sending it on every later login.
+  welcomeOnboardingSentAt DateTime?
   status               TenantStatus     @default(ACTIVE)
   subscriptionPlan     SubscriptionPlan @default(STARTER)
   subscriptionExpiresAt DateTime?

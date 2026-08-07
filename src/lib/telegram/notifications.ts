@@ -1,5 +1,6 @@
 import "server-only";
 import { sendTelegramMessage } from "@/lib/telegram/bot";
+import { prisma } from "@/lib/prisma";
 import { formatUsd } from "@/lib/ui";
 
 /** The 8 notification types from Chapter 9, all sent via the Telegram Bot with native buttons. */
@@ -113,19 +114,33 @@ export function notifyBalanceUpdated(telegramId: bigint, tenantId: string, balan
  * webhook route always knows its own tenantId, and the legacy static route
  * defaults to Falcon Unlocker's.
  */
-export function notifyWelcome(
+export async function notifyWelcome(
   telegramId: bigint,
   tenantId: string,
   firstName: string,
   tenantName = "Falcon Unlocker",
   token?: string,
 ) {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { welcomeMessage: true } });
+  const text = tenant?.welcomeMessage
+    ? tenant.welcomeMessage.replace(/\{firstName\}/g, firstName)
+    : `👋 <b>Welcome, ${firstName}!</b>\n${tenantName} is the first Telegram-native GSM Server. Open the app to unlock IMEI/server services, manage your wallet, and track your orders.`;
+
+  return sendTelegramMessage(telegramId, tenantId, text, [{ text: "Open App", path: "/" }], token);
+}
+
+/**
+ * One-time nudge (loginAction, guarded by Tenant.welcomeOnboardingSentAt) so
+ * a brand-new tenant's owner knows their bot is sending customers generic
+ * default copy until they write their own - links straight to the Admin
+ * Settings field that sets it.
+ */
+export function notifyCustomizeWelcomeMessage(telegramId: bigint, tenantId: string, firstName: string) {
   return sendTelegramMessage(
     telegramId,
     tenantId,
-    `👋 <b>Welcome, ${firstName}!</b>\n${tenantName} is the first Telegram-native GSM Server. Open the app to unlock IMEI/server services, manage your wallet, and track your orders.`,
-    [{ text: "Open App", path: "/" }],
-    token,
+    `👋 <b>Welcome, ${firstName}!</b>\nYour bot is currently sending new customers a generic default welcome message. Write your own to match your brand - tap below to set it.`,
+    [{ text: "Write Welcome Message", path: "/admin/settings#welcome-message" }],
   );
 }
 

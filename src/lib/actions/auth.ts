@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { TelegramAuthError, verifyTelegramInitData } from "@/lib/telegram/auth";
+import { notifyCustomizeWelcomeMessage } from "@/lib/telegram/notifications";
 import { Role, UserStatus } from "@/generated/prisma/client";
 
 const STATUS_MESSAGE: Record<string, string> = {
@@ -116,6 +117,28 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     // created before this chapter, or before they were set as owner.
     if ((isConfiguredAdmin || isTenantOwner) && user.role !== Role.SUPER_ADMIN && user.role !== Role.ADMIN) {
       user = await prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
+    }
+
+    // One-time nudge for a brand-new tenant's owner to write their own
+    // welcome message, instead of silently shipping our own default copy
+    // to every one of their customers forever. Falcon Unlocker's own
+    // tenant is excluded - that default message IS our own brand's real
+    // copy, not a placeholder. Atomic guarded update (only the login that
+    // actually flips welcomeOnboardingSentAt from null sends the message)
+    // so this can never double-send on a race, and best-effort: never
+    // breaks sign-in if the Telegram send fails.
+    if (isTenantOwner && resolvedTenantId !== "falcon-unlocker") {
+      try {
+        const claimed = await prisma.tenant.updateMany({
+          where: { id: resolvedTenantId, welcomeOnboardingSentAt: null },
+          data: { welcomeOnboardingSentAt: new Date() },
+        });
+        if (claimed.count > 0) {
+          await notifyCustomizeWelcomeMessage(telegramId, resolvedTenantId, user.firstName);
+        }
+      } catch (error) {
+        console.error("[auth] welcome-message onboarding nudge failed", error);
+      }
     }
 
     if (user.status !== UserStatus.ACTIVE) {
