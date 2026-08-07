@@ -9,8 +9,14 @@ import { ServerServiceManager } from "@/components/server/server-service-manager
 export const dynamic = "force-dynamic";
 
 export default async function ServerPage() {
+  // Hardcoded to the Falcon Unlocker tenant: this Server Component has no
+  // request-time identity to resolve the real tenant from (Telegram auth
+  // only resolves client-side via initData) — needs bot->tenant resolution
+  // first. Hardcoding keeps today's behavior correct and stops a second
+  // tenant's catalog from bleeding into Falcon's own customer-facing page
+  // the moment one exists (Chapter 31).
   const services = await prisma.serverService.findMany({
-    where: { status: ServiceStatus.ONLINE },
+    where: { status: ServiceStatus.ONLINE, tenantId: "falcon-unlocker" },
     orderBy: { displayOrder: "asc" },
     include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
   });

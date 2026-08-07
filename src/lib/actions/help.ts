@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 export type HelpArticleSummary = {
@@ -10,9 +11,16 @@ export type HelpArticleSummary = {
   body: string;
 };
 
-/** Help articles are public read content, editable from the Admin panel (Chapter 10). */
+/**
+ * Help articles are public read content, editable from the Admin panel
+ * (Chapter 10). Hardcoded to the Falcon Unlocker tenant, same reasoning as
+ * listFaqAction above.
+ */
 export async function listHelpArticlesAction(): Promise<HelpArticleSummary[]> {
-  const articles = await prisma.helpArticle.findMany({ orderBy: { displayOrder: "asc" } });
+  const articles = await prisma.helpArticle.findMany({
+    where: { tenantId: "falcon-unlocker" },
+    orderBy: { displayOrder: "asc" },
+  });
   return articles.map((article) => ({ id: article.id, title: article.title, body: article.body }));
 }
 
@@ -24,7 +32,8 @@ export async function createHelpArticleAction(
   input: CreateHelpArticleInput,
 ): Promise<CreateHelpArticleResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const title = input.title.trim();
     const body = input.body.trim();
@@ -32,7 +41,7 @@ export async function createHelpArticleAction(
     if (!body) return { ok: false, error: "Body is required" };
 
     await prisma.helpArticle.create({
-      data: { title, body, displayOrder: input.displayOrder },
+      data: { title, body, displayOrder: input.displayOrder, tenantId },
     });
 
     return { ok: true };

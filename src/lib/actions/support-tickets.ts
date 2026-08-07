@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { Role, TicketStatus } from "@/generated/prisma/client";
 import { notifySupportReply } from "@/lib/telegram/notifications";
@@ -38,6 +39,7 @@ export async function createTicketAction(
 ): Promise<CreateTicketResult> {
   try {
     const user = await getCurrentUser(initData);
+    const tenantId = requireTenantId(user);
     const subject = input.subject.trim();
     const message = input.message.trim();
     if (!subject) return { ok: false, error: "Subject is required" };
@@ -47,6 +49,7 @@ export async function createTicketAction(
       data: {
         subject,
         userId: user.id,
+        tenantId,
         messages: { create: { body: message, authorId: user.id } },
       },
     });
@@ -99,7 +102,13 @@ export async function getTicketAction(
       include: { messages: { orderBy: { createdAt: "asc" }, include: { author: true } } },
     });
     if (!ticket) return { ok: false, error: "Ticket not found" };
-    if (ticket.userId !== user.id && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
+
+    const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
+    const isOwner = ticket.userId === user.id;
+    // An admin can only reach tickets from their own tenant — otherwise the
+    // isAdmin check alone would let any tenant's staff read any other
+    // tenant's customer support thread.
+    if (!isOwner && !(isAdmin && ticket.tenantId === user.tenantId)) {
       return { ok: false, error: "Not authorized to view this ticket" };
     }
 
@@ -145,7 +154,8 @@ export async function sendTicketMessageAction(
     if (!ticket) return { ok: false, error: "Ticket not found" };
 
     const isOwner = ticket.userId === user.id;
-    const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
+    const isAdmin =
+      (user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN) && ticket.tenantId === user.tenantId;
     if (!isOwner && !isAdmin) {
       return { ok: false, error: "Not authorized to reply to this ticket" };
     }
@@ -182,10 +192,11 @@ export async function getAdminTicketQueueAction(
   initData: string,
 ): Promise<GetAdminTicketQueueResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const tickets = await prisma.supportTicket.findMany({
-      where: { status: { not: TicketStatus.CLOSED } },
+      where: { tenantId, status: { not: TicketStatus.CLOSED } },
       include: { user: true, messages: { orderBy: { createdAt: "desc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
     });
@@ -218,7 +229,10 @@ export async function closeTicketAction(
     const user = await getCurrentUser(initData);
     const ticket = await prisma.supportTicket.findUnique({ where: { id: ticketId } });
     if (!ticket) return { ok: false, error: "Ticket not found" };
-    if (ticket.userId !== user.id && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
+
+    const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
+    const isOwner = ticket.userId === user.id;
+    if (!isOwner && !(isAdmin && ticket.tenantId === user.tenantId)) {
       return { ok: false, error: "Not authorized to close this ticket" };
     }
 

@@ -77,6 +77,10 @@ model Tenant {
   queueEntries           OrderQueueEntry[]
   rechargeMethods        RechargeMethod[]
   rechargeOrders         RechargeOrder[]
+  supportTickets         SupportTicket[]
+  faqItems               FaqItem[]
+  helpArticles           HelpArticle[]
+  aboutPage              AboutPage?
 }
 
 enum UserStatus {
@@ -509,6 +513,12 @@ model SupportTicket {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  /// Tenant isolation (Chapter 31): snapshotted from the submitting
+  /// customer's own tenant at creation time — lets admin-side actions
+  /// verify ownership without an extra join to User.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
   messages SupportMessage[]
 }
 
@@ -531,6 +541,13 @@ model FaqItem {
   answer       String
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
+
+  /// Tenant isolation (Chapter 31): which brand owns this entry. The public
+  /// read (listFaqAction) isn't scoped by this yet — it has no request-time
+  /// tenant context to scope by, same blocker as the /imei /server catalog
+  /// pages (Chapter 25) — but admin writes are.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
 /// Admin-editable Help articles (Chapter 10).
@@ -540,11 +557,18 @@ model HelpArticle {
   body         String
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
+
+  /// Tenant isolation (Chapter 31): same as FaqItem.tenantId above.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
 
-/// Admin-editable About content (Chapter 10). Singleton row.
+/// Admin-editable About content (Chapter 10). Tenant isolation (Chapter 31):
+/// one row per tenant instead of a single platform-wide singleton — same
+/// pattern as PricingSettings (Chapter 28).
 model AboutPage {
-  id        String   @id @default("about")
+  tenantId  String   @id
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   content   String   @default("")
   updatedAt DateTime @updatedAt
 }

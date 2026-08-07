@@ -2,13 +2,19 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
-const ABOUT_PAGE_ID = "about";
-
-/** About content is public read, editable from the Admin panel (Chapter 10). Singleton row. */
+/**
+ * About content is public read, editable from the Admin panel (Chapter 10).
+ * getAboutAction isn't tenant-scoped yet — same blocker as listFaqAction (no
+ * request-time identity to scope by). updateAboutAction below is scoped:
+ * before Chapter 31 this was a single platform-wide row (fixed id: "about"),
+ * so any tenant's admin could overwrite every other tenant's About page —
+ * now one row per tenant, same pattern as PricingSettings (Chapter 28).
+ */
 export async function getAboutAction(): Promise<string> {
-  const page = await prisma.aboutPage.findUnique({ where: { id: ABOUT_PAGE_ID } });
+  const page = await prisma.aboutPage.findUnique({ where: { tenantId: "falcon-unlocker" } });
   return page?.content ?? "";
 }
 
@@ -19,12 +25,13 @@ export async function updateAboutAction(
   content: string,
 ): Promise<UpdateAboutResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     await prisma.aboutPage.upsert({
-      where: { id: ABOUT_PAGE_ID },
+      where: { tenantId },
       update: { content },
-      create: { id: ABOUT_PAGE_ID, content },
+      create: { tenantId, content },
     });
 
     return { ok: true };
