@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { OrderStatus, RechargeStatus, TicketStatus } from "@/generated/prisma/client";
 
@@ -20,9 +21,11 @@ export type GetAdminDashboardResult =
   | { ok: true; stats: AdminDashboardStats }
   | { ok: false; error: string };
 
+/** Scoped to the staff member's own tenant (Chapter 30) — previously aggregated every tenant's numbers together. */
 export async function getAdminDashboardAction(initData: string): Promise<GetAdminDashboardResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const [
       totalUsers,
@@ -35,21 +38,21 @@ export async function getAdminDashboardAction(initData: string): Promise<GetAdmi
       pendingRecharges,
       openTickets,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.imeiOrder.count({ where: { status: { in: IN_FLIGHT_STATUSES } } }),
-      prisma.serverOrder.count({ where: { status: { in: IN_FLIGHT_STATUSES } } }),
-      prisma.imeiOrder.count({ where: { status: OrderStatus.COMPLETED } }),
-      prisma.serverOrder.count({ where: { status: OrderStatus.COMPLETED } }),
+      prisma.user.count({ where: { tenantId } }),
+      prisma.imeiOrder.count({ where: { tenantId, status: { in: IN_FLIGHT_STATUSES } } }),
+      prisma.serverOrder.count({ where: { tenantId, status: { in: IN_FLIGHT_STATUSES } } }),
+      prisma.imeiOrder.count({ where: { tenantId, status: OrderStatus.COMPLETED } }),
+      prisma.serverOrder.count({ where: { tenantId, status: OrderStatus.COMPLETED } }),
       prisma.imeiOrder.aggregate({
-        where: { status: OrderStatus.COMPLETED },
+        where: { tenantId, status: OrderStatus.COMPLETED },
         _sum: { priceCents: true },
       }),
       prisma.serverOrder.aggregate({
-        where: { status: OrderStatus.COMPLETED },
+        where: { tenantId, status: OrderStatus.COMPLETED },
         _sum: { priceCents: true },
       }),
-      prisma.rechargeOrder.count({ where: { status: RechargeStatus.PENDING } }),
-      prisma.supportTicket.count({ where: { status: { not: TicketStatus.CLOSED } } }),
+      prisma.rechargeOrder.count({ where: { tenantId, status: RechargeStatus.PENDING } }),
+      prisma.supportTicket.count({ where: { status: { not: TicketStatus.CLOSED }, user: { tenantId } } }),
     ]);
 
     return {
@@ -82,27 +85,29 @@ export type GetAdminStatisticsResult =
   | { ok: true; stats: AdminStatistics }
   | { ok: false; error: string };
 
+/** Scoped to the staff member's own tenant (Chapter 30) — previously aggregated every tenant's numbers together. */
 export async function getAdminStatisticsAction(
   initData: string,
 ): Promise<GetAdminStatisticsResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const [usersByRole, imeiByStatus, serverByStatus, revenueImei, revenueServer, credits] =
       await Promise.all([
-        prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
-        prisma.imeiOrder.groupBy({ by: ["status"], _count: { _all: true } }),
-        prisma.serverOrder.groupBy({ by: ["status"], _count: { _all: true } }),
+        prisma.user.groupBy({ by: ["role"], where: { tenantId }, _count: { _all: true } }),
+        prisma.imeiOrder.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
+        prisma.serverOrder.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
         prisma.imeiOrder.aggregate({
-          where: { status: OrderStatus.COMPLETED },
+          where: { tenantId, status: OrderStatus.COMPLETED },
           _sum: { priceCents: true },
         }),
         prisma.serverOrder.aggregate({
-          where: { status: OrderStatus.COMPLETED },
+          where: { tenantId, status: OrderStatus.COMPLETED },
           _sum: { priceCents: true },
         }),
         prisma.walletTransaction.aggregate({
-          where: { type: "CREDIT" },
+          where: { type: "CREDIT", user: { tenantId } },
           _sum: { amountCents: true },
         }),
       ]);

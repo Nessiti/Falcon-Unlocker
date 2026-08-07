@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { RechargeContactType, RechargeStatus, WalletTransactionType } from "@/generated/prisma/client";
 import {
@@ -54,9 +55,10 @@ export type GetWalletDataResult = { ok: true; data: WalletData } | { ok: false; 
 export async function getWalletDataAction(initData: string): Promise<GetWalletDataResult> {
   try {
     const user = await getCurrentUser(initData);
+    const tenantId = requireTenantId(user);
 
     const [methods, rechargeOrders, transactions] = await Promise.all([
-      prisma.rechargeMethod.findMany({ where: { active: true }, orderBy: { displayOrder: "asc" } }),
+      prisma.rechargeMethod.findMany({ where: { active: true, tenantId }, orderBy: { displayOrder: "asc" } }),
       prisma.rechargeOrder.findMany({
         where: { userId: user.id },
         include: { method: true },
@@ -127,12 +129,13 @@ export async function createRechargeOrderAction(
 ): Promise<CreateRechargeOrderResult> {
   try {
     const user = await getCurrentUser(initData);
+    const tenantId = requireTenantId(user);
 
     if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
       return { ok: false, error: "Enter a valid amount" };
     }
 
-    const method = await prisma.rechargeMethod.findUnique({ where: { id: input.methodId } });
+    const method = await prisma.rechargeMethod.findFirst({ where: { id: input.methodId, tenantId } });
     if (!method || !method.active) {
       return { ok: false, error: "This payment method is not available" };
     }
@@ -143,6 +146,7 @@ export async function createRechargeOrderAction(
         methodId: method.id,
         amountCents: input.amountCents,
         proofNote: input.proofNote,
+        tenantId,
       },
     });
 
@@ -165,10 +169,11 @@ export async function getAdminRechargeQueueAction(
   initData: string,
 ): Promise<GetAdminRechargeQueueResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const orders = await prisma.rechargeOrder.findMany({
-      where: { status: RechargeStatus.PENDING },
+      where: { status: RechargeStatus.PENDING, tenantId },
       include: { method: true, user: true },
       orderBy: { createdAt: "asc" },
     });
@@ -207,9 +212,10 @@ export async function reviewRechargeOrderAction(
 ): Promise<ReviewRechargeOrderResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const outcome = await prisma.$transaction(async (tx) => {
-      const order = await tx.rechargeOrder.findUnique({ where: { id: input.rechargeOrderId } });
+      const order = await tx.rechargeOrder.findFirst({ where: { id: input.rechargeOrderId, tenantId } });
       if (!order || order.status !== RechargeStatus.PENDING) {
         throw new Error("ORDER_NOT_PENDING");
       }

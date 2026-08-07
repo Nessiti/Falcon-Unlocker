@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { RechargeContactType } from "@/generated/prisma/client";
@@ -20,13 +21,14 @@ export type CreateRechargeMethodInput = {
 
 export type CreateRechargeMethodResult = { ok: true } | { ok: false; error: string };
 
-/** Recharge methods (Instructions, account details, images, QR codes) are Admin-configured (Chapter 7). */
+/** Recharge methods (Instructions, account details, images, QR codes) are Admin-configured (Chapter 7), scoped to the admin's own tenant (Chapter 30). */
 export async function createRechargeMethodAction(
   initData: string,
   input: CreateRechargeMethodInput,
 ): Promise<CreateRechargeMethodResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     const instructions = input.instructions.trim();
@@ -49,6 +51,7 @@ export async function createRechargeMethodAction(
         displayOrder: input.displayOrder,
         contactType: input.contactType,
         contactValue,
+        tenantId,
       },
     });
 
@@ -78,14 +81,15 @@ export type ListAllRechargeMethodsResult =
   | { ok: true; methods: AdminRechargeMethodDetail[] }
   | { ok: false; error: string };
 
-/** Admin view of every recharge method, including inactive ones customers don't see. */
+/** Admin view of every recharge method in the staff member's own tenant, including inactive ones customers don't see. */
 export async function listAllRechargeMethodsAction(
   initData: string,
 ): Promise<ListAllRechargeMethodsResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
-    const methods = await prisma.rechargeMethod.findMany({ orderBy: { displayOrder: "asc" } });
+    const methods = await prisma.rechargeMethod.findMany({ where: { tenantId }, orderBy: { displayOrder: "asc" } });
 
     return {
       ok: true,
@@ -121,6 +125,7 @@ export async function updateRechargeMethodAction(
 ): Promise<UpdateRechargeMethodResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     const instructions = input.instructions.trim();
@@ -131,6 +136,9 @@ export async function updateRechargeMethodAction(
     if (input.contactType && !contactValue) {
       return { ok: false, error: "Enter a contact number/username for the selected contact type" };
     }
+
+    const owned = await prisma.rechargeMethod.findFirst({ where: { id: methodId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "Recharge method not found" };
 
     await prisma.rechargeMethod.update({
       where: { id: methodId },
@@ -166,8 +174,13 @@ export async function setRechargeMethodActiveAction(
 ): Promise<SetRechargeMethodActiveResult> {
   try {
     const admin = await requireAdmin(initData);
-    const method = await prisma.rechargeMethod.update({ where: { id: methodId }, data: { active } });
-    await logAdminAction(admin.id, "recharge-method.status", `${method.name} -> ${active ? "active" : "inactive"}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.rechargeMethod.findFirst({ where: { id: methodId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Recharge method not found" };
+
+    await prisma.rechargeMethod.update({ where: { id: methodId }, data: { active } });
+    await logAdminAction(admin.id, "recharge-method.status", `${owned.name} -> ${active ? "active" : "inactive"}`);
     return { ok: true };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update status";
@@ -183,8 +196,13 @@ export async function deleteRechargeMethodAction(
 ): Promise<DeleteRechargeMethodResult> {
   try {
     const admin = await requireAdmin(initData);
-    const method = await prisma.rechargeMethod.delete({ where: { id: methodId } });
-    await logAdminAction(admin.id, "recharge-method.delete", method.name);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.rechargeMethod.findFirst({ where: { id: methodId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Recharge method not found" };
+
+    await prisma.rechargeMethod.delete({ where: { id: methodId } });
+    await logAdminAction(admin.id, "recharge-method.delete", owned.name);
     return { ok: true };
   } catch {
     return {

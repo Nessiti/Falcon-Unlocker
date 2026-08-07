@@ -75,6 +75,8 @@ model Tenant {
   serverServiceMappings  ServerServiceMapping[]
   pricingSettings        PricingSettings?
   queueEntries           OrderQueueEntry[]
+  rechargeMethods        RechargeMethod[]
+  rechargeOrders         RechargeOrder[]
 }
 
 enum UserStatus {
@@ -423,6 +425,12 @@ model RechargeMethod {
   contactType  RechargeContactType?
   contactValue String?
 
+  /// Tenant isolation (Chapter 30): each brand configures its own payment
+  /// methods — a customer must never see another brand's payment
+  /// instructions (bank account, crypto address, etc.).
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
   rechargeOrders RechargeOrder[]
 }
 
@@ -450,6 +458,11 @@ model RechargeOrder {
 
   reviewedById String?
   reviewedBy   User?   @relation("RechargeOrderReviewer", fields: [reviewedById], references: [id])
+
+  /// Tenant isolation (Chapter 30): snapshotted from the submitting
+  /// customer's own tenant at creation time.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   walletTransactions WalletTransaction[]
 }
