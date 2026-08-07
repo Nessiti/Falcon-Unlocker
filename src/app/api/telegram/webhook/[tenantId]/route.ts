@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const update = (await request.json()) as TelegramUpdate;
-  await handleTelegramUpdate(update, tenant.name, token);
+  await handleTelegramUpdate(update, tenantId, tenant.name, token);
 
   return NextResponse.json({ ok: true });
 }

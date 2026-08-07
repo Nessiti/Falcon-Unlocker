@@ -58,7 +58,7 @@ export async function getActivePopupAction(initData?: string | null): Promise<Po
 
   if (popup.requiredChannel && currentUser) {
     try {
-      const isMember = await isChannelMember(popup.requiredChannel, currentUser.telegramId);
+      const isMember = await isChannelMember(popup.requiredChannel, currentUser.telegramId, tenantId);
       if (isMember) return null;
     } catch {
       // Couldn't check membership — fail open.
@@ -123,7 +123,7 @@ export async function createPopupAction(
     await logAdminAction(staff.id, "popup.create", title);
 
     if (input.notifyUsers) {
-      await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, title, message));
+      await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, tenantId, title, message));
     }
 
     return { ok: true };

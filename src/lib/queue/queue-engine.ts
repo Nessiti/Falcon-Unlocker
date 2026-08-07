@@ -86,7 +86,7 @@ async function advanceOrderToProcessing(kind: QueueKind, orderId: string): Promi
         },
       }),
     ]);
-    await notifyOrderStatusChanged(order.user.telegramId, order.service.name, OrderStatus.PROCESSING);
+    await notifyOrderStatusChanged(order.user.telegramId, order.tenantId, order.service.name, OrderStatus.PROCESSING);
   } else {
     const order = await prisma.serverOrder.findUnique({
       where: { id: orderId },
@@ -103,7 +103,7 @@ async function advanceOrderToProcessing(kind: QueueKind, orderId: string): Promi
         },
       }),
     ]);
-    await notifyOrderStatusChanged(order.user.telegramId, order.service.name, OrderStatus.PROCESSING);
+    await notifyOrderStatusChanged(order.user.telegramId, order.tenantId, order.service.name, OrderStatus.PROCESSING);
   }
 }
 

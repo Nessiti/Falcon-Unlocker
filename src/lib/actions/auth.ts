@@ -48,7 +48,12 @@ export async function loginAction(initData: string): Promise<LoginResult> {
       resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
     const user = await prisma.$transaction(async (tx) => {
-      const existing = await tx.user.findUnique({ where: { telegramId } });
+      // Chapter 37: the same Telegram person gets a separate, independent
+      // account per tenant, so "existing" means "already has an account in
+      // THIS tenant specifically" — never a different tenant's account.
+      const existing = await tx.user.findUnique({
+        where: { telegramId_tenantId: { telegramId, tenantId: resolvedTenantId } },
+      });
 
       if (existing) {
         return tx.user.update({
@@ -63,10 +68,6 @@ export async function loginAction(initData: string): Promise<LoginResult> {
             // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
             // every login.
             role: isConfiguredAdmin && existing.role !== Role.SUPER_ADMIN ? Role.ADMIN : existing.role,
-            // Self-heals accounts created in the window between Chapter 24
-            // (tenantId added, nullable) and this chapter (tenantId actually
-            // assigned at signup) — never overwrites an already-set tenantId.
-            ...(existing.tenantId ? {} : { tenantId: resolvedTenantId }),
           },
         });
       }
@@ -76,7 +77,9 @@ export async function loginAction(initData: string): Promise<LoginResult> {
       // the platform, not the first customer of every new tenant going
       // forward. A brand-new tenant's first real signup is an ordinary
       // Customer; its Admin is whoever the Super Admin set as owner.
-      const isFirstUser = resolvedTenantId === "falcon-unlocker" && (await tx.user.count()) === 0;
+      const isFirstUser =
+        resolvedTenantId === "falcon-unlocker" &&
+        (await tx.user.count({ where: { tenantId: "falcon-unlocker" } })) === 0;
 
       return tx.user.create({
         data: {

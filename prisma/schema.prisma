@@ -104,7 +104,10 @@ enum OrderStatus {
 
 model User {
   id          String     @id @default(cuid())
-  telegramId  BigInt     @unique
+  /// Not @unique on its own anymore (Chapter 37): the same Telegram person
+  /// can hold a separate, independent account in every tenant/brand they
+  /// use — unique only per (telegramId, tenantId) below.
+  telegramId  BigInt
   username    String?
   firstName   String
   lastName    String?
@@ -136,13 +139,16 @@ model User {
   serverOrderStatusEvents ServerOrderStatusEvent[]
   sentNotifications       Notification[]
 
-  /// Multi-tenant foundation: which brand this account belongs to. Nullable
-  /// for now — every existing user is backfilled to the seeded Falcon
-  /// Unlocker tenant by this chapter's migration, but query-level tenant
-  /// scoping (every admin-*.ts action filtering by tenantId) is a later
-  /// chapter, so this isn't enforced as required yet.
-  tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  /// Multi-tenant foundation: which brand this account belongs to. Required
+  /// (Chapter 37) — a Telegram identity gets its own separate account per
+  /// tenant, so "which brand" is never ambiguous once a row exists.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  /// One account per (person, brand) — the same Telegram user opening a
+  /// different tenant's bot gets its own independent account, never the
+  /// account they already have with another brand (Chapter 37).
+  @@unique([telegramId, tenantId])
 }
 
 /// Admin action log (Chapter 11).

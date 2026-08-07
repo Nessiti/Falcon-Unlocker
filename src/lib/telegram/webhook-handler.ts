@@ -12,16 +12,23 @@ export type TelegramUpdate = {
 /**
  * Shared /start handling for both the legacy Falcon-only webhook route and
  * the per-tenant one (Chapter 33) — replies as the given brand's own bot
- * (tenantName/token default to Falcon Unlocker's, so the original route's
- * behavior is unchanged).
+ * (tenantId/tenantName/token default to Falcon Unlocker's, so the original
+ * route's behavior is unchanged).
  */
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
+  tenantId = "falcon-unlocker",
   tenantName?: string,
   token?: string,
 ): Promise<void> {
   const message = update.message;
   if (message?.text?.trim() === "/start") {
-    await notifyWelcome(BigInt(message.chat.id), message.from?.first_name ?? "there", tenantName, token);
+    await notifyWelcome(
+      BigInt(message.chat.id),
+      tenantId,
+      message.from?.first_name ?? "there",
+      tenantName,
+      token,
+    );
   }
 }

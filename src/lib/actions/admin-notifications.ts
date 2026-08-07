@@ -28,8 +28,8 @@ export async function sendBroadcastAction(
 
     const recipientCount =
       input.kind === "PROMOTION"
-        ? await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, title, message))
-        : await broadcastToAllUsers(tenantId, (telegramId) => notifyMaintenance(telegramId, message));
+        ? await broadcastToAllUsers(tenantId, (telegramId) => notifyPromotion(telegramId, tenantId, title, message))
+        : await broadcastToAllUsers(tenantId, (telegramId) => notifyMaintenance(telegramId, tenantId, message));
 
     await prisma.notification.create({
       data: {

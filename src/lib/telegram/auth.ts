@@ -25,12 +25,15 @@ export type VerifiedInitData = {
  * platform's known bots, and hasn't expired — and resolves which tenant that
  * bot belongs to. Throws {@link TelegramAuthError} otherwise.
  *
- * Fast path: a returning user's own tenant (looked up from the — as yet
- * unverified — embedded Telegram user id) is tried first, so the overwhelming
- * majority of calls do exactly one indexed lookup and one HMAC check. Slow
- * path (new user, or a stale/rotated token): every known bot token is tried
- * in turn. Peeking at the unverified payload only ever picks which token to
- * verify against — nothing is trusted or acted on until validate() succeeds.
+ * Fast path: the same Telegram person can hold a separate account in more
+ * than one tenant (Chapter 37), so the — as yet unverified — embedded
+ * Telegram user id is used to look up every tenant this person already has
+ * an account in, and each is tried in turn; this is still cheap (a handful
+ * of rows at most) and covers the overwhelming majority of calls. Slow path
+ * (brand-new person, or a stale/rotated token): every known bot token is
+ * tried instead. Peeking at the unverified payload only ever picks which
+ * token to verify against — nothing is trusted or acted on until validate()
+ * succeeds.
  */
 export async function verifyTelegramInitData(initData: string): Promise<VerifiedInitData> {
   if (!initData) {
@@ -45,14 +48,14 @@ export async function verifyTelegramInitData(initData: string): Promise<Verified
   }
 
   if (peeked.user) {
-    const existing = await prisma.user.findUnique({
+    const existingAccounts = await prisma.user.findMany({
       where: { telegramId: BigInt(peeked.user.id) },
       select: { tenantId: true },
     });
-    if (existing?.tenantId) {
-      const token = await getTenantBotToken(existing.tenantId);
+    for (const { tenantId } of existingAccounts) {
+      const token = await getTenantBotToken(tenantId);
       if (token && (await tryValidate(initData, token))) {
-        return { data: peeked, tenantId: existing.tenantId };
+        return { data: peeked, tenantId };
       }
     }
   }

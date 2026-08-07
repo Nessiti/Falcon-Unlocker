@@ -101,13 +101,13 @@ export async function createImeiOrderAction(
     }
 
     await enqueueOrder("IMEI", orderId);
-    await notifyOrderReceived(user.telegramId, service.name, service.priceCents);
+    await notifyOrderReceived(user.telegramId, service.tenantId, service.name, service.priceCents);
 
     const customerName = [user.firstName, user.lastName].filter(Boolean).join(" ");
     const details = resolveFieldValues(input.fieldValues, service.fields);
     if (input.notes?.trim()) details.push({ label: "Notes", value: input.notes.trim() });
     await notifyAllStaff(service.tenantId, (telegramId) =>
-      notifyAdminNewOrder(telegramId, customerName, service.name, service.priceCents, details),
+      notifyAdminNewOrder(telegramId, service.tenantId, customerName, service.name, service.priceCents, details),
     );
 
     return { ok: true };

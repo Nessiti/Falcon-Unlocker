@@ -130,7 +130,7 @@ export async function adjustUserBalanceAction(
       "user.balance",
       `${target.firstName}: ${input.deltaCents} cents (${reason})`,
     );
-    await notifyBalanceUpdated(target.telegramId, target.balanceCents);
+    await notifyBalanceUpdated(target.telegramId, target.tenantId, target.balanceCents);
 
     return { ok: true };
   } catch (error) {

@@ -98,7 +98,7 @@ async function transitionImeiOrder(adminId: string, tenantId: string, input: Upd
     await tx.imeiOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, serviceName: order.service.name };
+    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
   });
 }
 
@@ -115,7 +115,7 @@ async function transitionServerOrder(adminId: string, tenantId: string, input: U
     await tx.serverOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, serviceName: order.service.name };
+    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
   });
 }
 
@@ -138,9 +138,9 @@ export async function updateOrderStatusAction(
     await logAdminAction(staff.id, "order.status", `${input.kind} ${input.orderId} -> ${input.status}`);
 
     if (input.status === OrderStatus.COMPLETED) {
-      await notifyOrderCompleted(outcome.telegramId, outcome.serviceName);
+      await notifyOrderCompleted(outcome.telegramId, outcome.tenantId, outcome.serviceName);
     } else if (input.status !== OrderStatus.PENDING) {
-      await notifyOrderStatusChanged(outcome.telegramId, outcome.serviceName, input.status);
+      await notifyOrderStatusChanged(outcome.telegramId, outcome.tenantId, outcome.serviceName, input.status);
     }
 
     return { ok: true };

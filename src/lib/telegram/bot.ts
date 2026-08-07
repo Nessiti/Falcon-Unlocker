@@ -1,5 +1,4 @@
 import "server-only";
-import { prisma } from "@/lib/prisma";
 import { getTenantBotToken } from "@/lib/telegram/tenant-resolution";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
@@ -22,43 +21,27 @@ function buildReplyMarkup(buttons: TelegramInlineButton[] | undefined) {
 }
 
 /**
- * Bot -> Tenant detection, outbound half (Chapter 33): a message must be
- * sent AS the recipient's own brand's bot, never always Falcon's. Looks up
- * which tenant owns this Telegram account and resolves that tenant's own
- * bot token. Falls back to Falcon's env token when the recipient has no
- * User row yet (e.g. a webhook /start reply before they've ever opened the
- * Mini App) or belongs to no tenant — the pre-multi-tenant default.
- */
-async function resolveOutboundToken(telegramId: bigint | number | string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where: { telegramId: BigInt(telegramId) },
-    select: { tenantId: true },
-  });
-  if (user?.tenantId) {
-    const token = await getTenantBotToken(user.tenantId);
-    if (token) return token;
-  }
-  return process.env.TELEGRAM_BOT_TOKEN ?? null;
-}
-
-/**
  * Sends a Telegram Bot message to a user (Chapter 9: 100% via Telegram Bot,
  * with native Telegram buttons opening the Mini App). Never throws — a
  * notification failure must not break the action that triggered it.
  *
- * `tokenOverride` is for contexts that already know the right bot and have
- * no User row to resolve from (the webhook route replying to a first-ever
- * /start) — every other caller (the whole Chapter 9 notification system)
- * needs no changes, since the recipient's own tenant is resolved
- * automatically from telegramId.
+ * `tenantId` picks which brand's bot sends the message — callers always
+ * already know it (it's the tenant of the order/ticket/user the
+ * notification is about), so it's taken directly rather than re-derived
+ * from `telegramId` (Chapter 37: the same Telegram person can hold a
+ * separate account in more than one tenant, so telegramId alone is no
+ * longer enough to say which bot should be speaking). `tokenOverride` is
+ * for the one context with no resolvable tenant yet — the webhook route
+ * replying to a first-ever /start.
  */
 export async function sendTelegramMessage(
   telegramId: bigint | number | string,
+  tenantId: string,
   text: string,
   buttons?: TelegramInlineButton[],
   tokenOverride?: string,
 ): Promise<void> {
-  const token = tokenOverride ?? (await resolveOutboundToken(telegramId));
+  const token = tokenOverride ?? (await getTenantBotToken(tenantId));
   if (!token) return;
 
   try {
@@ -85,15 +68,17 @@ const CHANNEL_MEMBER_STATUSES = new Set(["creator", "administrator", "member", "
  * Returns null when membership can't be determined (no bot token, channel
  * unset, network/API error, or the bot isn't in that channel) — callers
  * should treat null as "unknown" and fail open rather than hide content.
- * Resolves the recipient's own tenant's bot token the same way
- * sendTelegramMessage does — a channel gate only makes sense checked
- * against the same bot the customer is actually using.
+ * Takes `tenantId` directly for the same reason sendTelegramMessage does —
+ * a channel gate only makes sense checked against the same bot the
+ * customer is actually using, and that's no longer derivable from
+ * telegramId alone (Chapter 37).
  */
 export async function isChannelMember(
   channel: string,
   telegramId: bigint | number | string,
+  tenantId: string,
 ): Promise<boolean | null> {
-  const token = await resolveOutboundToken(telegramId);
+  const token = await getTenantBotToken(tenantId);
   if (!token || !channel.trim()) return null;
 
   try {

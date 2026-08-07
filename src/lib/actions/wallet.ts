@@ -253,10 +253,10 @@ export async function reviewRechargeOrderAction(
     });
 
     if (outcome.decision === "APPROVED") {
-      await notifyPaymentAccepted(outcome.customer.telegramId, outcome.order.amountCents);
-      await notifyBalanceUpdated(outcome.customer.telegramId, outcome.customer.balanceCents);
+      await notifyPaymentAccepted(outcome.customer.telegramId, tenantId, outcome.order.amountCents);
+      await notifyBalanceUpdated(outcome.customer.telegramId, tenantId, outcome.customer.balanceCents);
     } else {
-      await notifyPaymentRejected(outcome.customer.telegramId, outcome.order.amountCents);
+      await notifyPaymentRejected(outcome.customer.telegramId, tenantId, outcome.order.amountCents);
     }
 
     return { ok: true };

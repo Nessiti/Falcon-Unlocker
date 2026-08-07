@@ -173,7 +173,7 @@ export async function sendTicketMessageAction(
 
     if (isAdmin && !isOwner) {
       const owner = await prisma.user.findUnique({ where: { id: ticket.userId } });
-      if (owner) await notifySupportReply(owner.telegramId, body);
+      if (owner) await notifySupportReply(owner.telegramId, ticket.tenantId, body);
     }
 
     return { ok: true };

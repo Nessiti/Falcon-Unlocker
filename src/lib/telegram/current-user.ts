@@ -14,13 +14,15 @@ const STATUS_MESSAGE: Record<string, string> = {
  * Rejects suspended/blocked accounts (Chapter 11 User Management).
  */
 export async function getCurrentUser(initData: string): Promise<User> {
-  const { data: parsed } = await verifyTelegramInitData(initData);
+  const { data: parsed, tenantId } = await verifyTelegramInitData(initData);
   const tgUser = parsed.user;
   if (!tgUser) {
     throw new TelegramAuthError("No Telegram user in init data");
   }
 
-  const user = await prisma.user.findUnique({ where: { telegramId: BigInt(tgUser.id) } });
+  const user = await prisma.user.findUnique({
+    where: { telegramId_tenantId: { telegramId: BigInt(tgUser.id), tenantId } },
+  });
   if (!user) {
     throw new TelegramAuthError("Account not found");
   }
