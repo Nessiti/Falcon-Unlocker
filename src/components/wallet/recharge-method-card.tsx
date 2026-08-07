@@ -3,10 +3,19 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import { BlobContentTypeNotAllowedError, BlobFileTooLargeError } from "@vercel/blob";
 import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+
+function proofUploadErrorMessage(error: unknown): string {
+  if (error instanceof BlobFileTooLargeError) return "This photo is too large. Try a smaller one.";
+  if (error instanceof BlobContentTypeNotAllowedError) {
+    return "That file type isn't supported. Use a photo (JPG, PNG, or WEBP).";
+  }
+  return "Couldn't upload the image. Try again.";
+}
 
 function buildContactUrl(method: RechargeMethodSummary, message: string) {
   if (!method.contactType || !method.contactValue) return null;
@@ -61,8 +70,9 @@ export function RechargeMethodCard({
         headers: { "x-telegram-init-data": initData },
       });
       setProofUrl(blob.url);
-    } catch {
-      setError("Couldn't upload the image. Try again.");
+    } catch (uploadError) {
+      console.error("[wallet] proof upload failed", uploadError);
+      setError(proofUploadErrorMessage(uploadError));
       setProofPreview(null);
     } finally {
       setUploading(false);

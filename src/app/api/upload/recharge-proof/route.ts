@@ -25,7 +25,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         return {
           allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
-          maximumSizeInBytes: 8 * 1024 * 1024,
+          // Modern phone cameras routinely produce 10-15MB photos.
+          maximumSizeInBytes: 20 * 1024 * 1024,
           addRandomSuffix: true,
         };
       },
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
+    console.error("[upload] recharge-proof failed", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Upload failed" },
       { status: 400 },
