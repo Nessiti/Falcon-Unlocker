@@ -33,7 +33,7 @@ export function AdminAlertsProvider({ children }: { children: ReactNode }) {
 
   const isStaff =
     auth.status === "authenticated" &&
-    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR);
+    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR || auth.user.role === Role.SUPER_ADMIN);
 
   useEffect(() => {
     if (!isStaff || !initData) return;

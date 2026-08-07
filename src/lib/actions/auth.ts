@@ -54,7 +54,11 @@ export async function loginAction(initData: string): Promise<LoginResult> {
             firstName: tgUser.first_name,
             lastName: tgUser.last_name ?? null,
             avatarUrl: tgUser.photo_url ?? null,
-            role: isConfiguredAdmin ? Role.ADMIN : existing.role,
+            // Never downgrades a Super Admin (multi-tenant foundation) back
+            // to Admin just because their Telegram ID also matches
+            // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
+            // every login.
+            role: isConfiguredAdmin && existing.role !== Role.SUPER_ADMIN ? Role.ADMIN : existing.role,
           },
         });
       }

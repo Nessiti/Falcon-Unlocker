@@ -16,6 +16,55 @@ enum Role {
   CUSTOMER
   MODERATOR
   ADMIN
+  /// Platform owner (SaaS multi-tenant foundation): sits above every tenant's
+  /// own ADMIN. requireAdmin/requireStaff both accept SUPER_ADMIN too — it's
+  /// a superset of tenant-admin access, not a disjoint role — so promoting a
+  /// user to SUPER_ADMIN never takes away access they already had.
+  SUPER_ADMIN
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+/// SaaS subscription tiers (multi-tenant foundation, vision chapter 15).
+enum SubscriptionPlan {
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+/// A brand/tenant on the platform (multi-tenant foundation, vision chapters
+/// 1-3): one row per client, each with its own Telegram bot, catalog, users,
+/// wallet and API config. Falcon Unlocker itself is seeded as the first
+/// tenant so existing data doesn't move — every other tenant-scoped model
+/// gains its own tenantId in a later chapter; this chapter only establishes
+/// the Tenant record and Super Admin role, with zero behavior change to the
+/// already-running app.
+model Tenant {
+  id                   String           @id @default(cuid())
+  name                 String
+  telegramBotUsername  String?
+  /// Encrypted at rest the same way Provider secrets are (Chapter 19 —
+  /// src/lib/security/encryption.ts).
+  telegramBotToken     String?
+  ownerTelegramId      BigInt?
+  email                String?
+  currency             String           @default("USD")
+  country              String?
+  language             String           @default("en")
+  logoUrl              String?
+  primaryColor         String?
+  secondaryColor       String?
+  status               TenantStatus     @default(ACTIVE)
+  subscriptionPlan     SubscriptionPlan @default(STARTER)
+  subscriptionExpiresAt DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  users User[]
 }
 
 enum UserStatus {
@@ -67,6 +116,14 @@ model User {
   imeiOrderStatusEvents   ImeiOrderStatusEvent[]
   serverOrderStatusEvents ServerOrderStatusEvent[]
   sentNotifications       Notification[]
+
+  /// Multi-tenant foundation: which brand this account belongs to. Nullable
+  /// for now — every existing user is backfilled to the seeded Falcon
+  /// Unlocker tenant by this chapter's migration, but query-level tenant
+  /// scoping (every admin-*.ts action filtering by tenantId) is a later
+  /// chapter, so this isn't enforced as required yet.
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
 }
 
 /// Admin action log (Chapter 11).

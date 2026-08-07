@@ -40,7 +40,7 @@ export default function WalletPage() {
 
   if (auth.status !== "authenticated" || !initData) return null;
 
-  const isAdmin = auth.user.role === Role.ADMIN;
+  const isAdmin = auth.user.role === Role.ADMIN || auth.user.role === Role.SUPER_ADMIN;
   const balanceCents = data?.balanceCents ?? auth.user.balanceCents;
 
   return (

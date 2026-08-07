@@ -102,7 +102,11 @@ export function ImeiServiceForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (auth.status !== "authenticated" || auth.user.role !== Role.ADMIN || !initData) {
+  if (
+    auth.status !== "authenticated" ||
+    (auth.user.role !== Role.ADMIN && auth.user.role !== Role.SUPER_ADMIN) ||
+    !initData
+  ) {
     return null;
   }
   const verifiedInitData = initData;

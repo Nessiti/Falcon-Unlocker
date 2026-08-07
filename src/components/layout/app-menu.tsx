@@ -20,7 +20,8 @@ export function AppMenu({ open, onClose }: { open: boolean; onClose: () => void 
   const auth = useTelegramUser();
   const isStaff =
     auth.status === "authenticated" &&
-    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR);
+    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR || auth.user.role === Role.SUPER_ADMIN);
+  const isSuperAdmin = auth.status === "authenticated" && auth.user.role === Role.SUPER_ADMIN;
 
   if (!open) return null;
 
@@ -50,6 +51,15 @@ export function AppMenu({ open, onClose }: { open: boolean; onClose: () => void 
             className="rounded-lg px-3 py-2 text-sm text-foreground hover:bg-background"
           >
             Admin Panel
+          </Link>
+        ) : null}
+        {isSuperAdmin ? (
+          <Link
+            href="/super-admin/tenants"
+            onClick={onClose}
+            className="rounded-lg px-3 py-2 text-sm text-foreground hover:bg-background"
+          >
+            Super Admin
           </Link>
         ) : null}
         <button

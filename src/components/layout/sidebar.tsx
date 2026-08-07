@@ -76,7 +76,8 @@ export function Sidebar() {
   const alerts = useAdminAlerts();
   const isStaff =
     auth.status === "authenticated" &&
-    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR);
+    (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR || auth.user.role === Role.SUPER_ADMIN);
+  const isSuperAdmin = auth.status === "authenticated" && auth.user.role === Role.SUPER_ADMIN;
 
   const badgeByHref: Record<string, number> = alerts
     ? { "/admin/orders": alerts.newOrders, "/support": alerts.newTickets, "/wallet": alerts.newRecharges }
@@ -106,6 +107,17 @@ export function Sidebar() {
             {ADMIN_ITEMS.map((item) => (
               <NavLink key={item.href} {...item} badge={badgeByHref[item.href]} />
             ))}
+          </nav>
+        </>
+      ) : null}
+
+      {isSuperAdmin ? (
+        <>
+          <p className="mt-4 mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-hint">
+            Super Admin
+          </p>
+          <nav className="flex flex-col gap-1">
+            <NavLink label="Tenants" href="/super-admin/tenants" icon="🏢" />
           </nav>
         </>
       ) : null}

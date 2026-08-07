@@ -23,7 +23,7 @@ export default function SupportPage() {
   const [tab, setTab] = useState<Tab>("tickets");
 
   if (auth.status !== "authenticated" || !initData) return null;
-  const isAdmin = auth.user.role === Role.ADMIN;
+  const isAdmin = auth.user.role === Role.ADMIN || auth.user.role === Role.SUPER_ADMIN;
 
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 py-6 sm:px-6">

@@ -12,7 +12,7 @@ export async function broadcastToAllUsers(send: (telegramId: bigint) => Promise<
 /** Sends a Telegram notification to every Admin/Moderator (e.g. new order alerts). */
 export async function notifyAllStaff(send: (telegramId: bigint) => Promise<void>) {
   const staff = await prisma.user.findMany({
-    where: { role: { in: [Role.ADMIN, Role.MODERATOR] } },
+    where: { role: { in: [Role.ADMIN, Role.MODERATOR, Role.SUPER_ADMIN] } },
     select: { telegramId: true },
   });
   await Promise.all(staff.map((user) => send(user.telegramId)));

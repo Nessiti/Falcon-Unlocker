@@ -10,7 +10,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (auth.status !== "authenticated") return null;
 
-  const isStaff = auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR;
+  const isStaff =
+    auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR || auth.user.role === Role.SUPER_ADMIN;
   if (!isStaff) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">

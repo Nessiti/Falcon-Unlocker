@@ -99,7 +99,7 @@ export async function getTicketAction(
       include: { messages: { orderBy: { createdAt: "asc" }, include: { author: true } } },
     });
     if (!ticket) return { ok: false, error: "Ticket not found" };
-    if (ticket.userId !== user.id && user.role !== Role.ADMIN) {
+    if (ticket.userId !== user.id && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
       return { ok: false, error: "Not authorized to view this ticket" };
     }
 
@@ -145,7 +145,7 @@ export async function sendTicketMessageAction(
     if (!ticket) return { ok: false, error: "Ticket not found" };
 
     const isOwner = ticket.userId === user.id;
-    const isAdmin = user.role === Role.ADMIN;
+    const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
     if (!isOwner && !isAdmin) {
       return { ok: false, error: "Not authorized to reply to this ticket" };
     }
@@ -218,7 +218,7 @@ export async function closeTicketAction(
     const user = await getCurrentUser(initData);
     const ticket = await prisma.supportTicket.findUnique({ where: { id: ticketId } });
     if (!ticket) return { ok: false, error: "Ticket not found" };
-    if (ticket.userId !== user.id && user.role !== Role.ADMIN) {
+    if (ticket.userId !== user.id && user.role !== Role.ADMIN && user.role !== Role.SUPER_ADMIN) {
       return { ok: false, error: "Not authorized to close this ticket" };
     }
 

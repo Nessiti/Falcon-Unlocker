@@ -48,7 +48,11 @@ export function ServerServiceManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initData]);
 
-  if (auth.status !== "authenticated" || auth.user.role !== Role.ADMIN || !initData) {
+  if (
+    auth.status !== "authenticated" ||
+    (auth.user.role !== Role.ADMIN && auth.user.role !== Role.SUPER_ADMIN) ||
+    !initData
+  ) {
     return null;
   }
   const verifiedInitData = initData;

@@ -27,7 +27,7 @@ export default function AdminUsersPage() {
   }, [initData]);
 
   if (auth.status !== "authenticated" || !initData) return null;
-  const isAdmin = auth.user.role === Role.ADMIN;
+  const isAdmin = auth.user.role === Role.ADMIN || auth.user.role === Role.SUPER_ADMIN;
 
   if (error) return <p className="text-sm text-accent">{error}</p>;
   if (!users) return <p className="text-sm text-hint">Loading…</p>;
