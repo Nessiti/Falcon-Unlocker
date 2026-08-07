@@ -64,12 +64,16 @@ model Tenant {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  users          User[]
-  categories     Category[]
-  imeiServices   ImeiService[]
-  serverServices ServerService[]
-  imeiOrders     ImeiOrder[]
-  serverOrders   ServerOrder[]
+  users                  User[]
+  categories             Category[]
+  imeiServices           ImeiService[]
+  serverServices         ServerService[]
+  imeiOrders             ImeiOrder[]
+  serverOrders           ServerOrder[]
+  providers              Provider[]
+  imeiServiceMappings    ImeiServiceMapping[]
+  serverServiceMappings  ServerServiceMapping[]
+  pricingSettings        PricingSettings?
 }
 
 enum UserStatus {
@@ -653,6 +657,11 @@ model Provider {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Tenant isolation (Chapter 28): which brand owns this provider — never
+  /// shared, since it holds that brand's own API credentials and credit.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
   connectionLogs   ProviderConnectionLog[]
   apiLogs          ApiLog[]
   imeiMappings     ImeiServiceMapping[]
@@ -732,6 +741,13 @@ model ImeiServiceMapping {
   providerId String
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
+  /// Tenant isolation (Chapter 28): must match both imeiService.tenantId and
+  /// provider.tenantId — enforced at creation, since this join table is
+  /// exactly what could otherwise let one brand route orders through
+  /// another brand's paid provider credentials.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
   @@unique([imeiServiceId, providerId, providerServiceId])
 }
 
@@ -763,6 +779,13 @@ model ServerServiceMapping {
 
   providerId String
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  /// Tenant isolation (Chapter 28): must match both serverService.tenantId
+  /// and provider.tenantId — enforced at creation, since this join table is
+  /// exactly what could otherwise let one brand route orders through
+  /// another brand's paid provider credentials.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([serverServiceId, providerId, providerServiceId])
 }
@@ -846,8 +869,12 @@ model QueueSettings {
 /// optional and stack (percent applied first, then the flat amount added) —
 /// null means "no default markup of that kind". A mapping's own
 /// marginPercent/marginCents (Chapter 23) overrides these per-mapping.
+/// Tenant isolation (Chapter 28): one row per tenant instead of a single
+/// platform-wide singleton — tenantId itself is the primary key, since a
+/// tenant has at most one of these.
 model PricingSettings {
-  id                   String   @id @default("singleton")
+  tenantId             String   @id
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
   defaultMarginPercent Int?
   defaultMarginCents   Int?
   updatedAt            DateTime @updatedAt

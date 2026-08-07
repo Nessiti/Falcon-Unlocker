@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ProviderType, SyncFrequency } from "@/generated/prisma/client";
@@ -37,12 +38,14 @@ export type ListProvidersResult =
   | { ok: true; providers: ProviderSummary[] }
   | { ok: false; error: string };
 
-/** Provider Center (Chapter 12): every configured provider, priority-ordered. */
+/** Provider Center (Chapter 12): every provider configured for the staff member's own tenant, priority-ordered. */
 export async function listProvidersAction(initData: string): Promise<ListProvidersResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const providers = await prisma.provider.findMany({
+      where: { tenantId },
       orderBy: { priority: "asc" },
       include: { connectionLogs: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
@@ -102,9 +105,10 @@ export async function getProviderDetailAction(
   providerId: string,
 ): Promise<GetProviderDetailResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    const provider = await prisma.provider.findFirst({ where: { id: providerId, tenantId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
     return {
@@ -148,13 +152,14 @@ export type ProviderInput = {
 
 export type CreateProviderResult = { ok: true } | { ok: false; error: string };
 
-/** Add a provider (Chapter 12). Core app logic never depends on the type — see Chapter 13's connector. */
+/** Add a provider (Chapter 12), scoped to the admin's own tenant. Core app logic never depends on the type — see Chapter 13's connector. */
 export async function createProviderAction(
   initData: string,
   input: ProviderInput,
 ): Promise<CreateProviderResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     const baseUrl = input.baseUrl.trim();
@@ -180,6 +185,7 @@ export async function createProviderAction(
         priority: input.priority,
         syncFrequency: input.syncFrequency,
         rateLimitPerMinute: input.rateLimitPerMinute,
+        tenantId,
       },
     });
 
@@ -204,6 +210,7 @@ export async function updateProviderAction(
 ): Promise<UpdateProviderResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
     const baseUrl = input.baseUrl.trim();
@@ -212,6 +219,9 @@ export async function updateProviderAction(
     if (!Number.isInteger(input.timeoutMs) || input.timeoutMs <= 0) {
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
+
+    const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "Provider not found" };
 
     const rotatingSecret = Boolean(
       input.apiKey?.trim() || input.apiSecret?.trim() || input.token?.trim(),
@@ -255,8 +265,13 @@ export async function setProviderEnabledAction(
 ): Promise<SetProviderEnabledResult> {
   try {
     const admin = await requireAdmin(initData);
-    const provider = await prisma.provider.update({ where: { id: providerId }, data: { enabled } });
-    await logAdminAction(admin.id, "provider.status", `${provider.name} -> ${enabled ? "enabled" : "disabled"}`);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Provider not found" };
+
+    await prisma.provider.update({ where: { id: providerId }, data: { enabled } });
+    await logAdminAction(admin.id, "provider.status", `${owned.name} -> ${enabled ? "enabled" : "disabled"}`);
     return { ok: true };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to update status";
@@ -272,8 +287,13 @@ export async function deleteProviderAction(
 ): Promise<DeleteProviderResult> {
   try {
     const admin = await requireAdmin(initData);
-    const provider = await prisma.provider.delete({ where: { id: providerId } });
-    await logAdminAction(admin.id, "provider.delete", provider.name);
+    const tenantId = requireTenantId(admin);
+
+    const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { name: true } });
+    if (!owned) return { ok: false, error: "Provider not found" };
+
+    await prisma.provider.delete({ where: { id: providerId } });
+    await logAdminAction(admin.id, "provider.delete", owned.name);
     return { ok: true };
   } catch {
     return { ok: false, error: "Failed to delete provider" };
@@ -294,8 +314,9 @@ export async function testProviderConnectionAction(
 ): Promise<TestProviderConnectionResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    const provider = await prisma.provider.findFirst({ where: { id: providerId, tenantId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
     const { success, responseTimeMs, statusCode, errorMessage } =
@@ -332,7 +353,11 @@ export async function listProviderConnectionLogsAction(
   providerId: string,
 ): Promise<ListProviderConnectionLogsResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+
+    const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "Provider not found" };
 
     const logs = await prisma.providerConnectionLog.findMany({
       where: { providerId },
@@ -368,8 +393,9 @@ export async function refreshProviderBalanceAction(
 ): Promise<RefreshProviderBalanceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    const provider = await prisma.provider.findFirst({ where: { id: providerId, tenantId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
     const result = await getProviderConnector(provider).getBalance();
@@ -415,8 +441,9 @@ export async function syncProviderAction(
 ): Promise<SyncProviderResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    const provider = await prisma.provider.findFirst({ where: { id: providerId, tenantId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
     const result = await syncProvider(provider);

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { getProviderConnector } from "@/lib/providers/registry";
@@ -35,36 +36,37 @@ export type ListServiceMappingsResult =
   | { ok: true; mappings: ServiceMappingSummary[]; routingStrategy: RoutingStrategy }
   | { ok: false; error: string };
 
-/** Service Mapping (Chapter 14): every provider service linked to one Falcon service. */
+/** Service Mapping (Chapter 14): every provider service linked to one Falcon service, scoped to the staff member's own tenant (Chapter 28). */
 export async function listServiceMappingsAction(
   initData: string,
   kind: MappingKind,
   falconServiceId: string,
 ): Promise<ListServiceMappingsResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const [rows, falconService] =
       kind === "IMEI"
         ? await Promise.all([
             prisma.imeiServiceMapping.findMany({
-              where: { imeiServiceId: falconServiceId },
+              where: { imeiServiceId: falconServiceId, tenantId },
               include: { provider: true },
               orderBy: { priority: "asc" },
             }),
-            prisma.imeiService.findUnique({ where: { id: falconServiceId } }),
+            prisma.imeiService.findFirst({ where: { id: falconServiceId, tenantId } }),
           ])
         : await Promise.all([
             prisma.serverServiceMapping.findMany({
-              where: { serverServiceId: falconServiceId },
+              where: { serverServiceId: falconServiceId, tenantId },
               include: { provider: true },
               orderBy: { priority: "asc" },
             }),
-            prisma.serverService.findUnique({ where: { id: falconServiceId } }),
+            prisma.serverService.findFirst({ where: { id: falconServiceId, tenantId } }),
           ]);
     if (!falconService) return { ok: false, error: "Service not found" };
 
-    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { id: "singleton" } });
+    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { tenantId } });
 
     return {
       ok: true,
@@ -112,7 +114,13 @@ export type CreateServiceMappingInput = {
 
 export type CreateServiceMappingResult = { ok: true } | { ok: false; error: string };
 
-/** Manual mapping: admin links a Falcon service directly to a provider's service ID. */
+/**
+ * Manual mapping: admin links a Falcon service directly to a provider's
+ * service ID. Both the Falcon service AND the provider must belong to the
+ * admin's own tenant (Chapter 28) — this is the join table that could
+ * otherwise let one brand route orders (and spend) through another brand's
+ * paid provider credentials, so both sides are checked, not just one.
+ */
 export async function createServiceMappingAction(
   initData: string,
   kind: MappingKind,
@@ -121,10 +129,20 @@ export async function createServiceMappingAction(
 ): Promise<CreateServiceMappingResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const providerServiceId = input.providerServiceId.trim();
     if (!providerServiceId) return { ok: false, error: "Provider service ID is required" };
     if (!input.providerId) return { ok: false, error: "Select a provider" };
+
+    const provider = await prisma.provider.findFirst({ where: { id: input.providerId, tenantId }, select: { id: true } });
+    if (!provider) return { ok: false, error: "Provider not found" };
+
+    const falconService =
+      kind === "IMEI"
+        ? await prisma.imeiService.findFirst({ where: { id: falconServiceId, tenantId }, select: { id: true } })
+        : await prisma.serverService.findFirst({ where: { id: falconServiceId, tenantId }, select: { id: true } });
+    if (!falconService) return { ok: false, error: "Service not found" };
 
     if (kind === "IMEI") {
       await prisma.imeiServiceMapping.create({
@@ -139,6 +157,7 @@ export async function createServiceMappingAction(
           priority: input.priority,
           marginPercent: input.marginPercent,
           marginCents: input.marginCents,
+          tenantId,
         },
       });
     } else {
@@ -154,6 +173,7 @@ export async function createServiceMappingAction(
           priority: input.priority,
           marginPercent: input.marginPercent,
           marginCents: input.marginCents,
+          tenantId,
         },
       });
     }
@@ -196,6 +216,7 @@ export async function updateServiceMappingAction(
 ): Promise<UpdateServiceMappingResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const providerServiceId = input.providerServiceId.trim();
     if (!providerServiceId) return { ok: false, error: "Provider service ID is required" };
@@ -213,8 +234,12 @@ export async function updateServiceMappingAction(
     };
 
     if (kind === "IMEI") {
+      const owned = await prisma.imeiServiceMapping.findFirst({ where: { id: mappingId, tenantId }, select: { id: true } });
+      if (!owned) return { ok: false, error: "Mapping not found" };
       await prisma.imeiServiceMapping.update({ where: { id: mappingId }, data });
     } else {
+      const owned = await prisma.serverServiceMapping.findFirst({ where: { id: mappingId, tenantId }, select: { id: true } });
+      if (!owned) return { ok: false, error: "Mapping not found" };
       await prisma.serverServiceMapping.update({ where: { id: mappingId }, data });
     }
 
@@ -235,11 +260,14 @@ export async function deleteServiceMappingAction(
 ): Promise<DeleteServiceMappingResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     if (kind === "IMEI") {
-      await prisma.imeiServiceMapping.delete({ where: { id: mappingId } });
+      const { count } = await prisma.imeiServiceMapping.deleteMany({ where: { id: mappingId, tenantId } });
+      if (count === 0) return { ok: false, error: "Mapping not found" };
     } else {
-      await prisma.serverServiceMapping.delete({ where: { id: mappingId } });
+      const { count } = await prisma.serverServiceMapping.deleteMany({ where: { id: mappingId, tenantId } });
+      if (count === 0) return { ok: false, error: "Mapping not found" };
     }
 
     await logAdminAction(admin.id, "service-mapping.delete", `${kind} ${mappingId}`);
@@ -261,9 +289,10 @@ export async function fetchProviderServicesAction(
   providerId: string,
 ): Promise<FetchProviderServicesResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const provider = await prisma.provider.findUnique({ where: { id: providerId } });
+    const provider = await prisma.provider.findFirst({ where: { id: providerId, tenantId } });
     if (!provider) return { ok: false, error: "Provider not found" };
 
     const services = await getProviderConnector(provider).getServices();
@@ -288,7 +317,8 @@ function normalizeName(name: string): string {
  * Automatic mapping: for each candidate provider, fetch its live service
  * catalog and link the one whose name matches the Falcon service's name
  * (normalized, case/punctuation-insensitive). Providers with no match are
- * reported back, not silently skipped.
+ * reported back, not silently skipped. Both the service and every candidate
+ * provider are filtered to the admin's own tenant (Chapter 28).
  */
 export async function autoMapServiceAction(
   initData: string,
@@ -298,14 +328,15 @@ export async function autoMapServiceAction(
 ): Promise<AutoMapResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     const falconService =
       kind === "IMEI"
-        ? await prisma.imeiService.findUnique({ where: { id: falconServiceId } })
-        : await prisma.serverService.findUnique({ where: { id: falconServiceId } });
+        ? await prisma.imeiService.findFirst({ where: { id: falconServiceId, tenantId } })
+        : await prisma.serverService.findFirst({ where: { id: falconServiceId, tenantId } });
     if (!falconService) return { ok: false, error: "Service not found" };
 
-    const providers = await prisma.provider.findMany({ where: { id: { in: providerIds } } });
+    const providers = await prisma.provider.findMany({ where: { id: { in: providerIds }, tenantId } });
     const targetName = normalizeName(falconService.name);
 
     let created = 0;
@@ -343,6 +374,7 @@ export async function autoMapServiceAction(
               providerPriceCents: match.priceCents,
               providerEstimatedTime: match.estimatedTime,
               providerCategory: match.category,
+              tenantId,
             },
           });
         } else {
@@ -368,6 +400,7 @@ export async function autoMapServiceAction(
               providerPriceCents: match.priceCents,
               providerEstimatedTime: match.estimatedTime,
               providerCategory: match.category,
+              tenantId,
             },
           });
         }
@@ -403,11 +436,20 @@ export async function setServiceRoutingStrategyAction(
 ): Promise<SetRoutingStrategyResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     if (kind === "IMEI") {
-      await prisma.imeiService.update({ where: { id: falconServiceId }, data: { routingStrategy: strategy } });
+      const { count } = await prisma.imeiService.updateMany({
+        where: { id: falconServiceId, tenantId },
+        data: { routingStrategy: strategy },
+      });
+      if (count === 0) return { ok: false, error: "Service not found" };
     } else {
-      await prisma.serverService.update({ where: { id: falconServiceId }, data: { routingStrategy: strategy } });
+      const { count } = await prisma.serverService.updateMany({
+        where: { id: falconServiceId, tenantId },
+        data: { routingStrategy: strategy },
+      });
+      if (count === 0) return { ok: false, error: "Service not found" };
     }
 
     await logAdminAction(admin.id, "service-mapping.set-routing-strategy", `${kind} ${falconServiceId} -> ${strategy}`);
@@ -431,11 +473,12 @@ export async function getRoutingPreviewAction(
   falconServiceId: string,
 ): Promise<RoutingPreviewResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     if (kind === "IMEI") {
-      const service = await prisma.imeiService.findUnique({
-        where: { id: falconServiceId },
+      const service = await prisma.imeiService.findFirst({
+        where: { id: falconServiceId, tenantId },
         include: { mappings: { where: { enabled: true }, include: { provider: true } } },
       });
       if (!service) return { ok: false, error: "Service not found" };
@@ -443,8 +486,8 @@ export async function getRoutingPreviewAction(
       return { ok: true, plan };
     }
 
-    const service = await prisma.serverService.findUnique({
-      where: { id: falconServiceId },
+    const service = await prisma.serverService.findFirst({
+      where: { id: falconServiceId, tenantId },
       include: { mappings: { where: { enabled: true }, include: { provider: true } } },
     });
     if (!service) return { ok: false, error: "Service not found" };
@@ -473,12 +516,13 @@ export async function applySuggestedPriceAction(
 ): Promise<ApplySuggestedPriceResult> {
   try {
     const admin = await requireAdmin(initData);
-    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { id: "singleton" } });
+    const tenantId = requireTenantId(admin);
+    const pricingSettings = await prisma.pricingSettings.findUnique({ where: { tenantId } });
 
     let priceCents: number;
 
     if (kind === "IMEI") {
-      const mapping = await prisma.imeiServiceMapping.findUnique({ where: { id: mappingId } });
+      const mapping = await prisma.imeiServiceMapping.findFirst({ where: { id: mappingId, tenantId } });
       if (!mapping) return { ok: false, error: "Mapping not found" };
       if (mapping.providerPriceCents == null) {
         return { ok: false, error: "This mapping has no provider price to base a price on" };
@@ -490,7 +534,7 @@ export async function applySuggestedPriceAction(
       });
       await prisma.imeiService.update({ where: { id: mapping.imeiServiceId }, data: { priceCents } });
     } else {
-      const mapping = await prisma.serverServiceMapping.findUnique({ where: { id: mappingId } });
+      const mapping = await prisma.serverServiceMapping.findFirst({ where: { id: mappingId, tenantId } });
       if (!mapping) return { ok: false, error: "Mapping not found" };
       if (mapping.providerPriceCents == null) {
         return { ok: false, error: "This mapping has no provider price to base a price on" };

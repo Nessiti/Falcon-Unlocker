@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 export type PricingSettingsData = {
@@ -16,8 +17,9 @@ export type GetPricingSettingsResult =
 /** Default margin (Chapter 22) applied to a provider's cost when suggesting a selling price. */
 export async function getPricingSettingsAction(initData: string): Promise<GetPricingSettingsResult> {
   try {
-    await requireAdmin(initData);
-    const settings = await prisma.pricingSettings.findUnique({ where: { id: "singleton" } });
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
+    const settings = await prisma.pricingSettings.findUnique({ where: { tenantId } });
     return {
       ok: true,
       settings: {
@@ -38,20 +40,21 @@ export async function updatePricingSettingsAction(
   input: PricingSettingsData,
 ): Promise<UpdatePricingSettingsResult> {
   try {
-    await requireAdmin(initData);
+    const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     if (input.defaultMarginPercent != null && input.defaultMarginPercent < 0) {
       return { ok: false, error: "Margin percent can't be negative" };
     }
 
     await prisma.pricingSettings.upsert({
-      where: { id: "singleton" },
+      where: { tenantId },
       update: {
         defaultMarginPercent: input.defaultMarginPercent,
         defaultMarginCents: input.defaultMarginCents,
       },
       create: {
-        id: "singleton",
+        tenantId,
         defaultMarginPercent: input.defaultMarginPercent,
         defaultMarginCents: input.defaultMarginCents,
       },
