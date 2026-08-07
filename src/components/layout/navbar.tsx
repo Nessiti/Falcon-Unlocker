@@ -37,8 +37,16 @@ export function Navbar({
         ☰
       </button>
 
-      <span className="flex-1 truncate text-sm font-semibold text-foreground">
-        Falcon Unlocker
+      <span className="flex flex-1 items-center gap-2 truncate text-sm font-semibold text-foreground">
+        {user.tenantLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
+          <img
+            src={user.tenantLogoUrl}
+            alt={user.tenantName}
+            className="h-6 w-6 shrink-0 rounded object-contain"
+          />
+        ) : null}
+        <span className="truncate">{user.tenantName}</span>
       </span>
 
       <span className="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-medium text-foreground">

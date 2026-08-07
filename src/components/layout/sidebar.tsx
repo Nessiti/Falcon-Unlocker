@@ -78,6 +78,8 @@ export function Sidebar() {
     auth.status === "authenticated" &&
     (auth.user.role === Role.ADMIN || auth.user.role === Role.MODERATOR || auth.user.role === Role.SUPER_ADMIN);
   const isSuperAdmin = auth.status === "authenticated" && auth.user.role === Role.SUPER_ADMIN;
+  const brandName = auth.status === "authenticated" ? auth.user.tenantName : "Falcon Unlocker";
+  const brandLogoUrl = auth.status === "authenticated" ? auth.user.tenantLogoUrl : null;
 
   const badgeByHref: Record<string, number> = alerts
     ? { "/admin/orders": alerts.newOrders, "/support": alerts.newTickets, "/wallet": alerts.newRecharges }
@@ -86,10 +88,15 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-surface p-4">
       <div className="mb-4 flex items-center gap-2 px-1">
-        <span className="text-2xl" aria-hidden>
-          🦅
-        </span>
-        <span className="text-sm font-semibold text-foreground">Falcon Unlocker</span>
+        {brandLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
+          <img src={brandLogoUrl} alt={brandName} className="h-8 w-8 shrink-0 rounded object-contain" />
+        ) : (
+          <span className="text-2xl" aria-hidden>
+            🦅
+          </span>
+        )}
+        <span className="truncate text-sm font-semibold text-foreground">{brandName}</span>
       </div>
 
       <nav className="flex flex-col gap-1">
