@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { TelegramAuthError, verifyTelegramInitData } from "@/lib/telegram/auth";
-import { Role, UserStatus } from "@/generated/prisma/client";
+import { Prisma, Role, UserStatus } from "@/generated/prisma/client";
 
 const STATUS_MESSAGE: Record<string, string> = {
   [UserStatus.SUSPENDED]: "Your account is suspended. Contact support for help.",
@@ -47,29 +47,27 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     const isConfiguredAdmin =
       resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
+    const userWhere = { telegramId_tenantId: { telegramId, tenantId: resolvedTenantId } } as const;
+    const updateDataFor = (current: { role: Role }) => ({
+      username: tgUser.username ?? null,
+      firstName: tgUser.first_name,
+      lastName: tgUser.last_name ?? null,
+      avatarUrl: tgUser.photo_url ?? null,
+      // Never downgrades a Super Admin (multi-tenant foundation) back to
+      // Admin just because their Telegram ID also matches
+      // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
+      // every login.
+      role: isConfiguredAdmin && current.role !== Role.SUPER_ADMIN ? Role.ADMIN : current.role,
+    });
+
     const user = await prisma.$transaction(async (tx) => {
       // Chapter 37: the same Telegram person gets a separate, independent
       // account per tenant, so "existing" means "already has an account in
       // THIS tenant specifically" — never a different tenant's account.
-      const existing = await tx.user.findUnique({
-        where: { telegramId_tenantId: { telegramId, tenantId: resolvedTenantId } },
-      });
+      const existing = await tx.user.findUnique({ where: userWhere });
 
       if (existing) {
-        return tx.user.update({
-          where: { id: existing.id },
-          data: {
-            username: tgUser.username ?? null,
-            firstName: tgUser.first_name,
-            lastName: tgUser.last_name ?? null,
-            avatarUrl: tgUser.photo_url ?? null,
-            // Never downgrades a Super Admin (multi-tenant foundation) back
-            // to Admin just because their Telegram ID also matches
-            // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
-            // every login.
-            role: isConfiguredAdmin && existing.role !== Role.SUPER_ADMIN ? Role.ADMIN : existing.role,
-          },
-        });
+        return tx.user.update({ where: { id: existing.id }, data: updateDataFor(existing) });
       }
 
       // isFirstUser (and the free Admin role that comes with it) is scoped
@@ -81,18 +79,31 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         resolvedTenantId === "falcon-unlocker" &&
         (await tx.user.count({ where: { tenantId: "falcon-unlocker" } })) === 0;
 
-      return tx.user.create({
-        data: {
-          telegramId,
-          username: tgUser.username ?? null,
-          firstName: tgUser.first_name,
-          lastName: tgUser.last_name ?? null,
-          avatarUrl: tgUser.photo_url ?? null,
-          isFirstUser,
-          role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
-          tenantId: resolvedTenantId,
-        },
-      });
+      try {
+        return await tx.user.create({
+          data: {
+            telegramId,
+            username: tgUser.username ?? null,
+            firstName: tgUser.first_name,
+            lastName: tgUser.last_name ?? null,
+            avatarUrl: tgUser.photo_url ?? null,
+            isFirstUser,
+            role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
+            tenantId: resolvedTenantId,
+          },
+        });
+      } catch (error) {
+        // A concurrent request for this exact (telegramId, tenantId) pair —
+        // two tabs, a double-tap, Telegram occasionally opening the Mini
+        // App twice — can win the create between our findUnique above and
+        // here. Fall back to the row the other request just created
+        // instead of failing the whole sign-in.
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const winner = await tx.user.findUniqueOrThrow({ where: userWhere });
+          return tx.user.update({ where: { id: winner.id }, data: updateDataFor(winner) });
+        }
+        throw error;
+      }
     });
 
     if (user.status !== UserStatus.ACTIVE) {
@@ -117,6 +128,13 @@ export async function loginAction(initData: string): Promise<LoginResult> {
       },
     };
   } catch (error) {
+    // TelegramAuthError messages are safe to show as-is (they never contain
+    // secrets); anything else is an unexpected bug, so it's logged here —
+    // the client only ever sees the generic message, this is the one place
+    // the real cause survives for Vercel's Runtime Logs to catch.
+    if (!(error instanceof TelegramAuthError)) {
+      console.error("[auth] loginAction failed", error);
+    }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to sign in";
     return { ok: false, error: message };
   }
