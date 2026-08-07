@@ -16,6 +16,10 @@ function proofUploadErrorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "AbortError") {
     return "Upload timed out. Check your connection and try again.";
   }
+  // Every message the upload route itself returns is already a short,
+  // plain-language reason (e.g. "Unsupported file type") — worth showing
+  // as-is instead of masking it behind one generic string.
+  if (error instanceof Error && error.message) return error.message;
   return "Couldn't upload the image. Try again.";
 }
 

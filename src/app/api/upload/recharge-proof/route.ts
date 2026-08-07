@@ -3,7 +3,18 @@ import { put } from "@vercel/blob";
 import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
-const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+// Includes the raw camera formats too, not just the compressed JPEG output
+// — compressImageToJpeg falls back to the original file untouched when a
+// WebView can't decode it into a canvas, so the server has to accept
+// whatever a phone camera might hand it, not only its own preferred shape.
+const ALLOWED_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
 const MAX_SIZE_BYTES = 4 * 1024 * 1024;
 
 /**
@@ -38,7 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "File too large" }, { status: 400 });
     }
 
-    const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+    const extension = contentType.split("/")[1].replace("jpeg", "jpg");
     const blob = await put(`recharge-proofs/${user.id}-${Date.now()}.${extension}`, body, {
       access: "public",
       contentType,
