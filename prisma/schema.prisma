@@ -68,6 +68,8 @@ model Tenant {
   categories     Category[]
   imeiServices   ImeiService[]
   serverServices ServerService[]
+  imeiOrders     ImeiOrder[]
+  serverOrders   ServerOrder[]
 }
 
 enum UserStatus {
@@ -257,6 +259,11 @@ model ImeiOrder {
   serviceId String
   service   ImeiService @relation(fields: [serviceId], references: [id])
 
+  /// Tenant isolation (Chapter 26): snapshotted from the ordered service's
+  /// own tenant at order-creation time, same spirit as priceCents.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
   walletTransactions WalletTransaction[]
   statusEvents       ImeiOrderStatusEvent[]
 }
@@ -344,6 +351,11 @@ model ServerOrder {
 
   serviceId String
   service   ServerService @relation(fields: [serviceId], references: [id])
+
+  /// Tenant isolation (Chapter 26): snapshotted from the ordered service's
+  /// own tenant at order-creation time, same spirit as priceCents.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   walletTransactions WalletTransaction[]
   statusEvents       ServerOrderStatusEvent[]

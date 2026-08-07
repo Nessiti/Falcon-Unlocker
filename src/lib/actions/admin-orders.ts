@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyOrderCompleted, notifyOrderStatusChanged } from "@/lib/telegram/notifications";
@@ -28,14 +29,17 @@ export type ListAdminOrdersResult =
 
 export async function listAdminOrdersAction(initData: string): Promise<ListAdminOrdersResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const [imeiOrders, serverOrders] = await Promise.all([
       prisma.imeiOrder.findMany({
+        where: { tenantId },
         include: { service: { include: { fields: true } }, user: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.serverOrder.findMany({
+        where: { tenantId },
         include: { service: { include: { fields: true } }, user: true },
         orderBy: { createdAt: "desc" },
       }),
@@ -81,8 +85,11 @@ export type UpdateOrderStatusInput = {
 };
 export type UpdateOrderStatusResult = { ok: true } | { ok: false; error: string };
 
-async function transitionImeiOrder(adminId: string, input: UpdateOrderStatusInput) {
+async function transitionImeiOrder(adminId: string, tenantId: string, input: UpdateOrderStatusInput) {
   return prisma.$transaction(async (tx) => {
+    const owned = await tx.imeiOrder.findFirst({ where: { id: input.orderId, tenantId }, select: { id: true } });
+    if (!owned) return null;
+
     const order = await tx.imeiOrder.update({
       where: { id: input.orderId },
       data: { status: input.status },
@@ -95,8 +102,11 @@ async function transitionImeiOrder(adminId: string, input: UpdateOrderStatusInpu
   });
 }
 
-async function transitionServerOrder(adminId: string, input: UpdateOrderStatusInput) {
+async function transitionServerOrder(adminId: string, tenantId: string, input: UpdateOrderStatusInput) {
   return prisma.$transaction(async (tx) => {
+    const owned = await tx.serverOrder.findFirst({ where: { id: input.orderId, tenantId }, select: { id: true } });
+    if (!owned) return null;
+
     const order = await tx.serverOrder.update({
       where: { id: input.orderId },
       data: { status: input.status },
@@ -116,11 +126,14 @@ export async function updateOrderStatusAction(
 ): Promise<UpdateOrderStatusResult> {
   try {
     const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
     const outcome =
       input.kind === "IMEI"
-        ? await transitionImeiOrder(staff.id, input)
-        : await transitionServerOrder(staff.id, input);
+        ? await transitionImeiOrder(staff.id, tenantId, input)
+        : await transitionServerOrder(staff.id, tenantId, input);
+
+    if (!outcome) return { ok: false, error: "Order not found" };
 
     await logAdminAction(staff.id, "order.status", `${input.kind} ${input.orderId} -> ${input.status}`);
 

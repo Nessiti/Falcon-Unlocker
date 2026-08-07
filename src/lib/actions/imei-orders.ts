@@ -30,7 +30,11 @@ export async function createImeiOrderAction(
       where: { id: input.serviceId },
       include: { fields: true },
     });
-    if (!service || service.status !== ServiceStatus.ONLINE) {
+    if (
+      !service ||
+      service.status !== ServiceStatus.ONLINE ||
+      service.tenantId !== user.tenantId
+    ) {
       return { ok: false, error: "This service is not available" };
     }
 
@@ -73,6 +77,7 @@ export async function createImeiOrderAction(
             priceCents: service.priceCents,
             fieldValues: input.fieldValues,
             notes: input.notes,
+            tenantId: service.tenantId,
           },
         });
 

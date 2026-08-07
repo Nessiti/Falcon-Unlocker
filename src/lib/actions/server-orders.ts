@@ -30,7 +30,11 @@ export async function createServerOrderAction(
       where: { id: input.serviceId },
       include: { fields: true },
     });
-    if (!service || service.status !== ServiceStatus.ONLINE) {
+    if (
+      !service ||
+      service.status !== ServiceStatus.ONLINE ||
+      service.tenantId !== user.tenantId
+    ) {
       return { ok: false, error: "This service is not available" };
     }
 
@@ -63,6 +67,7 @@ export async function createServerOrderAction(
             priceCents: service.priceCents,
             fieldValues: input.fieldValues,
             notes: input.notes,
+            tenantId: service.tenantId,
           },
         });
 
