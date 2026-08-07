@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { TelegramAuthError, verifyTelegramInitData } from "@/lib/telegram/auth";
-import { Prisma, Role, UserStatus } from "@/generated/prisma/client";
+import { Role, UserStatus } from "@/generated/prisma/client";
 
 const STATUS_MESSAGE: Record<string, string> = {
   [UserStatus.SUSPENDED]: "Your account is suspended. Contact support for help.",
@@ -47,64 +47,57 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     const isConfiguredAdmin =
       resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
-    const userWhere = { telegramId_tenantId: { telegramId, tenantId: resolvedTenantId } } as const;
-    const updateDataFor = (current: { role: Role }) => ({
-      username: tgUser.username ?? null,
-      firstName: tgUser.first_name,
-      lastName: tgUser.last_name ?? null,
-      avatarUrl: tgUser.photo_url ?? null,
-      // Never downgrades a Super Admin (multi-tenant foundation) back to
-      // Admin just because their Telegram ID also matches
-      // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
-      // every login.
-      role: isConfiguredAdmin && current.role !== Role.SUPER_ADMIN ? Role.ADMIN : current.role,
+    // isFirstUser (and the free Admin role that comes with it) is scoped to
+    // Falcon Unlocker specifically — the very first person to ever use the
+    // platform, not the first customer of every new tenant going forward.
+    // A brand-new tenant's first real signup is an ordinary Customer; its
+    // Admin is whoever the Super Admin set as owner. Read outside the
+    // upsert below rather than inside a transaction with it: Falcon
+    // Unlocker has had a first user for a long time now, so a race on this
+    // specific read has no real-world window left to matter.
+    const isFirstUser =
+      resolvedTenantId === "falcon-unlocker" &&
+      (await prisma.user.count({ where: { tenantId: "falcon-unlocker" } })) === 0;
+
+    // Chapter 37: the same Telegram person gets a separate, independent
+    // account per tenant, so this upserts on (telegramId, tenantId), never
+    // telegramId alone. A single native INSERT ... ON CONFLICT DO UPDATE —
+    // not a manual find-then-create — so two concurrent logins for the
+    // same brand-new pair (two tabs, Telegram occasionally opening the
+    // Mini App twice) can't race into a unique-constraint error. (An
+    // earlier version tried to catch and recover from that race manually
+    // inside a $transaction; Postgres aborts the whole transaction on the
+    // first failed statement, so the "recovery" query failed too, with a
+    // second, more confusing error. upsert sidesteps the problem instead
+    // of working around it.)
+    let user = await prisma.user.upsert({
+      where: { telegramId_tenantId: { telegramId, tenantId: resolvedTenantId } },
+      update: {
+        username: tgUser.username ?? null,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name ?? null,
+        avatarUrl: tgUser.photo_url ?? null,
+      },
+      create: {
+        telegramId,
+        username: tgUser.username ?? null,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name ?? null,
+        avatarUrl: tgUser.photo_url ?? null,
+        isFirstUser,
+        role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
+        tenantId: resolvedTenantId,
+      },
     });
 
-    const user = await prisma.$transaction(async (tx) => {
-      // Chapter 37: the same Telegram person gets a separate, independent
-      // account per tenant, so "existing" means "already has an account in
-      // THIS tenant specifically" — never a different tenant's account.
-      const existing = await tx.user.findUnique({ where: userWhere });
-
-      if (existing) {
-        return tx.user.update({ where: { id: existing.id }, data: updateDataFor(existing) });
-      }
-
-      // isFirstUser (and the free Admin role that comes with it) is scoped
-      // to Falcon Unlocker specifically — the very first person to ever use
-      // the platform, not the first customer of every new tenant going
-      // forward. A brand-new tenant's first real signup is an ordinary
-      // Customer; its Admin is whoever the Super Admin set as owner.
-      const isFirstUser =
-        resolvedTenantId === "falcon-unlocker" &&
-        (await tx.user.count({ where: { tenantId: "falcon-unlocker" } })) === 0;
-
-      try {
-        return await tx.user.create({
-          data: {
-            telegramId,
-            username: tgUser.username ?? null,
-            firstName: tgUser.first_name,
-            lastName: tgUser.last_name ?? null,
-            avatarUrl: tgUser.photo_url ?? null,
-            isFirstUser,
-            role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
-            tenantId: resolvedTenantId,
-          },
-        });
-      } catch (error) {
-        // A concurrent request for this exact (telegramId, tenantId) pair —
-        // two tabs, a double-tap, Telegram occasionally opening the Mini
-        // App twice — can win the create between our findUnique above and
-        // here. Fall back to the row the other request just created
-        // instead of failing the whole sign-in.
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          const winner = await tx.user.findUniqueOrThrow({ where: userWhere });
-          return tx.user.update({ where: { id: winner.id }, data: updateDataFor(winner) });
-        }
-        throw error;
-      }
-    });
+    // Never downgrades a Super Admin (multi-tenant foundation) back to
+    // Admin just because their Telegram ID also matches TELEGRAM_ADMIN_ID
+    // — that would silently undo the promotion on every login. A separate
+    // follow-up write rather than folded into the upsert's `update`, since
+    // that data is static and can't branch on the row's pre-upsert role.
+    if (isConfiguredAdmin && user.role !== Role.SUPER_ADMIN && user.role !== Role.ADMIN) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
+    }
 
     if (user.status !== UserStatus.ACTIVE) {
       return { ok: false, error: STATUS_MESSAGE[user.status] };
