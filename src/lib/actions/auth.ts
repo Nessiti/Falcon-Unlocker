@@ -47,6 +47,17 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     const isConfiguredAdmin =
       resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
+    // Every other tenant's equivalent bootstrap: the owner Telegram ID the
+    // Super Admin set when creating the brand (Chapter 24) automatically
+    // becomes that tenant's own Admin on first login — otherwise a
+    // brand-new tenant would have no way to ever get an Admin at all, since
+    // updateUserRoleAction requires an existing Admin to grant one.
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: resolvedTenantId },
+      select: { ownerTelegramId: true },
+    });
+    const isTenantOwner = tenant?.ownerTelegramId != null && tenant.ownerTelegramId === telegramId;
+
     // isFirstUser (and the free Admin role that comes with it) is scoped to
     // Falcon Unlocker specifically — the very first person to ever use the
     // platform, not the first customer of every new tenant going forward.
@@ -85,17 +96,19 @@ export async function loginAction(initData: string): Promise<LoginResult> {
         lastName: tgUser.last_name ?? null,
         avatarUrl: tgUser.photo_url ?? null,
         isFirstUser,
-        role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
+        role: isFirstUser || isConfiguredAdmin || isTenantOwner ? Role.ADMIN : Role.CUSTOMER,
         tenantId: resolvedTenantId,
       },
     });
 
     // Never downgrades a Super Admin (multi-tenant foundation) back to
     // Admin just because their Telegram ID also matches TELEGRAM_ADMIN_ID
-    // — that would silently undo the promotion on every login. A separate
-    // follow-up write rather than folded into the upsert's `update`, since
-    // that data is static and can't branch on the row's pre-upsert role.
-    if (isConfiguredAdmin && user.role !== Role.SUPER_ADMIN && user.role !== Role.ADMIN) {
+    // or the tenant's owner id — that would silently undo the promotion on
+    // every login. A separate follow-up write rather than folded into the
+    // upsert's `update`, since that data is static and can't branch on the
+    // row's pre-upsert role. Also self-heals an owner's account that was
+    // created before this chapter, or before they were set as owner.
+    if ((isConfiguredAdmin || isTenantOwner) && user.role !== Role.SUPER_ADMIN && user.role !== Role.ADMIN) {
       user = await prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
     }
 

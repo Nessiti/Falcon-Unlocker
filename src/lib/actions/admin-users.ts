@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff, requireAdmin } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { notifyBalanceUpdated } from "@/lib/telegram/notifications";
@@ -21,10 +22,15 @@ export type AdminUserSummary = {
 
 export type ListUsersResult = { ok: true; users: AdminUserSummary[] } | { ok: false; error: string };
 
+/** Users section, scoped to the staff member's own tenant (Chapter 38 — this
+ * was the one admin section that never got the Chapter 25-31 tenant
+ * isolation pass, so every tenant's staff could see every other tenant's
+ * customers). */
 export async function listUsersAction(initData: string): Promise<ListUsersResult> {
   try {
-    await requireStaff(initData);
-    const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+    const users = await prisma.user.findMany({ where: { tenantId }, orderBy: { createdAt: "desc" } });
 
     return {
       ok: true,
@@ -49,13 +55,19 @@ export async function listUsersAction(initData: string): Promise<ListUsersResult
 export type UpdateUserStatusInput = { userId: string; status: UserStatus };
 export type UpdateUserStatusResult = { ok: true } | { ok: false; error: string };
 
-/** Suspend / Block / Unblock (Chapter 11 User Management). */
+/** Suspend / Block / Unblock (Chapter 11 User Management), scoped to the
+ * staff member's own tenant (Chapter 38). */
 export async function updateUserStatusAction(
   initData: string,
   input: UpdateUserStatusInput,
 ): Promise<UpdateUserStatusResult> {
   try {
     const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+
+    const owned = await prisma.user.findFirst({ where: { id: input.userId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "User not found" };
+
     const target = await prisma.user.update({
       where: { id: input.userId },
       data: { status: input.status },
@@ -72,13 +84,29 @@ export async function updateUserStatusAction(
 export type UpdateUserRoleInput = { userId: string; role: Role };
 export type UpdateUserRoleResult = { ok: true } | { ok: false; error: string };
 
-/** Create Admin / Moderator (Chapter 11): promotes/demotes an existing account. Admin-only. */
+/** Create Admin / Moderator (Chapter 11): promotes/demotes an existing
+ * account, scoped to the admin's own tenant (Chapter 38 — without this, any
+ * tenant's Admin could reach into another tenant's users, and could even
+ * grant itself SUPER_ADMIN). SUPER_ADMIN can never be granted or changed
+ * from here — that role has no self-serve path at all, by design. */
 export async function updateUserRoleAction(
   initData: string,
   input: UpdateUserRoleInput,
 ): Promise<UpdateUserRoleResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
+
+    if (input.role === Role.SUPER_ADMIN) {
+      return { ok: false, error: "Super Admin cannot be granted here" };
+    }
+
+    const owned = await prisma.user.findFirst({ where: { id: input.userId, tenantId } });
+    if (!owned) return { ok: false, error: "User not found" };
+    if (owned.role === Role.SUPER_ADMIN) {
+      return { ok: false, error: "Super Admin role cannot be changed here" };
+    }
+
     const target = await prisma.user.update({
       where: { id: input.userId },
       data: { role: input.role },
@@ -94,18 +122,23 @@ export async function updateUserRoleAction(
 export type AdjustBalanceInput = { userId: string; deltaCents: number; reason: string };
 export type AdjustBalanceResult = { ok: true } | { ok: false; error: string };
 
-/** Modify Balance (Chapter 11 User Management). Admin-only. */
+/** Modify Balance (Chapter 11 User Management), scoped to the admin's own
+ * tenant (Chapter 38). */
 export async function adjustUserBalanceAction(
   initData: string,
   input: AdjustBalanceInput,
 ): Promise<AdjustBalanceResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
     if (!Number.isInteger(input.deltaCents) || input.deltaCents === 0) {
       return { ok: false, error: "Enter a non-zero amount" };
     }
     const reason = input.reason.trim() || "Admin adjustment";
+
+    const owned = await prisma.user.findFirst({ where: { id: input.userId, tenantId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "User not found" };
 
     const target = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
