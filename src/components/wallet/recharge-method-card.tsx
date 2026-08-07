@@ -2,10 +2,9 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
-import { BlobContentTypeNotAllowedError, BlobFileTooLargeError, BlobRequestAbortedError } from "@vercel/blob";
 import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
+import { compressImageToJpeg, uploadWithProgress } from "@/lib/upload-image";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
@@ -14,11 +13,7 @@ import { formInputClass } from "@/lib/ui";
 const UPLOAD_TIMEOUT_MS = 45_000;
 
 function proofUploadErrorMessage(error: unknown): string {
-  if (error instanceof BlobFileTooLargeError) return "This photo is too large. Try a smaller one.";
-  if (error instanceof BlobContentTypeNotAllowedError) {
-    return "That file type isn't supported. Use a photo (JPG, PNG, or WEBP).";
-  }
-  if (error instanceof BlobRequestAbortedError) {
+  if (error instanceof DOMException && error.name === "AbortError") {
     return "Upload timed out. Check your connection and try again.";
   }
   return "Couldn't upload the image. Try again.";
@@ -75,15 +70,13 @@ export function RechargeMethodCard({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
     try {
-      const blob = await upload(file.name, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload/recharge-proof",
-        clientPayload: initData,
-        headers: { "x-telegram-init-data": initData },
-        abortSignal: controller.signal,
-        onUploadProgress: ({ percentage }) => setUploadProgress(Math.round(percentage)),
+      const compressed = await compressImageToJpeg(file);
+      const result = await uploadWithProgress("/api/upload/recharge-proof", compressed, {
+        headers: { "x-telegram-init-data": initData, "content-type": compressed.type || "image/jpeg" },
+        onProgress: setUploadProgress,
+        signal: controller.signal,
       });
-      setProofUrl(blob.url);
+      setProofUrl(result.url);
     } catch (uploadError) {
       console.error("[wallet] proof upload failed", uploadError);
       setError(proofUploadErrorMessage(uploadError));

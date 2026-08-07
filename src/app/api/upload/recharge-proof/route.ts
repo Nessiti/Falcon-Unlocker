@@ -1,43 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { getCurrentUser } from "@/lib/telegram/current-user";
+import { TelegramAuthError } from "@/lib/telegram/auth";
+
+const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_SIZE_BYTES = 4 * 1024 * 1024;
 
 /**
- * Server side of the direct-to-Blob upload flow for wallet recharge proof
- * photos (Chapter 40). The browser never sends the image through a Server
- * Action — it uploads straight to Vercel Blob using a short-lived token
- * this route hands out, after verifying the requester is a genuine,
- * currently signed-in customer (their initData, passed as the client
- * upload's clientPayload).
+ * Wallet recharge proof photo upload (Chapter 40, rewritten). The first
+ * version had the browser upload directly to Vercel Blob's own storage
+ * domain — a cross-origin request that a live report showed silently
+ * hanging forever inside Telegram's in-app WebView, never resolving on
+ * either side (not even a fast failure). Routing the bytes through this
+ * same-origin endpoint instead avoids that entirely: the client's only
+ * request goes to this app's own domain, exactly like every other action.
+ * The image is compressed client-side first, so this fits well inside a
+ * serverless function's request body limit.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
-
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
-        if (!clientPayload) {
-          throw new Error("Missing auth");
-        }
-        await getCurrentUser(clientPayload);
+    const initData = request.headers.get("x-telegram-init-data");
+    if (!initData) {
+      return NextResponse.json({ error: "Missing auth" }, { status: 401 });
+    }
+    const user = await getCurrentUser(initData);
 
-        return {
-          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
-          // Modern phone cameras routinely produce 10-15MB photos.
-          maximumSizeInBytes: 20 * 1024 * 1024,
-          addRandomSuffix: true,
-        };
-      },
+    const contentType = request.headers.get("content-type") ?? "";
+    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    }
+
+    const body = await request.arrayBuffer();
+    if (body.byteLength === 0) {
+      return NextResponse.json({ error: "Empty file" }, { status: 400 });
+    }
+    if (body.byteLength > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: "File too large" }, { status: 400 });
+    }
+
+    const extension = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+    const blob = await put(`recharge-proofs/${user.id}-${Date.now()}.${extension}`, body, {
+      access: "public",
+      contentType,
+      addRandomSuffix: true,
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     console.error("[upload] recharge-proof failed", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
-      { status: 400 },
-    );
+    const message = error instanceof TelegramAuthError ? error.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
