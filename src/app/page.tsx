@@ -93,7 +93,7 @@ export default function Home() {
           <WelcomeCard
             firstName={user.firstName}
             balanceCents={user.balanceCents}
-            logoUrl={user.tenantLogoUrl}
+            avatarUrl={user.avatarUrl}
           />
           <PlaceOrderBanner onClick={() => setShowOrderChooser(true)} />
           <CategoryShortcuts categories={categories} />

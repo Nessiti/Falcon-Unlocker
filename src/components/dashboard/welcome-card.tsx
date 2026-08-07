@@ -6,19 +6,19 @@ import { formatUsd } from "@/lib/ui";
 export function WelcomeCard({
   firstName,
   balanceCents,
-  logoUrl,
+  avatarUrl,
 }: {
   firstName: string;
   balanceCents: number;
-  logoUrl: string | null;
+  avatarUrl: string | null;
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <Link href="/settings" className="flex items-center gap-3 rounded-xl transition-colors active:bg-background">
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- tenant-hosted logo
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Telegram-hosted profile photo
           <img
-            src={logoUrl}
+            src={avatarUrl}
             alt=""
             className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-accent/20"
           />
