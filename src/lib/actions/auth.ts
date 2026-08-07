@@ -129,13 +129,19 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     };
   } catch (error) {
     // TelegramAuthError messages are safe to show as-is (they never contain
-    // secrets); anything else is an unexpected bug, so it's logged here —
-    // the client only ever sees the generic message, this is the one place
-    // the real cause survives for Vercel's Runtime Logs to catch.
+    // secrets). Anything else is an unexpected bug — it's logged here for
+    // Vercel's Runtime Logs, and also folded into the returned message
+    // itself (temporary diagnostic: Vercel's dashboard hasn't been
+    // reachable while chasing this specific failure, so the error needs to
+    // survive somewhere reachable — Prisma/JS error messages here are
+    // internal-shape descriptions, e.g. constraint names, never secrets).
     if (!(error instanceof TelegramAuthError)) {
       console.error("[auth] loginAction failed", error);
     }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to sign in";
+    const message =
+      error instanceof TelegramAuthError
+        ? error.message
+        : `Failed to sign in (${error instanceof Error ? `${error.name}: ${error.message}` : String(error)})`;
     return { ok: false, error: message };
   }
 }
