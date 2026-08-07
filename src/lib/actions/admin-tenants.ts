@@ -6,6 +6,7 @@ import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { TenantStatus, SubscriptionPlan } from "@/generated/prisma/client";
 import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
+import { registerTenantWebhook } from "@/lib/telegram/webhook-registration";
 
 function maskToken(value: string | null): string | null {
   if (!value) return null;
@@ -82,7 +83,9 @@ export type CreateTenantInput = {
   email: string | null;
 };
 
-export type CreateTenantResult = { ok: true } | { ok: false; error: string };
+export type CreateTenantResult =
+  | { ok: true; webhookWarning?: string }
+  | { ok: false; error: string };
 
 /**
  * Add a new brand (vision chapter 3) — the platform's core self-serve-onboarding
@@ -112,23 +115,69 @@ export async function createTenantAction(
       }
     }
 
-    await prisma.tenant.create({
+    const botToken = input.telegramBotToken?.trim() || null;
+
+    const tenant = await prisma.tenant.create({
       data: {
         name,
         telegramBotUsername: input.telegramBotUsername?.trim() || null,
-        telegramBotToken: input.telegramBotToken?.trim() ? encryptSecret(input.telegramBotToken.trim()) : null,
+        telegramBotToken: botToken ? encryptSecret(botToken) : null,
         ownerTelegramId,
         email: input.email?.trim() || null,
       },
     });
 
     await logAdminAction(superAdmin.id, "tenant.create", name);
-    return { ok: true };
+
+    // Registers the bot's webhook automatically so a new brand's bot is
+    // usable immediately, without the Super Admin needing to run a manual
+    // Telegram API call. A failure here doesn't roll back tenant creation —
+    // the "Register Webhook" button on this tenant's row retries the exact
+    // same call once the underlying issue (bad token, missing env var) is fixed.
+    let webhookWarning: string | undefined;
+    if (botToken) {
+      const result = await registerTenantWebhook(tenant.id, botToken);
+      if (!result.ok) webhookWarning = result.error;
+    }
+
+    return webhookWarning ? { ok: true, webhookWarning } : { ok: true };
   } catch (error) {
     if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
       return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
     }
     const message = error instanceof TelegramAuthError ? error.message : "Failed to create tenant";
+    return { ok: false, error: message };
+  }
+}
+
+export type RegisterTenantWebhookResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Manual (re-)registration of a tenant's bot webhook — for tenants created
+ * before this automation existed, or to retry after fixing a bad token or
+ * env var without recreating the whole brand.
+ */
+export async function registerTenantWebhookAction(
+  initData: string,
+  tenantId: string,
+): Promise<RegisterTenantWebhookResult> {
+  try {
+    await requireSuperAdmin(initData);
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { telegramBotToken: true },
+    });
+    if (!tenant?.telegramBotToken) {
+      return { ok: false, error: "This brand has no bot token configured" };
+    }
+
+    const token = decryptSecret(tenant.telegramBotToken);
+    const result = await registerTenantWebhook(tenantId, token);
+    if (!result.ok) return { ok: false, error: result.error };
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof TelegramAuthError ? error.message : "Failed to register webhook";
     return { ok: false, error: message };
   }
 }
