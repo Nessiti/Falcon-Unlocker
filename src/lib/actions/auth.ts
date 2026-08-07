@@ -34,14 +34,18 @@ export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: str
  */
 export async function loginAction(initData: string): Promise<LoginResult> {
   try {
-    const parsed = await verifyTelegramInitData(initData);
+    const { data: parsed, tenantId: resolvedTenantId } = await verifyTelegramInitData(initData);
     const tgUser = parsed.user;
     if (!tgUser) {
       return { ok: false, error: "No Telegram user in init data" };
     }
 
     const telegramId = BigInt(tgUser.id);
-    const isConfiguredAdmin = process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
+    // TELEGRAM_ADMIN_ID is Falcon Unlocker's own platform bootstrap env var
+    // — it has no meaning for a brand-new signup through a different
+    // tenant's bot, so it only ever grants Admin within Falcon's own tenant.
+    const isConfiguredAdmin =
+      resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
     const user = await prisma.$transaction(async (tx) => {
       const existing = await tx.user.findUnique({ where: { telegramId } });
@@ -59,11 +63,20 @@ export async function loginAction(initData: string): Promise<LoginResult> {
             // TELEGRAM_ADMIN_ID — that would silently undo the promotion on
             // every login.
             role: isConfiguredAdmin && existing.role !== Role.SUPER_ADMIN ? Role.ADMIN : existing.role,
+            // Self-heals accounts created in the window between Chapter 24
+            // (tenantId added, nullable) and this chapter (tenantId actually
+            // assigned at signup) — never overwrites an already-set tenantId.
+            ...(existing.tenantId ? {} : { tenantId: resolvedTenantId }),
           },
         });
       }
 
-      const isFirstUser = (await tx.user.count()) === 0;
+      // isFirstUser (and the free Admin role that comes with it) is scoped
+      // to Falcon Unlocker specifically — the very first person to ever use
+      // the platform, not the first customer of every new tenant going
+      // forward. A brand-new tenant's first real signup is an ordinary
+      // Customer; its Admin is whoever the Super Admin set as owner.
+      const isFirstUser = resolvedTenantId === "falcon-unlocker" && (await tx.user.count()) === 0;
 
       return tx.user.create({
         data: {
@@ -74,6 +87,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
           avatarUrl: tgUser.photo_url ?? null,
           isFirstUser,
           role: isFirstUser || isConfiguredAdmin ? Role.ADMIN : Role.CUSTOMER,
+          tenantId: resolvedTenantId,
         },
       });
     });

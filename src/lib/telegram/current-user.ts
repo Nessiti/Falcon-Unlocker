@@ -14,7 +14,7 @@ const STATUS_MESSAGE: Record<string, string> = {
  * Rejects suspended/blocked accounts (Chapter 11 User Management).
  */
 export async function getCurrentUser(initData: string): Promise<User> {
-  const parsed = await verifyTelegramInitData(initData);
+  const { data: parsed } = await verifyTelegramInitData(initData);
   const tgUser = parsed.user;
   if (!tgUser) {
     throw new TelegramAuthError("No Telegram user in init data");
