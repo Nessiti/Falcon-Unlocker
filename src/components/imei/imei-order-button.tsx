@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useRawInitData, hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
+import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { createImeiOrderAction } from "@/lib/actions/imei-orders";
 import { ImeiFieldInput } from "@/components/imei/imei-field-input";
@@ -10,12 +10,7 @@ import { OrderSuccessScreen } from "@/components/orders/order-success-screen";
 import { useSecurityConfirm } from "@/components/security/use-security-confirm";
 import type { ServiceFieldType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
-
-function notifyHaptic(type: "success" | "error") {
-  if (hapticFeedbackNotificationOccurred.isAvailable()) {
-    hapticFeedbackNotificationOccurred(type);
-  }
-}
+import { notifyHaptic } from "@/lib/haptics";
 
 type Field = {
   id: string;

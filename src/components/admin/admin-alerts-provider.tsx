@@ -2,21 +2,16 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useRawInitData, hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
+import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useTelegramUser } from "@/components/telegram-user-provider";
 import { getAdminAlertsAction, type AdminAlertCounts } from "@/lib/actions/admin-alerts";
 import { Role } from "@/generated/prisma/browser";
 import { playAdminAlertSound } from "@/lib/sound";
+import { notifyHaptic } from "@/lib/haptics";
 
 const POLL_INTERVAL_MS = 20000;
 
 const AdminAlertsContext = createContext<AdminAlertCounts | null>(null);
-
-function notifyHaptic(type: "warning") {
-  if (hapticFeedbackNotificationOccurred.isAvailable()) {
-    hapticFeedbackNotificationOccurred(type);
-  }
-}
 
 /**
  * Polls for new admin-relevant requests (pending orders, unanswered support

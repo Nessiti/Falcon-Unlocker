@@ -43,3 +43,21 @@ export function playAdminAlertSound() {
   playTone(ctx, 880, now, 0.15);
   playTone(ctx, 1174.66, now + 0.12, 0.18);
 }
+
+/**
+ * Rising three-note chime played once when an order is successfully placed
+ * (OrderSuccessScreen), alongside the native haptic notification - the user
+ * always just tapped "Confirm Order" themselves, so audio is allowed here
+ * the same way it is for the admin alert chime above.
+ */
+export function playOrderSuccessSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+  const now = ctx.currentTime;
+  playTone(ctx, 587.33, now, 0.14);
+  playTone(ctx, 739.99, now + 0.1, 0.14);
+  playTone(ctx, 987.77, now + 0.2, 0.35);
+}

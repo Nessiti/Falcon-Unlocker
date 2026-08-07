@@ -2,11 +2,11 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { hapticFeedbackNotificationOccurred } from "@telegram-apps/sdk-react";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
 import { compressImageToJpeg, uploadWithProgress } from "@/lib/upload-image";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+import { notifyHaptic } from "@/lib/haptics";
 
 // A hung upload used to spin forever with no feedback and no way out -
 // this bounds it so a stalled connection fails cleanly instead.
@@ -33,12 +33,6 @@ function buildContactUrl(method: RechargeMethodSummary, message: string) {
 
   const username = method.contactValue.replace(/^@/, "");
   return `https://t.me/${username}?text=${encodeURIComponent(message)}`;
-}
-
-function notifyHaptic(type: "success" | "error") {
-  if (hapticFeedbackNotificationOccurred.isAvailable()) {
-    hapticFeedbackNotificationOccurred(type);
-  }
 }
 
 export function RechargeMethodCard({
