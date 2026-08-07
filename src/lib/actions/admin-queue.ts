@@ -108,7 +108,7 @@ export type GetQueueEntryDetailResult =
   | { ok: true; entry: QueueEntryDetail }
   | { ok: false; error: string };
 
-/** The retry history for one queue entry — every provider attempted, in order. */
+/** The retry history for one queue entry - every provider attempted, in order. */
 export async function getQueueEntryDetailAction(
   initData: string,
   queueEntryId: string,
@@ -178,7 +178,7 @@ export type RetryQueueEntryResult =
 
 /**
  * Manual Retry (Chapter 18): gives a failed or cancelled entry a fresh pass
- * through every mapped provider again (clears triedProviderIds/attempts —
+ * through every mapped provider again (clears triedProviderIds/attempts -
  * circumstances may have changed since the last failure) and processes it
  * immediately rather than waiting for the next cron tick.
  */
@@ -216,10 +216,10 @@ export type ProcessQueueNowResult =
 
 /**
  * Manual trigger for the same processing pass the process-queue cron task
- * runs via /api/cron — intentionally platform-wide (Chapter 29), same as
+ * runs via /api/cron - intentionally platform-wide (Chapter 29), same as
  * the cron task itself: it works through whatever's actually due across
  * every tenant, not just the triggering admin's own. No cross-tenant data
- * is exposed by this — it's an operational trigger, not a read/write on a
+ * is exposed by this - it's an operational trigger, not a read/write on a
  * specific tenant's records (those stay scoped, see list/detail/cancel/
  * retry above).
  */
@@ -262,7 +262,7 @@ export async function getQueueSettingsAction(initData: string): Promise<GetQueue
 
 export type UpdateQueueSettingsResult = { ok: true } | { ok: false; error: string };
 
-/** Only affects entries created after this change — in-flight entries keep the budget they were queued with. */
+/** Only affects entries created after this change - in-flight entries keep the budget they were queued with. */
 export async function updateQueueSettingsAction(
   initData: string,
   input: QueueSettingsData,

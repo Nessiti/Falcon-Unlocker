@@ -13,7 +13,7 @@ export type FaqItemSummary = {
 
 /**
  * FAQ is public read content, editable from the Admin panel (Chapter 10).
- * Scoped to the caller's own tenant (Chapter 35), resolved from initData —
+ * Scoped to the caller's own tenant (Chapter 35), resolved from initData -
  * every call site is a client component that already has it in scope, so
  * this is real resolution, not the Chapter 31 hardcoded-to-Falcon stopgap.
  */

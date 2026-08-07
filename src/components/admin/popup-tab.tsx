@@ -150,7 +150,7 @@ export function PopupTab({ initData }: { initData: string }) {
         <div className="flex flex-col gap-1">
           <input
             className={formInputClass}
-            placeholder="Required channel (e.g. @FalconUnlockerBotChannel) — optional"
+            placeholder="Required channel (e.g. @FalconUnlockerBotChannel) - optional"
             value={requiredChannel}
             onChange={(e) => setRequiredChannel(e.target.value)}
           />

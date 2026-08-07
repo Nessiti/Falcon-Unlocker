@@ -19,7 +19,7 @@ const PRESET_COLORS = [
 
 /** A no-hex-typing color picker: the native OS/browser color wheel (every
  * color there is) plus one-tap common presets. Used for Brand Settings'
- * button color (Chapter 41) — nobody configuring their own brand should
+ * button color (Chapter 41) - nobody configuring their own brand should
  * need to know what a hex code is. */
 export function ColorPickerField({
   label,

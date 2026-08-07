@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-sm text-foreground">Telegram Session</p>
           <p className="text-xs text-hint">
-            Signed in automatically via your Telegram account — no separate password.
+            Signed in automatically via your Telegram account - no separate password.
           </p>
         </div>
 

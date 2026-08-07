@@ -2,7 +2,7 @@ export const formInputClass =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground";
 
 /** Picks black or white text for a given background hex, by relative
- * luminance — used to keep a tenant's custom button color readable without
+ * luminance - used to keep a tenant's custom button color readable without
  * asking them to also pick a text color (Chapter 41). */
 export function readableTextColor(hex: string): "#000000" | "#ffffff" {
   const value = hex.replace("#", "");
@@ -26,7 +26,7 @@ export type CategoryGroup<T> = { id: string; name: string; items: T[] };
  * Groups already-filtered services by category, preserving the order
  * categories first appear in (which follows the services' own displayOrder
  * sort) so groups never interleave. A category with no matching services
- * simply never gets an entry — the caller doesn't need to filter it out.
+ * simply never gets an entry - the caller doesn't need to filter it out.
  */
 export function groupByCategory<T extends { categoryId: string | null; category: { name: string } | null }>(
   services: T[],

@@ -79,7 +79,7 @@ export function SecurityCenter({ initData }: { initData: string }) {
             {overview ? `${overview.providersWithRateLimit}/${overview.totalProviders} providers limited` : "…"}
           </p>
           <p className="mt-1 text-xs text-hint">
-            Enforced per provider at the connector level — a call over the configured limit is
+            Enforced per provider at the connector level - a call over the configured limit is
             rejected before it ever reaches the provider&apos;s API.
           </p>
         </div>
@@ -104,7 +104,7 @@ export function SecurityCenter({ initData }: { initData: string }) {
         <p className="font-semibold text-foreground">IP Restrictions (future-ready)</p>
         <p className="text-xs text-hint">
           Comma or newline-separated IPs or address prefixes allowed to use admin/staff actions.
-          Leave empty to disable (default — no restriction).
+          Leave empty to disable (default - no restriction).
         </p>
         <p className="text-xs text-accent">
           Warning: misconfiguring this can lock every admin out of the panel, including you. Make

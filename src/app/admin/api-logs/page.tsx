@@ -11,8 +11,8 @@ export default function AdminApiLogsPage() {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-hint">
-        Every outbound call any provider connector makes — connection tests, syncs, balance
-        checks, orders — logged automatically at the shared HTTP layer (Chapter 13), regardless of
+        Every outbound call any provider connector makes - connection tests, syncs, balance
+        checks, orders - logged automatically at the shared HTTP layer (Chapter 13), regardless of
         provider type.
       </p>
       <ApiLogManager initData={initData} />

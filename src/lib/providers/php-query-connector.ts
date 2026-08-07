@@ -13,7 +13,7 @@ import type {
 
 /**
  * Default connector for PHP_API providers: the classic legacy reseller-panel
- * shape — a single endpoint, GET requests with `action`/`username`/`apikey`
+ * shape - a single endpoint, GET requests with `action`/`username`/`apikey`
  * query params, JSON responses. Same response contract as GenericJsonConnector,
  * different request style.
  */

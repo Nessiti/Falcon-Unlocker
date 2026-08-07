@@ -123,7 +123,7 @@ export function QueueManager({ initData }: { initData: string }) {
     setBusyId(null);
     setActionResult((current) => ({
       ...current,
-      [entry.id]: result.ok ? `✓ Retried — ${result.outcome ?? "no change"}` : `✗ ${result.error}`,
+      [entry.id]: result.ok ? `✓ Retried - ${result.outcome ?? "no change"}` : `✗ ${result.error}`,
     }));
     if (result.ok) refresh();
   }
@@ -133,7 +133,7 @@ export function QueueManager({ initData }: { initData: string }) {
       <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-sm">
         <p className="font-semibold text-foreground">Retry Configuration</p>
         <p className="text-xs text-hint">
-          Applies to newly queued orders — entries already in progress keep the budget they were
+          Applies to newly queued orders - entries already in progress keep the budget they were
           queued with. Timeout is configured per provider (Admin → Providers).
         </p>
         <div className="grid grid-cols-2 gap-3">

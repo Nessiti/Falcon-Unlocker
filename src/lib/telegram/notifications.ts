@@ -13,7 +13,7 @@ export function notifyOrderReceived(
   return sendTelegramMessage(
     telegramId,
     tenantId,
-    `🧾 <b>Order received</b>\n${serviceName} — ${formatUsd(priceCents)}\nWe'll notify you once it's processed.`,
+    `🧾 <b>Order received</b>\n${serviceName} - ${formatUsd(priceCents)}\nWe'll notify you once it's processed.`,
     [{ text: "View Order", path: "/orders" }],
   );
 }
@@ -31,7 +31,7 @@ export function notifyAdminNewOrder(
   return sendTelegramMessage(
     telegramId,
     tenantId,
-    `🆕 <b>New order</b>\n${customerName} — ${serviceName} (${formatUsd(priceCents)})${detailLines ? `\n${detailLines}` : ""}`,
+    `🆕 <b>New order</b>\n${customerName} - ${serviceName} (${formatUsd(priceCents)})${detailLines ? `\n${detailLines}` : ""}`,
     [{ text: "Open Admin Orders", path: "/admin/orders" }],
   );
 }
@@ -109,7 +109,7 @@ export function notifyBalanceUpdated(telegramId: bigint, tenantId: string, balan
  * correct brand for a first-ever /start, before any User row exists to
  * resolve a tenant from automatically. `tenantId` still has to be passed
  * (Chapter 37 made it a required part of every outbound send) but is only
- * ever used as a fallback if `token` isn't supplied — the per-tenant
+ * ever used as a fallback if `token` isn't supplied - the per-tenant
  * webhook route always knows its own tenantId, and the legacy static route
  * defaults to Falcon Unlocker's.
  */

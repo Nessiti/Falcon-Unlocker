@@ -27,7 +27,6 @@ export type TenantSummary = {
   language: string;
   logoUrl: string | null;
   primaryColor: string | null;
-  secondaryColor: string | null;
   status: TenantStatus;
   subscriptionPlan: SubscriptionPlan;
   subscriptionExpiresAt: string | null;
@@ -61,7 +60,6 @@ export async function listTenantsAction(initData: string): Promise<ListTenantsRe
         language: tenant.language,
         logoUrl: tenant.logoUrl,
         primaryColor: tenant.primaryColor,
-        secondaryColor: tenant.secondaryColor,
         status: tenant.status,
         subscriptionPlan: tenant.subscriptionPlan,
         subscriptionExpiresAt: tenant.subscriptionExpiresAt?.toISOString() ?? null,
@@ -88,10 +86,10 @@ export type CreateTenantResult =
   | { ok: false; error: string };
 
 /**
- * Add a new brand (vision chapter 3) — the platform's core self-serve-onboarding
+ * Add a new brand (vision chapter 3) - the platform's core self-serve-onboarding
  * primitive. Only sets the structural/registration facts (name, bot connection,
  * owner, contact email): logo, colors, currency, country and language are the
- * brand's own presentation/locale choices, not the Super Admin's to set — the
+ * brand's own presentation/locale choices, not the Super Admin's to set - the
  * brand's own Admin configures those via Brand Settings (src/lib/actions/
  * brand-settings.ts) once they have access. New tenants get the schema
  * defaults (USD, English, no logo/colors) until then.
@@ -131,7 +129,7 @@ export async function createTenantAction(
 
     // Registers the bot's webhook automatically so a new brand's bot is
     // usable immediately, without the Super Admin needing to run a manual
-    // Telegram API call. A failure here doesn't roll back tenant creation —
+    // Telegram API call. A failure here doesn't roll back tenant creation -
     // the "Register Webhook" button on this tenant's row retries the exact
     // same call once the underlying issue (bad token, missing env var) is fixed.
     let webhookWarning: string | undefined;
@@ -153,7 +151,7 @@ export async function createTenantAction(
 export type RegisterTenantWebhookResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Manual (re-)registration of a tenant's bot webhook — for tenants created
+ * Manual (re-)registration of a tenant's bot webhook - for tenants created
  * before this automation existed, or to retry after fixing a bad token or
  * env var without recreating the whole brand.
  */
@@ -184,7 +182,7 @@ export async function registerTenantWebhookAction(
 
 export type SetTenantStatusResult = { ok: true } | { ok: false; error: string };
 
-/** Suspend/reactivate a brand (vision chapter 15) — data is kept, access is not. */
+/** Suspend/reactivate a brand (vision chapter 15) - data is kept, access is not. */
 export async function setTenantStatusAction(
   initData: string,
   tenantId: string,

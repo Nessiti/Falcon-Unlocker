@@ -327,7 +327,7 @@ export function ServerServiceForm({
 
             {SERVER_FIELD_RULES[field.type]?.hint ? (
               <p className="text-[11px] text-hint">
-                Default format: {SERVER_FIELD_RULES[field.type]?.hint} — leave Min/Max length blank
+                Default format: {SERVER_FIELD_RULES[field.type]?.hint} - leave Min/Max length blank
                 to use it, or override below.
               </p>
             ) : null}

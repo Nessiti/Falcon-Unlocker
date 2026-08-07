@@ -114,7 +114,7 @@ export type CreateRechargeOrderInput = {
   amountCents: number;
   proofNote: string | null;
   /** Uploaded directly to Vercel Blob by the client before this action runs
-   * (Chapter 40) — see /api/upload/recharge-proof. */
+   * (Chapter 40) - see /api/upload/recharge-proof. */
   proofUrl: string | null;
 };
 

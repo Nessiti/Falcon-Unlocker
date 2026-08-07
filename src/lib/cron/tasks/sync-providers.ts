@@ -7,7 +7,7 @@ import type { CronTask, CronTaskResult } from "../types";
  * Automatic Synchronization (Chapter 16): syncs every enabled provider
  * whose configured frequency (HOURLY / EVERY_6_HOURS / DAILY) has elapsed
  * since its last sync. Self-gating on isSyncDue means this task is safe to
- * run as often as the scheduler calls /api/cron — providers not due yet
+ * run as often as the scheduler calls /api/cron - providers not due yet
  * are simply skipped, no matter how frequently this fires.
  */
 export const syncProvidersTask: CronTask = {
@@ -33,7 +33,7 @@ export const syncProvidersTask: CronTask = {
 
     const detail = `checked ${providers.length}, due ${due.length}, synced ${succeeded}`;
     if (failures.length > 0) {
-      return { ok: false, error: `${detail} — failures: ${failures.join("; ")}` };
+      return { ok: false, error: `${detail} - failures: ${failures.join("; ")}` };
     }
     return { ok: true, detail };
   },

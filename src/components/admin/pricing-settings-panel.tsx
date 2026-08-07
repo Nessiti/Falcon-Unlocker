@@ -57,7 +57,7 @@ export function PricingSettingsPanel({ initData }: { initData: string }) {
     <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
       <h2 className="text-sm font-semibold text-foreground">Default Margin</h2>
       <p className="text-xs text-hint">
-        Applied when suggesting a selling price from a provider&apos;s cost on a service mapping —
+        Applied when suggesting a selling price from a provider&apos;s cost on a service mapping -
         percent first, then the flat amount. A mapping&apos;s own margin overrides this default.
         Never changes an existing service price on its own.
       </p>

@@ -58,7 +58,7 @@ export type RunCronNowResult = { ok: true; results: CronRunSummary[] } | { ok: f
 
 /**
  * Manual trigger for testing without waiting on the external scheduler
- * (cron-job.org) — runs the exact same registry the /api/cron route does,
+ * (cron-job.org) - runs the exact same registry the /api/cron route does,
  * called directly rather than over HTTP so CRON_SECRET never needs to
  * reach the browser.
  */

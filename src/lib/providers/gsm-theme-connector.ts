@@ -15,7 +15,7 @@ import type {
  * Connector for "GSM-THEME" panel clones (verified against the published
  * standard: github.com/gsmtheme/gsm-theme-api-standards, PublicApiController.php).
  * Single endpoint, one `action` param routes to a match() block. Every
- * response — success AND error — comes back as HTTP 200 with a JSON body
+ * response - success AND error - comes back as HTTP 200 with a JSON body
  * shaped `{ SUCCESS: [...] }` or `{ ERROR: [{ MESSAGE }] }`, so HTTP status
  * is never a reliable success signal here; only the JSON body is. Order
  * detail/place actions take a `parameters` field holding a raw XML string
@@ -25,13 +25,13 @@ import type {
  * being called, not its implementation, so the exact credential field names
  * aren't confirmed. This follows the same `username` + `apiaccesskey`
  * convention already used for DhruFusionConnector (GSM-THEME panels are
- * built on that same lineage) — verify against a real test call and adjust
+ * built on that same lineage) - verify against a real test call and adjust
  * if the provider rejects auth.
  *
  * Method: POST, not GET. These panels serve a client-rendered storefront
  * SPA off the same domain, and Laravel's `Route::fallback()` (the usual way
  * an app serves a SPA's index.html for any unmatched path) only intercepts
- * GET requests by design — a GET to the real API route can still fall
+ * GET requests by design - a GET to the real API route can still fall
  * through to the SPA shell if routing is even slightly off, which is
  * consistent with what was observed (200 + the homepage HTML, for both `/`
  * and `/api/public`, action param or not). POST does not fall through a
@@ -68,7 +68,7 @@ export class GsmThemeConnector extends BaseConnector {
       ERROR?: (Record<string, unknown> | string)[];
     };
 
-    // The panel returns HTTP 200 for both success AND error — `ERROR` in the
+    // The panel returns HTTP 200 for both success AND error - `ERROR` in the
     // body is the only reliable failure signal, independent of response.ok.
     if (json.ERROR?.length) {
       const first = json.ERROR[0];
@@ -102,7 +102,7 @@ export class GsmThemeConnector extends BaseConnector {
     const parsed = await this.parseGsmThemeResponse(response);
     if (!parsed.ok) throw new Error(parsed.error);
 
-    // LIST is an object keyed by group name, not an array — each group's
+    // LIST is an object keyed by group name, not an array - each group's
     // SERVICES is itself an object keyed by service id.
     type RawService = {
       SERVICEID: string | number;
@@ -134,7 +134,7 @@ export class GsmThemeConnector extends BaseConnector {
     try {
       // The panel's order XML only has one <IMEI> tag and one <CUSTOMFIELD>
       // tag (its service list response confirms services carry at most one
-      // custom field beyond the IMEI itself) — not a per-field breakdown.
+      // custom field beyond the IMEI itself) - not a per-field breakdown.
       const { imei, rest } = Object.entries(input.fieldValues).reduce(
         (acc, [key, value]) => {
           if (key.toLowerCase() === "imei") acc.imei = value;
@@ -197,7 +197,7 @@ export class GsmThemeConnector extends BaseConnector {
   async cancelOrder(providerOrderId: string, _kind: OrderKind): Promise<CancelOrderResult> {
     // The published action list (accountinfo / imeiservicelist / getimeiorder
     // / getimeiorderbulk / placeimeiorder / placebulkorder) has no cancel
-    // action — any other action hits the controller's default branch and
+    // action - any other action hits the controller's default branch and
     // returns "Invalid Action". Fail immediately rather than log a call the
     // provider can never honor.
     return { ok: false, error: "This provider does not support order cancellation" };

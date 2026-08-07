@@ -53,7 +53,7 @@ export function Navbar({
         {formatUsd(user.balanceCents)}
       </span>
 
-      {/* Desktop and tablets only — phones are already fullscreen-equivalent in Telegram. */}
+      {/* Desktop and tablets only - phones are already fullscreen-equivalent in Telegram. */}
       <FullscreenButton className="hidden sm:flex" />
 
       <button

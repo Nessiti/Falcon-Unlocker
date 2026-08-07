@@ -8,7 +8,7 @@ import { OrderStatus } from "@/generated/prisma/client";
 /**
  * Queue & Retry System (Chapter 18): Order -> Queue -> Provider -> Response.
  * Reuses the Chapter 15 routing plan to pick a candidate provider and, on
- * failure, automatically retries the next candidate — unless the service's
+ * failure, automatically retries the next candidate - unless the service's
  * strategy is MANUAL (no automatic fallback, per the routing engine) or the
  * retry budget (QueueSettings.maxRetries) is exhausted.
  */
@@ -26,7 +26,7 @@ export async function getQueueSettings() {
 
 /**
  * Called right after an order is created. Only enqueues when the ordered
- * service has at least one enabled mapping to an enabled provider — services
+ * service has at least one enabled mapping to an enabled provider - services
  * with no routing configured stay fully manual, unchanged from before this
  * chapter. Idempotent: the unique(kind, orderId) constraint means calling
  * this twice for the same order is a safe no-op, never a duplicate entry.
@@ -118,7 +118,7 @@ export type ProcessOutcome = "SUCCEEDED" | "FAILED" | "REQUEUED" | null;
 
 /**
  * Claims and processes exactly one queue entry. Returns null if it couldn't
- * be claimed (already picked up by a concurrent run, or no longer QUEUED) —
+ * be claimed (already picked up by a concurrent run, or no longer QUEUED) -
  * the atomic claim is what prevents the same entry from ever being
  * submitted to a provider twice.
  */
@@ -160,7 +160,7 @@ export async function processQueueEntry(queueEntryId: string): Promise<ProcessOu
     const candidate = plan.order.find((c) => !entry.triedProviderIds.includes(c.providerId));
 
     if (!candidate) {
-      await failEntry(entry.id, "No more providers to try — every mapped provider has already failed");
+      await failEntry(entry.id, "No more providers to try - every mapped provider has already failed");
       return "FAILED";
     }
 

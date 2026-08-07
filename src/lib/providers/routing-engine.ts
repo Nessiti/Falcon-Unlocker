@@ -5,7 +5,7 @@ import type { RoutingStrategy } from "@/generated/prisma/client";
 /**
  * Smart Routing Engine (Chapter 15): given a service's enabled provider
  * mappings, decides which provider to try first and, for every strategy
- * except MANUAL, the automatic fallback order — "if Provider A fails, retry
+ * except MANUAL, the automatic fallback order - "if Provider A fails, retry
  * B, then C, without user intervention." MANUAL disables fallback: only the
  * top-priority mapping is returned, since the admin wants to control
  * provider choice by hand rather than have the engine pick for them.

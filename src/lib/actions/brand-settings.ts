@@ -10,7 +10,6 @@ export type BrandSettings = {
   name: string;
   logoUrl: string | null;
   primaryColor: string | null;
-  secondaryColor: string | null;
   currency: string;
   country: string | null;
   language: string;
@@ -21,10 +20,10 @@ export type GetBrandSettingsResult =
   | { ok: false; error: string };
 
 /**
- * Brand Settings: the tenant's own presentation/locale choices — logo,
+ * Brand Settings: the tenant's own presentation/locale choices - logo,
  * colors, currency, country, language. Deliberately NOT Super Admin
  * territory (that's only name/bot connection/owner, set once at brand
- * creation in admin-tenants.ts) — every brand configures its own look and
+ * creation in admin-tenants.ts) - every brand configures its own look and
  * locale itself, the same way any tenant admin manages their own catalog.
  */
 export async function getBrandSettingsAction(initData: string): Promise<GetBrandSettingsResult> {
@@ -41,7 +40,6 @@ export async function getBrandSettingsAction(initData: string): Promise<GetBrand
         name: tenant.name,
         logoUrl: tenant.logoUrl,
         primaryColor: tenant.primaryColor,
-        secondaryColor: tenant.secondaryColor,
         currency: tenant.currency,
         country: tenant.country,
         language: tenant.language,
@@ -56,7 +54,6 @@ export async function getBrandSettingsAction(initData: string): Promise<GetBrand
 export type UpdateBrandSettingsInput = {
   logoUrl: string | null;
   primaryColor: string | null;
-  secondaryColor: string | null;
   currency: string;
   country: string | null;
   language: string;
@@ -82,7 +79,6 @@ export async function updateBrandSettingsAction(
       data: {
         logoUrl: input.logoUrl?.trim() || null,
         primaryColor: input.primaryColor?.trim() || null,
-        secondaryColor: input.secondaryColor?.trim() || null,
         currency,
         country: input.country?.trim() || null,
         language,

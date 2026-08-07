@@ -152,7 +152,7 @@ export type ProviderInput = {
 
 export type CreateProviderResult = { ok: true } | { ok: false; error: string };
 
-/** Add a provider (Chapter 12), scoped to the admin's own tenant. Core app logic never depends on the type — see Chapter 13's connector. */
+/** Add a provider (Chapter 12), scoped to the admin's own tenant. Core app logic never depends on the type - see Chapter 13's connector. */
 export async function createProviderAction(
   initData: string,
   input: ProviderInput,
@@ -305,7 +305,7 @@ export type TestProviderConnectionResult =
   | { ok: false; error: string };
 
 /**
- * Runs through the Chapter 13 connector engine — the core app never talks
+ * Runs through the Chapter 13 connector engine - the core app never talks
  * to a provider's raw API, only through ProviderConnector.testConnection().
  */
 export async function testProviderConnectionAction(
@@ -431,7 +431,7 @@ export type SyncProviderResult =
 /**
  * Automatic Synchronization (Chapter 16), triggered manually via "Sync Now".
  * Refreshes connection status, balance, and cached mapping data (name,
- * price, category, estimated time) — never the admin's own service records.
+ * price, category, estimated time) - never the admin's own service records.
  * The same logic runs on a schedule as the sync-providers task, invoked via
  * the unified /api/cron endpoint (see src/lib/cron/).
  */

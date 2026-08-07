@@ -3,7 +3,7 @@ import { ServiceFieldType, ServerFieldType } from "@/generated/prisma/client";
 export type FieldFormatRule = {
   /** Shown as a hint under the input and in validation error messages. */
   hint: string;
-  /** Characters allowed while typing — used to strip invalid input live. */
+  /** Characters allowed while typing - used to strip invalid input live. */
   allowedChars?: RegExp;
   /** Full-value shape the submitted value must match. */
   pattern?: RegExp;
@@ -15,7 +15,7 @@ export type FieldFormatRule = {
 /**
  * Built-in default format per Form Generator field type (Chapter 11's 13
  * types, extended with UDID/MEID/ICCID). An admin's own minLength/maxLength
- * on the field (Prisma columns) overrides the defaults here — this is only
+ * on the field (Prisma columns) overrides the defaults here - this is only
  * the fallback for fields nobody has customized. IMEI stays hard-coded at
  * exactly 15 digits: that's a fixed real-world spec, not a per-service choice.
  */
@@ -102,7 +102,7 @@ export type FieldValidationResult = { ok: true } | { ok: false; error: string };
 /**
  * Validates a submitted field value against its type's built-in format,
  * an optional per-field admin length override, and Chapter 11's optional
- * admin regex — all three layer together (regex further restricts, it
+ * admin regex - all three layer together (regex further restricts, it
  * doesn't replace the type/length checks).
  */
 export function validateFieldValue(
@@ -142,7 +142,7 @@ export function validateFieldValue(
         return { ok: false, error: `${options.label}: doesn't match the required format` };
       }
     } catch {
-      // Malformed admin-entered regex — ignore rather than block every order.
+      // Malformed admin-entered regex - ignore rather than block every order.
     }
   }
 

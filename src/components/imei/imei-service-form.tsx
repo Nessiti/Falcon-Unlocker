@@ -327,7 +327,7 @@ export function ImeiServiceForm({
 
             {SERVICE_FIELD_RULES[field.type]?.hint ? (
               <p className="text-[11px] text-hint">
-                Default format: {SERVICE_FIELD_RULES[field.type]?.hint} — leave Min/Max length
+                Default format: {SERVICE_FIELD_RULES[field.type]?.hint} - leave Min/Max length
                 blank to use it, or override below.
               </p>
             ) : null}

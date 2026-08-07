@@ -27,7 +27,7 @@ function truncateForLog(value: string | null): string | null {
 // Some provider APIs (PhpQueryConnector, DhruFusionConnector) put the API
 // key/token directly in the query string rather than a header. Redact any
 // query param whose name looks credential-shaped before it ever reaches
-// ApiLog — "No exposed API credentials" (Chapter 21) applies to the API
+// ApiLog - "No exposed API credentials" (Chapter 21) applies to the API
 // Logs viewer too, not just the frontend forms.
 const SENSITIVE_QUERY_PARAM_PATTERN = /key|secret|token|password|auth/i;
 
@@ -48,7 +48,7 @@ function sanitizeUrlForLog(url: string): string {
 /**
  * Shared HTTP plumbing (timeout handling, generic reachability test) that
  * every concrete connector builds on. Per-type request/response shape stays
- * in the subclass — nothing provider-specific belongs here.
+ * in the subclass - nothing provider-specific belongs here.
  */
 export abstract class BaseConnector implements ProviderConnector {
   protected readonly provider: Provider;
@@ -102,7 +102,7 @@ export abstract class BaseConnector implements ProviderConnector {
 
   /**
    * Rate Limiting (Chapter 19): counts this provider's own ApiLog rows from
-   * the last 60 seconds — no extra state to maintain, reuses what Chapter
+   * the last 60 seconds - no extra state to maintain, reuses what Chapter
    * 17 already records at this exact chokepoint. Protecting the provider's
    * real API from being hammered (by a runaway sync, a retry storm, or an
    * admin double-clicking) is the point, so this fails closed on error:
@@ -124,7 +124,7 @@ export abstract class BaseConnector implements ProviderConnector {
 
   /**
    * API Logs (Chapter 17): the single chokepoint every connector call passes
-   * through, regardless of provider type — so every outbound request is
+   * through, regardless of provider type - so every outbound request is
    * logged identically without any provider-specific logging code. A
    * logging failure never breaks the actual provider call. Also where
    * Chapter 19's per-provider rate limit is enforced, before any network
@@ -160,7 +160,7 @@ export abstract class BaseConnector implements ProviderConnector {
     try {
       // Some providers' hosting (WAF/anti-bot rules) blocks requests with no
       // User-Agent or a client that doesn't look like a browser, returning a
-      // 403 before the request ever reaches their API logic — independent
+      // 403 before the request ever reaches their API logic - independent
       // of whether the credentials are correct. A generic browser-like
       // default here (callers can still override it) fixes that without
       // any provider-specific code.

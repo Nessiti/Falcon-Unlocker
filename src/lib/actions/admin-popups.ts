@@ -23,7 +23,7 @@ export type PopupSummary = {
 
 /**
  * The active, not-yet-expired popup to show customers (Chapter 11: Popup),
- * scoped to the caller's own tenant (Chapter 34) — resolved from initData
+ * scoped to the caller's own tenant (Chapter 34) - resolved from initData
  * when present (every call site is a client component that already has it,
  * unlike listFaqAction/listNewsAction's server-rendered pages), falling
  * back to Falcon Unlocker's tenant when it's missing or fails to verify, so
@@ -41,7 +41,7 @@ export async function getActivePopupAction(initData?: string | null): Promise<Po
       currentUser = await getCurrentUser(initData);
       if (currentUser.tenantId) tenantId = currentUser.tenantId;
     } catch {
-      // Couldn't resolve the user — fall back to Falcon Unlocker's tenant.
+      // Couldn't resolve the user - fall back to Falcon Unlocker's tenant.
     }
   }
 
@@ -61,7 +61,7 @@ export async function getActivePopupAction(initData?: string | null): Promise<Po
       const isMember = await isChannelMember(popup.requiredChannel, currentUser.telegramId, tenantId);
       if (isMember) return null;
     } catch {
-      // Couldn't check membership — fail open.
+      // Couldn't check membership - fail open.
     }
   }
 

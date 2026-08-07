@@ -2,9 +2,9 @@ import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 
 /**
- * Encryption at rest (Chapter 19 — Security Center) for provider secrets
+ * Encryption at rest (Chapter 19 - Security Center) for provider secrets
  * (apiKey/apiSecret/token). AES-256-GCM with a key derived from
- * ENCRYPTION_KEY — SHA-256 of the env var, so any length input works
+ * ENCRYPTION_KEY - SHA-256 of the env var, so any length input works
  * without forcing the admin to generate a byte-exact key.
  */
 
@@ -33,7 +33,7 @@ export function encryptSecret(plaintext: string): string {
 
 /**
  * Decrypts a value produced by encryptSecret. Values that don't match the
- * expected iv:authTag:ciphertext shape are returned unchanged — this is
+ * expected iv:authTag:ciphertext shape are returned unchanged - this is
  * what lets providers created before Chapter 19 (stored as plaintext) keep
  * working without a forced data migration; every value written from now on
  * is always encrypted, so the database converges to fully encrypted as
@@ -49,7 +49,7 @@ export function decryptSecret(value: string): string {
     const decrypted = Buffer.concat([decipher.update(Buffer.from(dataHex, "hex")), decipher.final()]);
     return decrypted.toString("utf8");
   } catch {
-    // Wrong key or corrupted value — fail safe by returning the raw stored
+    // Wrong key or corrupted value - fail safe by returning the raw stored
     // value (the caller ends up with a garbage credential and a failed
     // provider call, not a crash) rather than throwing.
     return value;

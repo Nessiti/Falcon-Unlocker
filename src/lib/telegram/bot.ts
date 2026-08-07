@@ -22,16 +22,16 @@ function buildReplyMarkup(buttons: TelegramInlineButton[] | undefined) {
 
 /**
  * Sends a Telegram Bot message to a user (Chapter 9: 100% via Telegram Bot,
- * with native Telegram buttons opening the Mini App). Never throws — a
+ * with native Telegram buttons opening the Mini App). Never throws - a
  * notification failure must not break the action that triggered it.
  *
- * `tenantId` picks which brand's bot sends the message — callers always
+ * `tenantId` picks which brand's bot sends the message - callers always
  * already know it (it's the tenant of the order/ticket/user the
  * notification is about), so it's taken directly rather than re-derived
  * from `telegramId` (Chapter 37: the same Telegram person can hold a
  * separate account in more than one tenant, so telegramId alone is no
  * longer enough to say which bot should be speaking). `tokenOverride` is
- * for the one context with no resolvable tenant yet — the webhook route
+ * for the one context with no resolvable tenant yet - the webhook route
  * replying to a first-ever /start.
  */
 export async function sendTelegramMessage(
@@ -66,9 +66,9 @@ const CHANNEL_MEMBER_STATUSES = new Set(["creator", "administrator", "member", "
  * Checks whether a user already belongs to a Telegram channel/chat, via the
  * Bot API's getChatMember (the bot must be a member of that channel).
  * Returns null when membership can't be determined (no bot token, channel
- * unset, network/API error, or the bot isn't in that channel) — callers
+ * unset, network/API error, or the bot isn't in that channel) - callers
  * should treat null as "unknown" and fail open rather than hide content.
- * Takes `tenantId` directly for the same reason sendTelegramMessage does —
+ * Takes `tenantId` directly for the same reason sendTelegramMessage does -
  * a channel gate only makes sense checked against the same bot the
  * customer is actually using, and that's no longer derivable from
  * telegramId alone (Chapter 37).

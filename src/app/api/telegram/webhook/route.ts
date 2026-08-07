@@ -6,7 +6,7 @@ import { handleTelegramUpdate, type TelegramUpdate } from "@/lib/telegram/webhoo
  * once via Telegram's setWebhook API with a secret token that every genuine
  * update carries in the X-Telegram-Bot-Api-Secret-Token header.
  *
- * This route is Falcon Unlocker's own bot specifically — unchanged since
+ * This route is Falcon Unlocker's own bot specifically - unchanged since
  * before the multi-tenant work, since Telegram's webhook registration for
  * the live bot already points here. Every other tenant's bot registers its
  * webhook at /api/telegram/webhook/[tenantId] instead (Chapter 33).

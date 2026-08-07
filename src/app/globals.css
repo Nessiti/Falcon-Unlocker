@@ -14,13 +14,22 @@
   --safe-area-inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-viewport-safe-area-inset-bottom, 0px));
   --safe-area-inset-left: max(env(safe-area-inset-left, 0px), var(--tg-viewport-safe-area-inset-left, 0px));
   --safe-area-inset-right: max(env(safe-area-inset-right, 0px), var(--tg-viewport-safe-area-inset-right, 0px));
+
+  /* Plain (non-@theme) custom properties so a tenant's own brand color can be
+     assigned to them directly at runtime and actually take effect. Tailwind's
+     `@theme inline` inlines its right-hand expression verbatim into every
+     utility that uses it, so a utility class built from a `@theme inline`
+     variable never reads that variable back at runtime - only a plain
+     `:root` property like this one does. */
+  --brand-accent: var(--tg-theme-button-color, var(--accent));
+  --brand-accent-foreground: var(--tg-theme-button-text-color, var(--accent-foreground));
 }
 
 @theme inline {
   --color-background: var(--tg-theme-bg-color, var(--background));
   --color-foreground: var(--tg-theme-text-color, var(--foreground));
-  --color-accent: var(--tg-theme-button-color, var(--accent));
-  --color-accent-foreground: var(--tg-theme-button-text-color, var(--accent-foreground));
+  --color-accent: var(--brand-accent);
+  --color-accent-foreground: var(--brand-accent-foreground);
   --color-surface: var(--tg-theme-secondary-bg-color, var(--surface));
   --color-hint: var(--tg-theme-hint-color, var(--hint));
   --color-border: var(--border);

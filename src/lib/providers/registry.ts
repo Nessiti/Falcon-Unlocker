@@ -13,7 +13,7 @@ import { decryptSecret } from "@/lib/security/encryption";
 /**
  * The single place that knows which connector class implements which
  * provider type. Per the Global Rule, adding a new provider type means
- * adding one class + one case here — nothing else in the app should ever
+ * adding one class + one case here - nothing else in the app should ever
  * need to change. Decrypting secrets (Chapter 19) here, once, for the same
  * reason: no connector subclass ever needs to know encryption exists.
  */

@@ -10,7 +10,7 @@ import { TelegramAuthError } from "@/lib/telegram/auth";
  * getAboutAction is scoped to the caller's own tenant (Chapter 35), resolved
  * from initData. updateAboutAction below was already scoped in Chapter 31:
  * before that this was a single platform-wide row (fixed id: "about"), so
- * any tenant's admin could overwrite every other tenant's About page — now
+ * any tenant's admin could overwrite every other tenant's About page - now
  * one row per tenant, same pattern as PricingSettings (Chapter 28).
  */
 export async function getAboutAction(initData?: string | null): Promise<string> {

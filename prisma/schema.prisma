@@ -17,8 +17,8 @@ enum Role {
   MODERATOR
   ADMIN
   /// Platform owner (SaaS multi-tenant foundation): sits above every tenant's
-  /// own ADMIN. requireAdmin/requireStaff both accept SUPER_ADMIN too — it's
-  /// a superset of tenant-admin access, not a disjoint role — so promoting a
+  /// own ADMIN. requireAdmin/requireStaff both accept SUPER_ADMIN too - it's
+  /// a superset of tenant-admin access, not a disjoint role - so promoting a
   /// user to SUPER_ADMIN never takes away access they already had.
   SUPER_ADMIN
 }
@@ -39,7 +39,7 @@ enum SubscriptionPlan {
 /// A brand/tenant on the platform (multi-tenant foundation, vision chapters
 /// 1-3): one row per client, each with its own Telegram bot, catalog, users,
 /// wallet and API config. Falcon Unlocker itself is seeded as the first
-/// tenant so existing data doesn't move — every other tenant-scoped model
+/// tenant so existing data doesn't move - every other tenant-scoped model
 /// gains its own tenantId in a later chapter; this chapter only establishes
 /// the Tenant record and Super Admin role, with zero behavior change to the
 /// already-running app.
@@ -47,7 +47,7 @@ model Tenant {
   id                   String           @id @default(cuid())
   name                 String
   telegramBotUsername  String?
-  /// Encrypted at rest the same way Provider secrets are (Chapter 19 —
+  /// Encrypted at rest the same way Provider secrets are (Chapter 19 -
   /// src/lib/security/encryption.ts).
   telegramBotToken     String?
   ownerTelegramId      BigInt?
@@ -57,7 +57,6 @@ model Tenant {
   language             String           @default("en")
   logoUrl              String?
   primaryColor         String?
-  secondaryColor       String?
   status               TenantStatus     @default(ACTIVE)
   subscriptionPlan     SubscriptionPlan @default(STARTER)
   subscriptionExpiresAt DateTime?
@@ -106,7 +105,7 @@ model User {
   id          String     @id @default(cuid())
   /// Not @unique on its own anymore (Chapter 37): the same Telegram person
   /// can hold a separate, independent account in every tenant/brand they
-  /// use — unique only per (telegramId, tenantId) below.
+  /// use - unique only per (telegramId, tenantId) below.
   telegramId  BigInt
   username    String?
   firstName   String
@@ -140,12 +139,12 @@ model User {
   sentNotifications       Notification[]
 
   /// Multi-tenant foundation: which brand this account belongs to. Required
-  /// (Chapter 37) — a Telegram identity gets its own separate account per
+  /// (Chapter 37) - a Telegram identity gets its own separate account per
   /// tenant, so "which brand" is never ambiguous once a row exists.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  /// One account per (person, brand) — the same Telegram user opening a
+  /// One account per (person, brand) - the same Telegram user opening a
   /// different tenant's bot gets its own independent account, never the
   /// account they already have with another brand (Chapter 37).
   @@unique([telegramId, tenantId])
@@ -201,7 +200,7 @@ model Category {
   createdAt DateTime @default(now())
 
   /// Tenant isolation (Chapter 25): category names are unique per tenant,
-  /// not globally — two brands can both have an "Unlock" category.
+  /// not globally - two brands can both have an "Unlock" category.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
@@ -299,7 +298,7 @@ model ImeiOrderStatusEvent {
   order   ImeiOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   /// Null for system-triggered transitions (Chapter 18's Queue & Retry System
-  /// advancing an order after a successful automatic provider submission) —
+  /// advancing an order after a successful automatic provider submission) -
   /// every other transition is an admin action and always sets this.
   adminId String?
   admin   User?   @relation(fields: [adminId], references: [id])
@@ -392,7 +391,7 @@ model ServerOrderStatusEvent {
   order   ServerOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   /// Null for system-triggered transitions (Chapter 18's Queue & Retry System
-  /// advancing an order after a successful automatic provider submission) —
+  /// advancing an order after a successful automatic provider submission) -
   /// every other transition is an admin action and always sets this.
   adminId String?
   admin   User?   @relation(fields: [adminId], references: [id])
@@ -439,7 +438,7 @@ model RechargeMethod {
   contactValue String?
 
   /// Tenant isolation (Chapter 30): each brand configures its own payment
-  /// methods — a customer must never see another brand's payment
+  /// methods - a customer must never see another brand's payment
   /// instructions (bank account, crypto address, etc.).
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
@@ -523,7 +522,7 @@ model SupportTicket {
   user   User   @relation(fields: [userId], references: [id])
 
   /// Tenant isolation (Chapter 31): snapshotted from the submitting
-  /// customer's own tenant at creation time — lets admin-side actions
+  /// customer's own tenant at creation time - lets admin-side actions
   /// verify ownership without an extra join to User.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
@@ -552,9 +551,9 @@ model FaqItem {
   createdAt    DateTime @default(now())
 
   /// Tenant isolation (Chapter 31): which brand owns this entry. The public
-  /// read (listFaqAction) isn't scoped by this yet — it has no request-time
+  /// read (listFaqAction) isn't scoped by this yet - it has no request-time
   /// tenant context to scope by, same blocker as the /imei /server catalog
-  /// pages (Chapter 25) — but admin writes are.
+  /// pages (Chapter 25) - but admin writes are.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 }
@@ -573,7 +572,7 @@ model HelpArticle {
 }
 
 /// Admin-editable About content (Chapter 10). Tenant isolation (Chapter 31):
-/// one row per tenant instead of a single platform-wide singleton — same
+/// one row per tenant instead of a single platform-wide singleton - same
 /// pattern as PricingSettings (Chapter 28).
 model AboutPage {
   tenantId  String   @id
@@ -593,8 +592,8 @@ model NewsPost {
   createdAt DateTime  @default(now())
 
   /// Tenant isolation (Chapter 34): which brand posted this. listNewsAction
-  /// (public read) still can't resolve a real visitor's tenant — same
-  /// blocker as FaqItem/HelpArticle (Chapter 31) — so it's hardcoded to
+  /// (public read) still can't resolve a real visitor's tenant - same
+  /// blocker as FaqItem/HelpArticle (Chapter 31) - so it's hardcoded to
   /// Falcon Unlocker's own tenant there rather than left unfiltered.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
@@ -615,7 +614,7 @@ model Popup {
   createdAt  DateTime  @default(now())
 
   /// Optional Telegram channel (@username or numeric chat id, bot must be a
-  /// member) — when set, this popup is skipped for users who already belong
+  /// member) - when set, this popup is skipped for users who already belong
   /// to that channel instead of nagging them to join again.
   requiredChannel String?
 
@@ -683,7 +682,7 @@ enum SyncFrequency {
 
 /// Provider Gateway (Chapter 12): a single external unlocking/GSM API, isolated
 /// behind the connector interface built in Chapter 13. The core app never
-/// contains provider-specific logic — only this generic record + connector.
+/// contains provider-specific logic - only this generic record + connector.
 model Provider {
   id       String       @id @default(cuid())
   name     String
@@ -691,8 +690,8 @@ model Provider {
   baseUrl  String
   username String?
 
-  /// Credentials are never sent to the frontend in full (only masked) — see
-  /// admin-providers.ts. Encrypted at rest (Chapter 19 — src/lib/security/
+  /// Credentials are never sent to the frontend in full (only masked) - see
+  /// admin-providers.ts. Encrypted at rest (Chapter 19 - src/lib/security/
   /// encryption.ts); values written before Chapter 19 that are still
   /// plaintext keep working (decryptSecret passes them through unchanged)
   /// until next rotated.
@@ -719,7 +718,7 @@ model Provider {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /// Tenant isolation (Chapter 28): which brand owns this provider — never
+  /// Tenant isolation (Chapter 28): which brand owns this provider - never
   /// shared, since it holds that brand's own API credentials and credit.
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
@@ -751,7 +750,7 @@ model ProviderConnectionLog {
 model ApiLog {
   id             String   @id @default(cuid())
   /// Which ProviderConnector method this call was made from (e.g.
-  /// "getBalance", "submitOrder") — lets "Retry Request" safely re-invoke
+  /// "getBalance", "submitOrder") - lets "Retry Request" safely re-invoke
   /// the same operation instead of raw-replaying stored bytes, which would
   /// require storing credentials alongside the log.
   operation      String
@@ -792,7 +791,7 @@ model ImeiServiceMapping {
 
   /// Margin (Chapter 23): overrides PricingSettings' default for this
   /// mapping specifically. Null falls back to the default. Only ever used
-  /// to compute a *suggested* selling price shown to the admin — never
+  /// to compute a *suggested* selling price shown to the admin - never
   /// applied to ImeiService.priceCents on its own.
   marginPercent Int?
   marginCents   Int?
@@ -804,7 +803,7 @@ model ImeiServiceMapping {
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   /// Tenant isolation (Chapter 28): must match both imeiService.tenantId and
-  /// provider.tenantId — enforced at creation, since this join table is
+  /// provider.tenantId - enforced at creation, since this join table is
   /// exactly what could otherwise let one brand route orders through
   /// another brand's paid provider credentials.
   tenantId String
@@ -831,7 +830,7 @@ model ServerServiceMapping {
 
   /// Margin (Chapter 23): overrides PricingSettings' default for this
   /// mapping specifically. Null falls back to the default. Only ever used
-  /// to compute a *suggested* selling price shown to the admin — never
+  /// to compute a *suggested* selling price shown to the admin - never
   /// applied to ServerService.priceCents on its own.
   marginPercent Int?
   marginCents   Int?
@@ -843,7 +842,7 @@ model ServerServiceMapping {
   provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   /// Tenant isolation (Chapter 28): must match both serverService.tenantId
-  /// and provider.tenantId — enforced at creation, since this join table is
+  /// and provider.tenantId - enforced at creation, since this join table is
   /// exactly what could otherwise let one brand route orders through
   /// another brand's paid provider credentials.
   tenantId String
@@ -870,7 +869,7 @@ enum QueueStatus {
 /// the candidate list (per triedProviderIds) is exhausted.
 model OrderQueueEntry {
   id      String @id @default(cuid())
-  /// "IMEI" | "SERVER" — matches the OrderKind/MappingKind convention used
+  /// "IMEI" | "SERVER" - matches the OrderKind/MappingKind convention used
   /// elsewhere (admin-orders.ts, admin-service-mappings.ts) rather than a
   /// redundant Prisma enum. No FK to ImeiOrder/ServerOrder for the same
   /// reason those actions already join by kind + id instead of a relation.
@@ -882,7 +881,7 @@ model OrderQueueEntry {
   maxRetries        Int
   retryDelaySeconds Int
   nextAttemptAt     DateTime    @default(now())
-  /// Provider ids already tried in the current retry cycle — reset to empty
+  /// Provider ids already tried in the current retry cycle - reset to empty
   /// by a manual retry so a fresh pass can try every mapped provider again.
   triedProviderIds  String[]    @default([])
   lastError         String?
@@ -907,7 +906,7 @@ model OrderQueueEntry {
   @@index([status, nextAttemptAt])
 }
 
-/// One row per provider submission attempt for a queue entry — the visible retry history.
+/// One row per provider submission attempt for a queue entry - the visible retry history.
 model QueueAttemptLog {
   id           String   @id @default(cuid())
   success      Boolean
@@ -922,7 +921,7 @@ model QueueAttemptLog {
 }
 
 /// Global retry defaults (Chapter 18), admin-configurable. Single row, id
-/// fixed to "singleton" — Timeout is already configured per-provider
+/// fixed to "singleton" - Timeout is already configured per-provider
 /// (Provider.timeoutMs, Chapter 12), so it isn't duplicated here.
 model QueueSettings {
   id                String   @id @default("singleton")
@@ -933,11 +932,11 @@ model QueueSettings {
 
 /// Margin (Chapter 22): default markup applied on top of a provider's cost
 /// price when suggesting a selling price for a service mapping. Both are
-/// optional and stack (percent applied first, then the flat amount added) —
+/// optional and stack (percent applied first, then the flat amount added) -
 /// null means "no default markup of that kind". A mapping's own
 /// marginPercent/marginCents (Chapter 23) overrides these per-mapping.
 /// Tenant isolation (Chapter 28): one row per tenant instead of a single
-/// platform-wide singleton — tenantId itself is the primary key, since a
+/// platform-wide singleton - tenantId itself is the primary key, since a
 /// tenant has at most one of these.
 model PricingSettings {
   tenantId             String   @id
@@ -948,7 +947,7 @@ model PricingSettings {
 }
 
 /// Unified Cron System: one row per task run, written by every task
-/// registered in src/lib/cron/registry.ts regardless of outcome — the
+/// registered in src/lib/cron/registry.ts regardless of outcome - the
 /// execution audit trail for whatever scheduler (cron-job.org) calls
 /// /api/cron.
 model CronRunLog {
@@ -971,7 +970,7 @@ model SecuritySettings {
 
   /// IP Restrictions (future-ready): comma/newline-separated IPs or address
   /// prefixes allowed to use admin/staff actions. Empty/null = disabled (no
-  /// restriction) — this is the safe default so an admin can't lock
+  /// restriction) - this is the safe default so an admin can't lock
   /// themselves out by leaving it unset. Enforced in requireAdmin/
   /// requireStaff the moment it's filled in, not just a decorative toggle.
   adminIpAllowlist String?

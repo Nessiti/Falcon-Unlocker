@@ -166,7 +166,7 @@ export function TenantManager({ initData }: { initData: string }) {
         <h2 className="text-sm font-semibold text-foreground">New Brand</h2>
         <p className="text-xs text-hint">
           Sets only the brand&apos;s identity and bot connection. Logo, colors, currency, country
-          and language are the brand&apos;s own choice — its Admin configures those later from
+          and language are the brand&apos;s own choice - its Admin configures those later from
           Brand Settings, not the Super Admin.
         </p>
 

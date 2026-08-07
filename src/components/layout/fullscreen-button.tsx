@@ -5,7 +5,7 @@ import { useSignal, requestFullscreen, exitFullscreen, isFullscreen } from "@tel
 import { useTelegramStatus } from "@/components/telegram-root";
 
 // Telegram's own requestFullscreen only expands the Mini App to fill
-// Telegram's window/panel — it never touches the OS, so the Windows
+// Telegram's window/panel - it never touches the OS, so the Windows
 // taskbar / macOS menu bar and dock stay visible. The browser's native
 // Fullscreen API is deliberately NOT used as a fallback here: that one
 // takes over the entire screen (hides the taskbar/dock, needs Esc or an
@@ -32,7 +32,7 @@ async function leaveFullscreen() {
 }
 
 /**
- * A single-click "enter fullscreen" toggle. Desktop and tablets only — on
+ * A single-click "enter fullscreen" toggle. Desktop and tablets only - on
  * phones the app is already fullscreen-equivalent inside Telegram, so the
  * button is hidden below the `sm` breakpoint via className, not by guessing
  * at the Telegram client's platform string (unreliable for tablets, which

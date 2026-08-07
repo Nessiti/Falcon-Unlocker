@@ -23,7 +23,7 @@ export type GetSecurityOverviewResult =
  * Security Center (Chapter 19) dashboard: encryption-at-rest, secret
  * rotation hygiene, rate limiting coverage, and IP allowlist status.
  * Audit Logs and Admin Action Logs (also required by this chapter) already
- * exist as their own pages since Chapter 11 — see /admin/logs.
+ * exist as their own pages since Chapter 11 - see /admin/logs.
  */
 export async function getSecurityOverviewAction(initData: string): Promise<GetSecurityOverviewResult> {
   try {
@@ -80,7 +80,7 @@ export type UpdateSecuritySettingsResult = { ok: true } | { ok: false; error: st
  * IP Restrictions (future-ready): clearing the field disables the
  * restriction entirely. Because this same setting is enforced on every
  * requireAdmin call, a misconfigured allowlist that excludes the admin's
- * own IP can lock the admin panel out from the app itself — the only
+ * own IP can lock the admin panel out from the app itself - the only
  * recovery path then is clearing SecuritySettings.adminIpAllowlist
  * directly in the database (e.g. via `npx prisma studio`).
  */

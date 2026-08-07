@@ -13,7 +13,7 @@ export default function AdminProvidersPage() {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-hint">
-        Every provider is isolated behind a generic record — the core app never depends on a
+        Every provider is isolated behind a generic record - the core app never depends on a
         specific provider&apos;s API shape. Connector logic (getServices, submitOrder, getBalance,
         etc.) is wired up per provider in Chapter 13.
       </p>

@@ -18,10 +18,10 @@ export type GetAdminAlertsResult = { ok: true; alerts: AdminAlertCounts } | { ok
 /**
  * Powers the live "new request" badges (Sidebar/AdminNav/notification bell):
  * the same DB state that triggers a bot notification to staff (Chapter 9)
- * — a freshly placed order, an unanswered support ticket, a submitted
- * recharge proof — polled from the client so the webapp reflects it too,
+ * - a freshly placed order, an unanswered support ticket, a submitted
+ * recharge proof - polled from the client so the webapp reflects it too,
  * without the admin needing to check Telegram. Scoped to the staff member's
- * own tenant (Chapter 30) — previously counted every tenant's activity
+ * own tenant (Chapter 30) - previously counted every tenant's activity
  * together, so a brand's badge could light up from a completely different
  * brand's orders/tickets/recharges.
  */

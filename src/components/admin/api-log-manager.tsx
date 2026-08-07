@@ -105,7 +105,7 @@ export function ApiLogManager({ initData }: { initData: string }) {
     setBusyId(null);
     setRetryResult((current) => ({
       ...current,
-      [log.id]: result.ok ? "✓ Retried — see the newest log entry" : `✗ ${result.error}`,
+      [log.id]: result.ok ? "✓ Retried - see the newest log entry" : `✗ ${result.error}`,
     }));
     if (result.ok) refresh();
   }
@@ -239,7 +239,7 @@ export function ApiLogManager({ initData }: { initData: string }) {
                     title={
                       RETRYABLE_OPERATIONS.has(log.operation)
                         ? undefined
-                        : "Order operations aren't safely auto-retryable — see Chapter 18"
+                        : "Order operations aren't safely auto-retryable - see Chapter 18"
                     }
                   >
                     Retry Request

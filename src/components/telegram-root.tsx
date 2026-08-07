@@ -31,7 +31,7 @@ export function useTelegramStatus() {
 
 /**
  * The sync isTMA() check only looks at whether launch params are already
- * sitting in the URL — on some real Telegram clients (notably slower to
+ * sitting in the URL - on some real Telegram clients (notably slower to
  * inject the bridge, e.g. some Desktop/Android builds) that's not yet true
  * on first paint, even though the app genuinely is running inside Telegram.
  * Concluding "not Telegram" from that alone stranded real users on the
@@ -82,7 +82,7 @@ export function TelegramRoot({ children }: { children: ReactNode }) {
           try {
             // Some Telegram clients never reply to this request. Without a
             // timeout this await hangs forever, stranding the whole app on
-            // "Loading…" — viewport info (safe-area insets, expand) is a
+            // "Loading…" - viewport info (safe-area insets, expand) is a
             // nice-to-have, not required for the app to work, so a
             // timeout/failure here shouldn't block reaching "ready".
             await mountViewport({ timeout: 4000 });

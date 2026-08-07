@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <DesktopHeader user={auth.user} />
           </div>
 
-          {/* Page content mounts once — only the surrounding chrome above switches by breakpoint. */}
+          {/* Page content mounts once - only the surrounding chrome above switches by breakpoint. */}
           <div className="flex flex-1 flex-col">{children}</div>
         </div>
       </div>

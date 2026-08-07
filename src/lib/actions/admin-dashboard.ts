@@ -21,7 +21,7 @@ export type GetAdminDashboardResult =
   | { ok: true; stats: AdminDashboardStats }
   | { ok: false; error: string };
 
-/** Scoped to the staff member's own tenant (Chapter 30) — previously aggregated every tenant's numbers together. */
+/** Scoped to the staff member's own tenant (Chapter 30) - previously aggregated every tenant's numbers together. */
 export async function getAdminDashboardAction(initData: string): Promise<GetAdminDashboardResult> {
   try {
     const staff = await requireStaff(initData);
@@ -85,7 +85,7 @@ export type GetAdminStatisticsResult =
   | { ok: true; stats: AdminStatistics }
   | { ok: false; error: string };
 
-/** Scoped to the staff member's own tenant (Chapter 30) — previously aggregated every tenant's numbers together. */
+/** Scoped to the staff member's own tenant (Chapter 30) - previously aggregated every tenant's numbers together. */
 export async function getAdminStatisticsAction(
   initData: string,
 ): Promise<GetAdminStatisticsResult> {

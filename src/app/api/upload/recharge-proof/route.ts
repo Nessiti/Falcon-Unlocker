@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/telegram/current-user";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 // Includes the raw camera formats too, not just the compressed JPEG output
-// — compressImageToJpeg falls back to the original file untouched when a
+// - compressImageToJpeg falls back to the original file untouched when a
 // WebView can't decode it into a canvas, so the server has to accept
 // whatever a phone camera might hand it, not only its own preferred shape.
 const ALLOWED_CONTENT_TYPES = new Set([
@@ -20,7 +20,7 @@ const MAX_SIZE_BYTES = 4 * 1024 * 1024;
 /**
  * Wallet recharge proof photo upload (Chapter 40, rewritten). The first
  * version had the browser upload directly to Vercel Blob's own storage
- * domain — a cross-origin request that a live report showed silently
+ * domain - a cross-origin request that a live report showed silently
  * hanging forever inside Telegram's in-app WebView, never resolving on
  * either side (not even a fast failure). Routing the bytes through this
  * same-origin endpoint instead avoids that entirely: the client's only

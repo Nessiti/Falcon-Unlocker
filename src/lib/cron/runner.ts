@@ -42,7 +42,7 @@ async function runTask(task: CronTask): Promise<CronRunSummary> {
 }
 
 /**
- * Runs every registered task independently — Promise.allSettled means a
+ * Runs every registered task independently - Promise.allSettled means a
  * task that throws (or even a bug in runTask's own error handling) never
  * stops the others from running. This is what /api/cron calls; it contains
  * no task-specific logic itself.

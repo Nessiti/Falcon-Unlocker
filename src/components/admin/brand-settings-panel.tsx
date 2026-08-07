@@ -8,7 +8,6 @@ import { formInputClass } from "@/lib/ui";
 const EMPTY_FORM = {
   logoUrl: "",
   primaryColor: null as string | null,
-  secondaryColor: null as string | null,
   currency: "USD",
   country: "",
   language: "en",
@@ -33,7 +32,6 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
       setForm({
         logoUrl: result.settings.logoUrl ?? "",
         primaryColor: result.settings.primaryColor,
-        secondaryColor: result.settings.secondaryColor,
         currency: result.settings.currency,
         country: result.settings.country ?? "",
         language: result.settings.language,
@@ -50,7 +48,6 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
     const result = await updateBrandSettingsAction(initData, {
       logoUrl: form.logoUrl || null,
       primaryColor: form.primaryColor,
-      secondaryColor: form.secondaryColor,
       currency: form.currency,
       country: form.country || null,
       language: form.language,
@@ -69,9 +66,9 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
-      <h2 className="text-sm font-semibold text-foreground">Brand Settings{brandName ? ` — ${brandName}` : ""}</h2>
+      <h2 className="text-sm font-semibold text-foreground">Brand Settings{brandName ? ` - ${brandName}` : ""}</h2>
       <p className="text-xs text-hint">
-        Your brand&apos;s own look and locale. The Super Admin only sets up your bot connection —
+        Your brand&apos;s own look and locale. The Super Admin only sets up your bot connection -
         logo, colors, currency, country and language are entirely yours to configure.
       </p>
 
@@ -86,11 +83,6 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
           label="Button color"
           value={form.primaryColor}
           onChange={(primaryColor) => setForm({ ...form, primaryColor })}
-        />
-        <ColorPickerField
-          label="Secondary color"
-          value={form.secondaryColor}
-          onChange={(secondaryColor) => setForm({ ...form, secondaryColor })}
         />
         <input
           className={formInputClass}

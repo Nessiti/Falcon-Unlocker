@@ -12,8 +12,8 @@ function tabClass(active: boolean) {
 
 /**
  * A textarea for admin-authored Markdown with a Write/Preview toggle, so
- * admins can format News, Popups, FAQ answers, and About content — bold,
- * italic, links, lists, blockquotes, code — without needing a developer.
+ * admins can format News, Popups, FAQ answers, and About content - bold,
+ * italic, links, lists, blockquotes, code - without needing a developer.
  */
 export function MarkdownField({
   value,

@@ -36,7 +36,7 @@ function buildShareText(order: OrderSummary): string {
     lines.push("History:");
     for (const event of order.statusHistory) {
       const when = new Date(event.createdAt).toLocaleString();
-      lines.push(`- ${STATUS_LABEL[event.status] ?? event.status} · ${when}${event.comment ? ` — ${event.comment}` : ""}`);
+      lines.push(`- ${STATUS_LABEL[event.status] ?? event.status} · ${when}${event.comment ? ` - ${event.comment}` : ""}`);
     }
   }
   return lines.join("\n");
@@ -55,11 +55,11 @@ export function OrderDetailModal({ order, onClose }: { order: OrderSummary; onCl
   async function handleShare() {
     try {
       await navigator.share({
-        title: `Order #${order.id.slice(0, 8)} — ${order.serviceName}`,
+        title: `Order #${order.id.slice(0, 8)} - ${order.serviceName}`,
         text: buildShareText(order),
       });
     } catch {
-      // User cancelled the share sheet — nothing to do.
+      // User cancelled the share sheet - nothing to do.
     }
   }
 

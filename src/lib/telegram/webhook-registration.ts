@@ -9,7 +9,7 @@ export type RegisterWebhookResult = { ok: true; url: string } | { ok: false; err
  * setWebhook API, pointing at that tenant's own route
  * (/api/telegram/webhook/[tenantId]). Before this, every new brand's bot
  * needed a manual `curl .../setWebhook` step after being added in Super
- * Admin — this closes that gap by doing it automatically whenever a bot
+ * Admin - this closes that gap by doing it automatically whenever a bot
  * token is set, and exposes the same call as a retry button for tenants
  * that predate this or whose registration failed the first time.
  */

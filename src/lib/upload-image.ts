@@ -5,7 +5,7 @@ const JPEG_QUALITY = 0.8;
 
 /**
  * Downscales and re-encodes an image as JPEG before it ever leaves the
- * device — a full-resolution phone photo can be 10-15MB, comfortably past
+ * device - a full-resolution phone photo can be 10-15MB, comfortably past
  * what a serverless function's request body allows, while a compressed
  * proof-of-payment screenshot is plenty legible well under 1MB. Falls back
  * to the original file untouched if the browser can't decode it (some
@@ -39,7 +39,7 @@ export async function compressImageToJpeg(file: File): Promise<Blob> {
 export type UploadProgressCallback = (percentage: number) => void;
 
 /**
- * POSTs a blob to `url` with real byte-level progress — `fetch` doesn't
+ * POSTs a blob to `url` with real byte-level progress - `fetch` doesn't
  * expose upload progress in a broadly supported way, XHR still does.
  */
 export function uploadWithProgress(

@@ -17,11 +17,11 @@ import type {
  * Connector for the WebX Next API (https://github.com/ptuchik/webx-api).
  * Distinctive shape vs. the other connectors: auth is a bcrypt hash of
  * `username + apiKey` sent as an `Auth-Key` header (generated fresh per
- * request — bcrypt salts randomly, there's no fixed value to reuse), and
+ * request - bcrypt salts randomly, there's no fixed value to reuse), and
  * IMEI/Server orders live on genuinely separate endpoints
  * (`imei-orders` / `server-orders`), which is why `kind` is threaded
  * through the shared ProviderConnector interface for this connector to key
- * off — see providers/types.ts.
+ * off - see providers/types.ts.
  *
  * File orders/services exist in the upstream API but have no equivalent in
  * Falcon's data model (only IMEI/Server order kinds exist), so they're
@@ -44,7 +44,7 @@ export class WebXConnector extends BaseConnector {
 
   /**
    * Mirrors the PHP client's call(): GET/DELETE params go in the query
-   * string, POST params go in a urlencoded body — `username` is always
+   * string, POST params go in a urlencoded body - `username` is always
    * included, matching every request the upstream client makes.
    */
   private async call(
@@ -119,7 +119,7 @@ export class WebXConnector extends BaseConnector {
         ...input.fieldValues,
       };
       // The first configured custom field is treated as the order's primary
-      // identifier — the device IMEI for IMEI orders, a quantity for Server
+      // identifier - the device IMEI for IMEI orders, a quantity for Server
       // orders. Falcon's generic Form Generator fields carry no semantic
       // role beyond their id/label at the connector layer (see
       // queue-engine.ts), so this is the same best-effort convention the
@@ -194,7 +194,7 @@ function parseWebXService(service: Record<string, unknown>): ConnectorService {
   };
 }
 
-/** 0=waiting, 1=in process, 2=cancelled, 3=rejected, 4=success — WebX's Order status constants. */
+/** 0=waiting, 1=in process, 2=cancelled, 3=rejected, 4=success - WebX's Order status constants. */
 function normalizeWebXStatus(status: unknown): ConnectorOrderStatus | null {
   const value = typeof status === "string" ? Number(status) : status;
   switch (value) {

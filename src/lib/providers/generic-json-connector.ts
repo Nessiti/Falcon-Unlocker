@@ -14,7 +14,7 @@ import type {
 /**
  * Default connector for REST_API / JSON_API / CUSTOM_API providers: a
  * conventional JSON-over-HTTP shape (Bearer auth, `/balance`, `/services`,
- * `/orders` endpoints). Real providers vary — this is the reference
+ * `/orders` endpoints). Real providers vary - this is the reference
  * implementation; a genuinely bespoke API needs its own connector class,
  * which per the Global Rule is the only thing that has to change, never
  * the core app.

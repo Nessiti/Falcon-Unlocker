@@ -22,7 +22,7 @@ export type AuthUser = {
   balanceCents: number;
   hasPin: boolean;
   biometricEnabled: boolean;
-  /** This account's own tenant's brand (Chapters 39-41) — the app shell
+  /** This account's own tenant's brand (Chapters 39-41) - the app shell
    * reads these instead of hardcoding Falcon Unlocker's own name/logo/
    * button color. */
   tenantName: string;
@@ -34,7 +34,7 @@ export type LoginResult = { ok: true; user: AuthUser } | { ok: false; error: str
 
 /**
  * Automatic Telegram login: verifies initData, then finds or creates the
- * matching account. No form, no password — identity comes entirely from
+ * matching account. No form, no password - identity comes entirely from
  * Telegram. The very first account ever created becomes Admin, and the
  * Telegram ID configured as TELEGRAM_ADMIN_ID is always granted Admin too.
  */
@@ -48,14 +48,14 @@ export async function loginAction(initData: string): Promise<LoginResult> {
 
     const telegramId = BigInt(tgUser.id);
     // TELEGRAM_ADMIN_ID is Falcon Unlocker's own platform bootstrap env var
-    // — it has no meaning for a brand-new signup through a different
+    // - it has no meaning for a brand-new signup through a different
     // tenant's bot, so it only ever grants Admin within Falcon's own tenant.
     const isConfiguredAdmin =
       resolvedTenantId === "falcon-unlocker" && process.env.TELEGRAM_ADMIN_ID === String(tgUser.id);
 
     // Every other tenant's equivalent bootstrap: the owner Telegram ID the
     // Super Admin set when creating the brand (Chapter 24) automatically
-    // becomes that tenant's own Admin on first login — otherwise a
+    // becomes that tenant's own Admin on first login - otherwise a
     // brand-new tenant would have no way to ever get an Admin at all, since
     // updateUserRoleAction requires an existing Admin to grant one.
     const tenant = await prisma.tenant.findUnique({
@@ -65,7 +65,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     const isTenantOwner = tenant?.ownerTelegramId != null && tenant.ownerTelegramId === telegramId;
 
     // isFirstUser (and the free Admin role that comes with it) is scoped to
-    // Falcon Unlocker specifically — the very first person to ever use the
+    // Falcon Unlocker specifically - the very first person to ever use the
     // platform, not the first customer of every new tenant going forward.
     // A brand-new tenant's first real signup is an ordinary Customer; its
     // Admin is whoever the Super Admin set as owner. Read outside the
@@ -78,8 +78,8 @@ export async function loginAction(initData: string): Promise<LoginResult> {
 
     // Chapter 37: the same Telegram person gets a separate, independent
     // account per tenant, so this upserts on (telegramId, tenantId), never
-    // telegramId alone. A single native INSERT ... ON CONFLICT DO UPDATE —
-    // not a manual find-then-create — so two concurrent logins for the
+    // telegramId alone. A single native INSERT ... ON CONFLICT DO UPDATE -
+    // not a manual find-then-create - so two concurrent logins for the
     // same brand-new pair (two tabs, Telegram occasionally opening the
     // Mini App twice) can't race into a unique-constraint error. (An
     // earlier version tried to catch and recover from that race manually
@@ -109,7 +109,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
 
     // Never downgrades a Super Admin (multi-tenant foundation) back to
     // Admin just because their Telegram ID also matches TELEGRAM_ADMIN_ID
-    // or the tenant's owner id — that would silently undo the promotion on
+    // or the tenant's owner id - that would silently undo the promotion on
     // every login. A separate follow-up write rather than folded into the
     // upsert's `update`, since that data is static and can't branch on the
     // row's pre-upsert role. Also self-heals an owner's account that was
@@ -144,7 +144,7 @@ export async function loginAction(initData: string): Promise<LoginResult> {
     };
   } catch (error) {
     // TelegramAuthError messages are safe to show as-is (they never contain
-    // secrets). Anything else is an unexpected bug — logged here for
+    // secrets). Anything else is an unexpected bug - logged here for
     // Vercel's Runtime Logs, never shown to the user: a customer-facing
     // screen has no business displaying a Prisma/JS error name or message.
     if (!(error instanceof TelegramAuthError)) {

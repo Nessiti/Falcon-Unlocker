@@ -8,7 +8,7 @@ import { compressImageToJpeg, uploadWithProgress } from "@/lib/upload-image";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
-// A hung upload used to spin forever with no feedback and no way out —
+// A hung upload used to spin forever with no feedback and no way out -
 // this bounds it so a stalled connection fails cleanly instead.
 const UPLOAD_TIMEOUT_MS = 45_000;
 
@@ -17,7 +17,7 @@ function proofUploadErrorMessage(error: unknown): string {
     return "Upload timed out. Check your connection and try again.";
   }
   // Every message the upload route itself returns is already a short,
-  // plain-language reason (e.g. "Unsupported file type") — worth showing
+  // plain-language reason (e.g. "Unsupported file type") - worth showing
   // as-is instead of masking it behind one generic string.
   if (error instanceof Error && error.message) return error.message;
   return "Couldn't upload the image. Try again.";
@@ -110,7 +110,7 @@ export function RechargeMethodCard({
       `Hi, I'd like to send proof of payment for a recharge of ${amount} USD via ${method.name}.`,
     );
     // Opened synchronously (before the await) so browsers don't treat it as a
-    // blocked popup — navigated to the real URL once the order is created.
+    // blocked popup - navigated to the real URL once the order is created.
     const contactWindow = contactUrl ? window.open("", "_blank") : null;
 
     setSubmitting(true);
@@ -153,7 +153,7 @@ export function RechargeMethodCard({
           <p className="text-sm font-semibold text-foreground">Request submitted!</p>
           <p className="mt-1 text-xs text-hint">
             {method.contactType
-              ? `We've opened ${method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} — send your proof of payment there to complete your request.`
+              ? `We've opened ${method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} - send your proof of payment there to complete your request.`
               : "Your recharge request is awaiting admin approval. You'll be notified once it's reviewed."}
           </p>
         </div>

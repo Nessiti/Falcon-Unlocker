@@ -10,7 +10,7 @@ import type { Provider, SyncFrequency } from "@/generated/prisma/client";
  * - Provider Balance: refreshes Provider.lastBalanceCents/lastBalanceAt.
  * - Services / Categories / Prices / Estimated Time: refreshes the *cached*
  *   providerServiceName/providerPriceCents/providerCategory/providerEstimatedTime
- *   on every existing mapping to this provider — never the admin's own
+ *   on every existing mapping to this provider - never the admin's own
  *   ImeiService/ServerService name, price, or status, which are
  *   administrator customizations sync must never overwrite.
  */

@@ -117,7 +117,7 @@ export type CreateServiceMappingResult = { ok: true } | { ok: false; error: stri
 /**
  * Manual mapping: admin links a Falcon service directly to a provider's
  * service ID. Both the Falcon service AND the provider must belong to the
- * admin's own tenant (Chapter 28) — this is the join table that could
+ * admin's own tenant (Chapter 28) - this is the join table that could
  * otherwise let one brand route orders (and spend) through another brand's
  * paid provider credentials, so both sides are checked, not just one.
  */
@@ -507,7 +507,7 @@ export type ApplySuggestedPriceResult =
  * Margin (Chapter 23): recomputes this mapping's suggested price
  * server-side (never trusts a client-submitted number for something that
  * changes what customers pay) and sets it as the Falcon service's
- * priceCents — an explicit admin action, never automatic.
+ * priceCents - an explicit admin action, never automatic.
  */
 export async function applySuggestedPriceAction(
   initData: string,

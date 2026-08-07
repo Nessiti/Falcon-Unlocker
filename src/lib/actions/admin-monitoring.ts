@@ -7,11 +7,11 @@ import { isSyncDue } from "@/lib/providers/sync-engine";
 
 /**
  * Monitoring Dashboard (Chapter 20): a real-time Provider Monitoring
- * Center, built entirely from data earlier chapters already collect —
+ * Center, built entirely from data earlier chapters already collect -
  * ApiLog (Chapter 17) for status/success rate/response time, OrderQueueEntry
  * and QueueAttemptLog (Chapter 18) for active/daily orders, and Provider's
  * own balance/sync fields (Chapters 12, 16). "Real-time" here means
- * polled — the admin UI refreshes this on an interval, the same pattern as
+ * polled - the admin UI refreshes this on an interval, the same pattern as
  * the live admin alerts feature.
  */
 

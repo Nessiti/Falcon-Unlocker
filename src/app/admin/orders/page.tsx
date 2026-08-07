@@ -13,7 +13,7 @@ import { OrderStatus } from "@/generated/prisma/browser";
 const KIND_OPTIONS: (OrderKind | "ALL")[] = ["ALL", "IMEI", "SERVER"];
 
 // Orders still needing admin attention vs. orders already resolved
-// one way or another — kept apart so treated orders don't clutter
+// one way or another - kept apart so treated orders don't clutter
 // the queue of new ones.
 const ACTIVE_STATUSES: OrderStatus[] = [
   OrderStatus.PENDING,

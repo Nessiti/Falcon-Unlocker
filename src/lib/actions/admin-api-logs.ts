@@ -187,7 +187,7 @@ const RETRYABLE_OPERATIONS = new Set<ApiLogOperation>(["testConnection", "getBal
  * Retry Request (Chapter 17): re-invokes the same connector method rather
  * than raw-replaying the stored request bytes, which never include
  * credentials and would go stale immediately if secrets rotate. Scoped to
- * parameterless, idempotent operations only — retrying submitOrder blindly
+ * parameterless, idempotent operations only - retrying submitOrder blindly
  * risks a duplicate real order on the provider side, which is the Queue &
  * Retry System's job (Chapter 18), not this one.
  */

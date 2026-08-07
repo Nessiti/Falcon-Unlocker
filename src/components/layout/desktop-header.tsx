@@ -14,7 +14,7 @@ function alertsTarget(alerts: ReturnType<typeof useAdminAlerts>): string | null 
   return null;
 }
 
-/** Top bar for the desktop dashboard layout — the sidebar covers navigation, so no menu button. */
+/** Top bar for the desktop dashboard layout - the sidebar covers navigation, so no menu button. */
 export function DesktopHeader({ user }: { user: AuthUser }) {
   const router = useRouter();
   const alerts = useAdminAlerts();

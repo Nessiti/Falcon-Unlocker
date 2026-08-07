@@ -22,7 +22,7 @@ export type AdminUserSummary = {
 
 export type ListUsersResult = { ok: true; users: AdminUserSummary[] } | { ok: false; error: string };
 
-/** Users section, scoped to the staff member's own tenant (Chapter 38 — this
+/** Users section, scoped to the staff member's own tenant (Chapter 38 - this
  * was the one admin section that never got the Chapter 25-31 tenant
  * isolation pass, so every tenant's staff could see every other tenant's
  * customers). */
@@ -85,10 +85,10 @@ export type UpdateUserRoleInput = { userId: string; role: Role };
 export type UpdateUserRoleResult = { ok: true } | { ok: false; error: string };
 
 /** Create Admin / Moderator (Chapter 11): promotes/demotes an existing
- * account, scoped to the admin's own tenant (Chapter 38 — without this, any
+ * account, scoped to the admin's own tenant (Chapter 38 - without this, any
  * tenant's Admin could reach into another tenant's users, and could even
  * grant itself SUPER_ADMIN). SUPER_ADMIN can never be granted or changed
- * from here — that role has no self-serve path at all, by design. */
+ * from here - that role has no self-serve path at all, by design. */
 export async function updateUserRoleAction(
   initData: string,
   input: UpdateUserRoleInput,

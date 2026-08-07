@@ -215,7 +215,7 @@ export function ProviderManager({ initData }: { initData: string }) {
             <p className={secretsStale(provider.secretsRotatedAt) ? "text-xs text-accent" : "text-xs text-hint"}>
               Secrets rotated:{" "}
               {provider.secretsRotatedAt ? new Date(provider.secretsRotatedAt).toLocaleDateString() : "Never"}
-              {secretsStale(provider.secretsRotatedAt) ? " — rotation recommended" : ""}
+              {secretsStale(provider.secretsRotatedAt) ? " - rotation recommended" : ""}
             </p>
             <p className="text-xs text-hint">
               Rate limit:{" "}

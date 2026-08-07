@@ -12,11 +12,11 @@ import type {
 } from "./types";
 
 /**
- * Connector for DHRU Fusion API panels — the standard GSM-reseller panel
+ * Connector for DHRU Fusion API panels - the standard GSM-reseller panel
  * convention: single endpoint, `api=json` + `action` + `username` +
  * `apiaccesskey` query params, responses wrapped in a top-level `SUCCESS`
  * or `ERROR` array. Exact action names and field names can vary slightly
- * between panel versions/customizations — verify against the specific
+ * between panel versions/customizations - verify against the specific
  * provider's published API docs if orders don't come through as expected.
  */
 export class DhruFusionConnector extends BaseConnector {

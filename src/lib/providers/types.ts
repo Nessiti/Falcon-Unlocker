@@ -2,7 +2,7 @@
  * The common Provider Connector interface (Chapter 13). Every connector,
  * regardless of provider type, implements exactly this shape. The rest of
  * the Falcon core (order flow, service mapping, sync jobs, monitoring) only
- * ever talks to these methods — never to a provider's raw API directly.
+ * ever talks to these methods - never to a provider's raw API directly.
  */
 export interface ProviderConnector {
   connect(): Promise<void>;
@@ -17,7 +17,7 @@ export interface ProviderConnector {
 }
 
 /**
- * "IMEI" | "SERVER" — matches the convention used everywhere else in the app
+ * "IMEI" | "SERVER" - matches the convention used everywhere else in the app
  * (OrderQueueEntry.kind, admin-orders.ts, admin-service-mappings.ts). Some
  * provider APIs (WebX) have genuinely separate endpoints per order kind, so
  * it's threaded through the connector interface rather than each connector

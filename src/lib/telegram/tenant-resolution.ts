@@ -7,7 +7,7 @@ import { decryptSecret } from "@/lib/security/encryption";
  * is one shared Mini App URL, but every tenant runs its own Telegram bot.
  * Telegram signs `initData` using the specific bot's own token as the HMAC
  * key, so "which bot launched this Mini App" is answered by finding which
- * tenant's token successfully validates the signature — no other signal is
+ * tenant's token successfully validates the signature - no other signal is
  * available (a shared static URL carries no server-side session).
  */
 
@@ -15,7 +15,7 @@ export type BotTokenCandidate = { tenantId: string; token: string };
 
 /**
  * Falcon Unlocker's own bot token still lives in TELEGRAM_BOT_TOKEN (env),
- * not Tenant.telegramBotToken — deliberately unmoved since Chapter 24, so
+ * not Tenant.telegramBotToken - deliberately unmoved since Chapter 24, so
  * the already-running app's bot config is never disturbed by this work.
  */
 export async function getTenantBotToken(tenantId: string): Promise<string | null> {
@@ -32,7 +32,7 @@ export async function getTenantBotToken(tenantId: string): Promise<string | null
 
 /**
  * Every (tenantId, token) pair initData could have been signed with.
- * Falcon's env token always comes first — it's the overwhelmingly common
+ * Falcon's env token always comes first - it's the overwhelmingly common
  * case and a plain env read beats a DB round-trip.
  */
 export async function candidateBotTokens(): Promise<BotTokenCandidate[]> {

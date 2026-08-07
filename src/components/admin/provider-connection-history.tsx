@@ -50,7 +50,7 @@ export function ProviderConnectionHistory({
               <span className={log.success ? "text-foreground" : "text-accent"}>
                 {log.success ? "✓ Success" : "✗ Failed"}
                 {log.statusCode ? ` (${log.statusCode})` : ""}
-                {log.errorMessage ? ` — ${log.errorMessage}` : ""}
+                {log.errorMessage ? ` - ${log.errorMessage}` : ""}
               </span>
               <span className="shrink-0 text-hint">
                 {log.responseTimeMs != null ? `${log.responseTimeMs}ms · ` : ""}

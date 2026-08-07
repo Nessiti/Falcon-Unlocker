@@ -212,7 +212,7 @@ export function ServiceMappingManager({
           `skipped: ${result.skipped.map((s) => `${s.providerName} (${s.reason})`).join(", ")}`,
         );
       }
-      setAutoMapSummary(parts.join(" — "));
+      setAutoMapSummary(parts.join(" - "));
       refresh();
     } else {
       setAutoMapSummary(`Failed: ${result.error}`);
@@ -221,7 +221,7 @@ export function ServiceMappingManager({
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-3 text-xs">
-      <p className="font-semibold text-foreground">Provider Mappings — {falconServiceName}</p>
+      <p className="font-semibold text-foreground">Provider Mappings - {falconServiceName}</p>
       {error ? <p className="text-accent">{error}</p> : null}
       {!mappings && !error ? <p className="text-hint">Loading…</p> : null}
 
@@ -242,7 +242,7 @@ export function ServiceMappingManager({
           </select>
           <span className="text-hint">
             {routingStrategy === "MANUAL"
-              ? "Only the top-priority provider is used — failures are not retried automatically."
+              ? "Only the top-priority provider is used - failures are not retried automatically."
               : "If the first provider fails, the next one is retried automatically."}
           </span>
         </label>
@@ -349,7 +349,7 @@ export function ServiceMappingManager({
                 </button>
               </>
             ) : (
-              <span className="text-hint">No provider price cached yet — sync to get a suggestion.</span>
+              <span className="text-hint">No provider price cached yet - sync to get a suggestion.</span>
             )}
           </div>
         </div>
@@ -399,7 +399,7 @@ export function ServiceMappingManager({
                   {catalog.map((service) => (
                     <option key={service.providerServiceId} value={service.providerServiceId}>
                       {service.name}
-                      {service.priceCents != null ? ` — ${formatUsd(service.priceCents)}` : ""}
+                      {service.priceCents != null ? ` - ${formatUsd(service.priceCents)}` : ""}
                     </option>
                   ))}
                 </select>

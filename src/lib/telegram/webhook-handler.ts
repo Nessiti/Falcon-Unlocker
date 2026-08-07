@@ -11,7 +11,7 @@ export type TelegramUpdate = {
 
 /**
  * Shared /start handling for both the legacy Falcon-only webhook route and
- * the per-tenant one (Chapter 33) — replies as the given brand's own bot
+ * the per-tenant one (Chapter 33) - replies as the given brand's own bot
  * (tenantId/tenantName/token default to Falcon Unlocker's, so the original
  * route's behavior is unchanged).
  */

@@ -1,7 +1,7 @@
 /**
  * Single-hue horizontal bar chart for comparing one magnitude across
  * providers (Success Rate / Error Rate / Response Time / Orders per
- * Provider — Chapter 20). Sequential one-hue encoding per the dataviz
+ * Provider - Chapter 20). Sequential one-hue encoding per the dataviz
  * guide's form rule for "compare magnitude, low -> high": identity comes
  * from the row label, not color, so no legend or categorical palette is
  * needed for a single series.

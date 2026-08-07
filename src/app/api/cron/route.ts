@@ -4,7 +4,7 @@ import { runAllCronTasks } from "@/lib/cron/runner";
 /**
  * Unified Cron System: the single entry point for every scheduled task,
  * meant to be called by an external scheduler (cron-job.org) instead of a
- * hosting provider's native cron — Vercel's Hobby plan only allows daily
+ * hosting provider's native cron - Vercel's Hobby plan only allows daily
  * cron jobs, which isn't frequent enough for queue processing. Contains no
  * business logic itself: authenticates the request, then hands off to
  * runAllCronTasks(), which runs every task registered in

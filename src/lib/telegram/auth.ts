@@ -22,17 +22,17 @@ export type VerifiedInitData = {
 
 /**
  * Verifies the Telegram Mini App `initData` string was signed by one of the
- * platform's known bots, and hasn't expired — and resolves which tenant that
+ * platform's known bots, and hasn't expired - and resolves which tenant that
  * bot belongs to. Throws {@link TelegramAuthError} otherwise.
  *
  * Fast path: the same Telegram person can hold a separate account in more
- * than one tenant (Chapter 37), so the — as yet unverified — embedded
+ * than one tenant (Chapter 37), so the - as yet unverified - embedded
  * Telegram user id is used to look up every tenant this person already has
  * an account in, and each is tried in turn; this is still cheap (a handful
  * of rows at most) and covers the overwhelming majority of calls. Slow path
  * (brand-new person, or a stale/rotated token): every known bot token is
  * tried instead. Peeking at the unverified payload only ever picks which
- * token to verify against — nothing is trusted or acted on until validate()
+ * token to verify against - nothing is trusted or acted on until validate()
  * succeeds.
  */
 export async function verifyTelegramInitData(initData: string): Promise<VerifiedInitData> {

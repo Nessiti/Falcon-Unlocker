@@ -1,7 +1,7 @@
 /**
  * Margin (Chapter 22-23): computes a suggested selling price from a
  * provider's cost. Percent is applied first (rounded), then the flat
- * amount is added — matches how "20% + $0.50" markups are normally read.
+ * amount is added - matches how "20% + $0.50" markups are normally read.
  * Never touches an admin's actual service price on its own; callers decide
  * whether/when to apply the suggestion.
  */

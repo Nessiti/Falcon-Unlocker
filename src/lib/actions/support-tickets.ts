@@ -105,7 +105,7 @@ export async function getTicketAction(
 
     const isAdmin = user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
     const isOwner = ticket.userId === user.id;
-    // An admin can only reach tickets from their own tenant — otherwise the
+    // An admin can only reach tickets from their own tenant - otherwise the
     // isAdmin check alone would let any tenant's staff read any other
     // tenant's customer support thread.
     if (!isOwner && !(isAdmin && ticket.tenantId === user.tenantId)) {
