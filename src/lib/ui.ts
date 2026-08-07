@@ -55,8 +55,14 @@ export function formatUsd(cents: number) {
  * elements (the avatar) off the edge of a narrow phone screen once the
  * balance gets large - bounding the width at the source fixes that instead
  * of chasing the overflow through every layout that shows a balance.
+ *
+ * Only switches to compact notation once the full precision string would
+ * actually be wide enough to risk that overflow - a typical balance like
+ * $362.11 stays exact instead of silently getting rounded to $362.1.
  */
 export function formatUsdCompact(cents: number) {
+  const full = formatUsd(cents);
+  if (full.length <= 9) return full;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
