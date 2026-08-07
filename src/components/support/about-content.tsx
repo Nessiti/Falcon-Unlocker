@@ -19,11 +19,11 @@ export function AboutContent({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getAboutAction().then((value) => {
+    getAboutAction(initData).then((value) => {
       setContent(value);
       setDraft(value);
     });
-  }, []);
+  }, [initData]);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();

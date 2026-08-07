@@ -2,10 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
-import { requireTenantId } from "@/lib/telegram/tenant";
+import { requireTenantId, resolvePublicTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/client";
+import type { Category, ImeiService, ImeiServiceField } from "@/generated/prisma/client";
 
 export type CreateImeiServiceField = {
   label: string;
@@ -361,6 +362,34 @@ export async function deleteImeiServiceAction(
       ok: false,
       error: "Failed to delete service (it may still have orders referencing it)",
     };
+  }
+}
+
+export type PublicImeiService = ImeiService & {
+  category: Category | null;
+  fields: ImeiServiceField[];
+};
+
+export type ListPublicImeiServicesResult =
+  | { ok: true; services: PublicImeiService[] }
+  | { ok: false; error: string };
+
+/** Public catalog read for the /imei page (Chapter 35). Resolves the
+ * visitor's real tenant via their initData instead of the Chapter 31
+ * Falcon Unlocker hardcode. */
+export async function listPublicImeiServicesAction(
+  initData?: string | null,
+): Promise<ListPublicImeiServicesResult> {
+  try {
+    const tenantId = await resolvePublicTenantId(initData);
+    const services = await prisma.imeiService.findMany({
+      where: { status: ServiceStatus.ONLINE, tenantId },
+      orderBy: { displayOrder: "asc" },
+      include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
+    });
+    return { ok: true, services };
+  } catch {
+    return { ok: false, error: "Failed to load services" };
   }
 }
 

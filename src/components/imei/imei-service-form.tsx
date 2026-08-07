@@ -64,10 +64,12 @@ export function ImeiServiceForm({
   editingService,
   onSaved,
   onCancel,
+  onChanged,
 }: {
   editingService?: ImeiServiceDetail;
   onSaved?: () => void;
   onCancel?: () => void;
+  onChanged?: () => void;
 } = {}) {
   const auth = useTelegramUser();
   const initData = useRawInitData();
@@ -181,6 +183,7 @@ export function ImeiServiceForm({
     }
 
     router.refresh();
+    onChanged?.();
     if (editingService) {
       onSaved?.();
     } else {

@@ -24,7 +24,7 @@ const STATUS_OPTIONS: ServiceStatus[] = [
   ServiceStatus.MAINTENANCE,
 ];
 
-export function ImeiServiceManager() {
+export function ImeiServiceManager({ onChanged }: { onChanged?: () => void } = {}) {
   const auth = useTelegramUser();
   const initData = useRawInitData();
   const router = useRouter();
@@ -64,6 +64,7 @@ export function ImeiServiceManager() {
     if (result.ok) {
       refresh();
       router.refresh();
+      onChanged?.();
     } else {
       setError(result.error);
     }
@@ -76,6 +77,7 @@ export function ImeiServiceManager() {
     if (result.ok) {
       refresh();
       router.refresh();
+      onChanged?.();
     } else {
       setError(result.error);
     }
@@ -112,6 +114,7 @@ export function ImeiServiceManager() {
               refresh();
             }}
             onCancel={() => setEditingDetail(null)}
+            onChanged={onChanged}
           />
         ) : (
           <div

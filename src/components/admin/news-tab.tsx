@@ -16,12 +16,13 @@ export function NewsTab({ initData }: { initData: string }) {
   const [error, setError] = useState<string | null>(null);
 
   function refresh() {
-    listNewsAction().then(setPosts);
+    listNewsAction(initData).then(setPosts);
   }
 
   useEffect(() => {
     refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initData]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

@@ -2,10 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
-import { requireTenantId } from "@/lib/telegram/tenant";
+import { requireTenantId, resolvePublicTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import { ServerFieldType, ServerServiceType, ServiceBadge, ServiceStatus } from "@/generated/prisma/client";
+import type { Category, ServerService, ServerServiceField } from "@/generated/prisma/client";
 
 export type CreateServerServiceField = {
   label: string;
@@ -355,6 +356,34 @@ export async function deleteServerServiceAction(
       ok: false,
       error: "Failed to delete service (it may still have orders referencing it)",
     };
+  }
+}
+
+export type PublicServerService = ServerService & {
+  category: Category | null;
+  fields: ServerServiceField[];
+};
+
+export type ListPublicServerServicesResult =
+  | { ok: true; services: PublicServerService[] }
+  | { ok: false; error: string };
+
+/** Public catalog read for the /server page (Chapter 35). Resolves the
+ * visitor's real tenant via their initData instead of the Chapter 31
+ * Falcon Unlocker hardcode. */
+export async function listPublicServerServicesAction(
+  initData?: string | null,
+): Promise<ListPublicServerServicesResult> {
+  try {
+    const tenantId = await resolvePublicTenantId(initData);
+    const services = await prisma.serverService.findMany({
+      where: { status: ServiceStatus.ONLINE, tenantId },
+      orderBy: { displayOrder: "asc" },
+      include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
+    });
+    return { ok: true, services };
+  } catch {
+    return { ok: false, error: "Failed to load services" };
   }
 }
 

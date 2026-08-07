@@ -65,10 +65,12 @@ export function ServerServiceForm({
   editingService,
   onSaved,
   onCancel,
+  onChanged,
 }: {
   editingService?: ServerServiceDetail;
   onSaved?: () => void;
   onCancel?: () => void;
+  onChanged?: () => void;
 } = {}) {
   const auth = useTelegramUser();
   const initData = useRawInitData();
@@ -181,6 +183,7 @@ export function ServerServiceForm({
     }
 
     router.refresh();
+    onChanged?.();
     if (editingService) {
       onSaved?.();
     } else {

@@ -13,7 +13,7 @@ export function FaqTab({ initData, isAdmin }: { initData: string; isAdmin: boole
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(() => listFaqAction().then(setItems), []);
+  const refresh = useCallback(() => listFaqAction(initData).then(setItems), [initData]);
 
   useEffect(() => {
     refresh();

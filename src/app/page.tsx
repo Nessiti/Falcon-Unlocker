@@ -25,7 +25,7 @@ export default function Home() {
     getDashboardSummaryAction(initData).then((result) => {
       if (!cancelled && result.ok) setSummary(result.summary);
     });
-    listNewsAction().then((result) => {
+    listNewsAction(initData).then((result) => {
       if (!cancelled) setNews(result);
     });
     getActivePopupAction(initData).then((result) => {

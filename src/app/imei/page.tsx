@@ -1,25 +1,26 @@
-import { prisma } from "@/lib/prisma";
-import { ServiceStatus } from "@/generated/prisma/client";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRawInitData } from "@telegram-apps/sdk-react";
 import { ImeiCatalog } from "@/components/imei/imei-catalog";
 import { ImeiServiceForm } from "@/components/imei/imei-service-form";
 import { ImeiServiceManager } from "@/components/imei/imei-service-manager";
+import { CatalogSkeleton } from "@/components/ui/catalog-skeleton";
+import { listPublicImeiServicesAction, type PublicImeiService } from "@/lib/actions/imei-services";
 
-// The catalog reflects live admin changes (new/updated services), so it's
-// rendered per request instead of frozen at build time.
-export const dynamic = "force-dynamic";
+export default function ImeiPage() {
+  const initData = useRawInitData();
+  const [services, setServices] = useState<PublicImeiService[] | null>(null);
 
-export default async function ImeiPage() {
-  // Hardcoded to the Falcon Unlocker tenant: this Server Component has no
-  // request-time identity to resolve the real tenant from (Telegram auth
-  // only resolves client-side via initData) — needs bot->tenant resolution
-  // first. Hardcoding keeps today's behavior correct and stops a second
-  // tenant's catalog from bleeding into Falcon's own customer-facing page
-  // the moment one exists (Chapter 31).
-  const services = await prisma.imeiService.findMany({
-    where: { status: ServiceStatus.ONLINE, tenantId: "falcon-unlocker" },
-    orderBy: { displayOrder: "asc" },
-    include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
-  });
+  const refresh = useCallback(() => {
+    listPublicImeiServicesAction(initData).then((result) => {
+      if (result.ok) setServices(result.services);
+    });
+  }, [initData]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
@@ -28,10 +29,10 @@ export default async function ImeiPage() {
         <p className="text-sm text-hint">Unlock, FRP, and IMEI-based services.</p>
       </div>
 
-      <ImeiCatalog services={services} />
+      {services === null ? <CatalogSkeleton /> : <ImeiCatalog services={services} />}
 
-      <ImeiServiceManager />
-      <ImeiServiceForm />
+      <ImeiServiceManager onChanged={refresh} />
+      <ImeiServiceForm onChanged={refresh} />
     </main>
   );
 }

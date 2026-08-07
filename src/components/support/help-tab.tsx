@@ -15,7 +15,7 @@ export function HelpTab({ initData, isAdmin }: { initData: string; isAdmin: bool
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(() => listHelpArticlesAction().then(setArticles), []);
+  const refresh = useCallback(() => listHelpArticlesAction(initData).then(setArticles), [initData]);
 
   useEffect(() => {
     refresh();

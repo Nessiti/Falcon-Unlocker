@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/telegram/admin";
-import { requireTenantId } from "@/lib/telegram/tenant";
+import { requireTenantId, resolvePublicTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 export type NewsPostSummary = {
@@ -16,16 +16,13 @@ export type NewsPostSummary = {
 
 /**
  * News (Chapter 11): Create/Edit/Schedule/Pin. Public read, admin-editable.
- * Hardcoded to the Falcon Unlocker tenant: this has no initData/request-time
- * identity to resolve the real tenant from — same blocker as listFaqAction
- * (Chapter 31). Keeps today's behavior exactly correct and never leaks a
- * second tenant's posts unfiltered, until bot->tenant resolution extends to
- * this call site too.
+ * Scoped to the caller's own tenant (Chapter 35), resolved from initData.
  */
-export async function listNewsAction(): Promise<NewsPostSummary[]> {
+export async function listNewsAction(initData?: string | null): Promise<NewsPostSummary[]> {
+  const tenantId = await resolvePublicTenantId(initData);
   const posts = await prisma.newsPost.findMany({
     where: {
-      tenantId: "falcon-unlocker",
+      tenantId,
       OR: [{ publishAt: null }, { publishAt: { lte: new Date() } }],
     },
     orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],

@@ -1,25 +1,26 @@
-import { prisma } from "@/lib/prisma";
-import { ServiceStatus } from "@/generated/prisma/client";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRawInitData } from "@telegram-apps/sdk-react";
 import { ServerCatalog } from "@/components/server/server-catalog";
 import { ServerServiceForm } from "@/components/server/server-service-form";
 import { ServerServiceManager } from "@/components/server/server-service-manager";
+import { CatalogSkeleton } from "@/components/ui/catalog-skeleton";
+import { listPublicServerServicesAction, type PublicServerService } from "@/lib/actions/server-services";
 
-// The catalog reflects live admin changes (new/updated services), so it's
-// rendered per request instead of frozen at build time.
-export const dynamic = "force-dynamic";
+export default function ServerPage() {
+  const initData = useRawInitData();
+  const [services, setServices] = useState<PublicServerService[] | null>(null);
 
-export default async function ServerPage() {
-  // Hardcoded to the Falcon Unlocker tenant: this Server Component has no
-  // request-time identity to resolve the real tenant from (Telegram auth
-  // only resolves client-side via initData) — needs bot->tenant resolution
-  // first. Hardcoding keeps today's behavior correct and stops a second
-  // tenant's catalog from bleeding into Falcon's own customer-facing page
-  // the moment one exists (Chapter 31).
-  const services = await prisma.serverService.findMany({
-    where: { status: ServiceStatus.ONLINE, tenantId: "falcon-unlocker" },
-    orderBy: { displayOrder: "asc" },
-    include: { category: true, fields: { orderBy: { displayOrder: "asc" } } },
-  });
+  const refresh = useCallback(() => {
+    listPublicServerServicesAction(initData).then((result) => {
+      if (result.ok) setServices(result.services);
+    });
+  }, [initData]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
@@ -30,10 +31,10 @@ export default async function ServerPage() {
         </p>
       </div>
 
-      <ServerCatalog services={services} />
+      {services === null ? <CatalogSkeleton /> : <ServerCatalog services={services} />}
 
-      <ServerServiceManager />
-      <ServerServiceForm />
+      <ServerServiceManager onChanged={refresh} />
+      <ServerServiceForm onChanged={refresh} />
     </main>
   );
 }

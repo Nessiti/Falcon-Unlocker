@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/telegram/admin";
-import { requireTenantId } from "@/lib/telegram/tenant";
+import { requireTenantId, resolvePublicTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 
 export type HelpArticleSummary = {
@@ -13,12 +13,13 @@ export type HelpArticleSummary = {
 
 /**
  * Help articles are public read content, editable from the Admin panel
- * (Chapter 10). Hardcoded to the Falcon Unlocker tenant, same reasoning as
- * listFaqAction above.
+ * (Chapter 10). Scoped to the caller's own tenant (Chapter 35), same
+ * reasoning as listFaqAction above.
  */
-export async function listHelpArticlesAction(): Promise<HelpArticleSummary[]> {
+export async function listHelpArticlesAction(initData?: string | null): Promise<HelpArticleSummary[]> {
+  const tenantId = await resolvePublicTenantId(initData);
   const articles = await prisma.helpArticle.findMany({
-    where: { tenantId: "falcon-unlocker" },
+    where: { tenantId },
     orderBy: { displayOrder: "asc" },
   });
   return articles.map((article) => ({ id: article.id, title: article.title, body: article.body }));
