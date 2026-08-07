@@ -74,6 +74,7 @@ model Tenant {
   imeiServiceMappings    ImeiServiceMapping[]
   serverServiceMappings  ServerServiceMapping[]
   pricingSettings        PricingSettings?
+  queueEntries           OrderQueueEntry[]
 }
 
 enum UserStatus {
@@ -833,6 +834,11 @@ model OrderQueueEntry {
   currentProvider   Provider? @relation(fields: [currentProviderId], references: [id])
 
   attemptLogs QueueAttemptLog[]
+
+  /// Tenant isolation (Chapter 29): snapshotted from the order at enqueue
+  /// time, same spirit as ImeiOrder/ServerOrder.tenantId (Chapter 26).
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   /// Prevents duplicate submissions at the source: an order can only ever
   /// have one queue entry, no matter how many times enqueueing is attempted.

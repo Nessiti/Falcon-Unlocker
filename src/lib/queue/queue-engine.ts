@@ -39,14 +39,14 @@ export async function enqueueOrder(kind: QueueKind, orderId: string): Promise<vo
             id: orderId,
             service: { mappings: { some: { enabled: true, provider: { enabled: true } } } },
           },
-          select: { id: true },
+          select: { id: true, tenantId: true },
         })
       : await prisma.serverOrder.findFirst({
           where: {
             id: orderId,
             service: { mappings: { some: { enabled: true, provider: { enabled: true } } } },
           },
-          select: { id: true },
+          select: { id: true, tenantId: true },
         });
 
   if (!routable) return;
@@ -58,6 +58,7 @@ export async function enqueueOrder(kind: QueueKind, orderId: string): Promise<vo
       data: {
         kind,
         orderId,
+        tenantId: routable.tenantId,
         maxRetries: settings.maxRetries,
         retryDelaySeconds: settings.retryDelaySeconds,
       },

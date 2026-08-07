@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/telegram/admin";
+import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
 import {
@@ -67,8 +68,9 @@ async function buildSummaries(
   });
 }
 
-function loadEntries() {
+function loadEntries(tenantId: string) {
   return prisma.orderQueueEntry.findMany({
+    where: { tenantId },
     orderBy: { createdAt: "desc" },
     take: LIST_LIMIT,
     include: { currentProvider: true },
@@ -79,11 +81,12 @@ export type ListQueueEntriesResult =
   | { ok: true; entries: QueueEntrySummary[] }
   | { ok: false; error: string };
 
-/** Queue & Retry System (Chapter 18): every order queued for automatic provider submission. */
+/** Queue & Retry System (Chapter 18): every order queued for automatic provider submission, scoped to the staff member's own tenant (Chapter 29). */
 export async function listQueueEntriesAction(initData: string): Promise<ListQueueEntriesResult> {
   try {
-    await requireStaff(initData);
-    const entries = await buildSummaries(await loadEntries());
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
+    const entries = await buildSummaries(await loadEntries(tenantId));
     return { ok: true, entries };
   } catch (error) {
     const message = error instanceof TelegramAuthError ? error.message : "Failed to load queue";
@@ -111,10 +114,11 @@ export async function getQueueEntryDetailAction(
   queueEntryId: string,
 ): Promise<GetQueueEntryDetailResult> {
   try {
-    await requireStaff(initData);
+    const staff = await requireStaff(initData);
+    const tenantId = requireTenantId(staff);
 
-    const entry = await prisma.orderQueueEntry.findUnique({
-      where: { id: queueEntryId },
+    const entry = await prisma.orderQueueEntry.findFirst({
+      where: { id: queueEntryId, tenantId },
       include: {
         currentProvider: true,
         attemptLogs: { include: { provider: true }, orderBy: { createdAt: "asc" } },
@@ -151,8 +155,9 @@ export async function cancelQueueEntryAction(
 ): Promise<CancelQueueEntryResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const entry = await prisma.orderQueueEntry.findUnique({ where: { id: queueEntryId } });
+    const entry = await prisma.orderQueueEntry.findFirst({ where: { id: queueEntryId, tenantId } });
     if (!entry) return { ok: false, error: "Queue entry not found" };
     if (entry.status === "SUCCEEDED" || entry.status === "CANCELLED") {
       return { ok: false, error: "This entry is already finished" };
@@ -183,8 +188,9 @@ export async function retryQueueEntryAction(
 ): Promise<RetryQueueEntryResult> {
   try {
     const admin = await requireAdmin(initData);
+    const tenantId = requireTenantId(admin);
 
-    const entry = await prisma.orderQueueEntry.findUnique({ where: { id: queueEntryId } });
+    const entry = await prisma.orderQueueEntry.findFirst({ where: { id: queueEntryId, tenantId } });
     if (!entry) return { ok: false, error: "Queue entry not found" };
     if (entry.status !== "FAILED" && entry.status !== "CANCELLED") {
       return { ok: false, error: "Only failed or cancelled entries can be retried" };
@@ -208,7 +214,15 @@ export type ProcessQueueNowResult =
   | { ok: true; summary: ProcessQueueSummary }
   | { ok: false; error: string };
 
-/** Manual trigger for the same processing pass the process-queue cron task runs via /api/cron. */
+/**
+ * Manual trigger for the same processing pass the process-queue cron task
+ * runs via /api/cron — intentionally platform-wide (Chapter 29), same as
+ * the cron task itself: it works through whatever's actually due across
+ * every tenant, not just the triggering admin's own. No cross-tenant data
+ * is exposed by this — it's an operational trigger, not a read/write on a
+ * specific tenant's records (those stay scoped, see list/detail/cancel/
+ * retry above).
+ */
 export async function processQueueNowAction(initData: string): Promise<ProcessQueueNowResult> {
   try {
     const admin = await requireAdmin(initData);
