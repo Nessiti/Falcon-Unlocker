@@ -11,6 +11,37 @@ import {
 } from "@/lib/actions/admin-api-keys";
 import { formInputClass } from "@/lib/ui";
 
+/**
+ * The endpoint a reseller points their own software at. Shown alongside the
+ * key/secret because DHRU-style panels ask for three things - server URL,
+ * username, API access key - and handing over only two leaves the reseller
+ * asking "what's the link?".
+ */
+const API_URL = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/reseller`;
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-hint">{label}</p>
+        <p className="break-all text-xs text-foreground">{value}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard?.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        }}
+        className="shrink-0 rounded-lg border border-border px-2 py-1 text-[11px] text-foreground transition-transform active:scale-95"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
 export function ApiKeyManager({ initData }: { initData: string }) {
   const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
   const [users, setUsers] = useState<AdminUserSummary[]>([]);
@@ -110,17 +141,26 @@ export function ApiKeyManager({ initData }: { initData: string }) {
         {error ? <p className="text-xs text-accent">{error}</p> : null}
       </div>
 
+      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
+        <h2 className="text-sm font-semibold text-foreground">Endpoint</h2>
+        <p className="text-xs text-hint">
+          Give this URL to any customer integrating their own system. Their panel may label the
+          fields differently - key/username and secret/API access key are both accepted.
+        </p>
+        <CopyRow label="API URL / Server URL" value={API_URL} />
+      </div>
+
       {newSecret ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-accent bg-surface p-4">
           <p className="text-sm font-medium text-foreground">
-            Save this secret now - it won&apos;t be shown again.
+            Send these three to your customer - the secret won&apos;t be shown again.
           </p>
-          <p className="break-all rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground">
-            API key: {newSecret.key}
-          </p>
-          <p className="break-all rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground">
-            API secret: {newSecret.secret}
-          </p>
+          <CopyRow label="API URL / Server URL" value={API_URL} />
+          <CopyRow label="API key (some panels call this Username)" value={newSecret.key} />
+          <CopyRow
+            label="API secret (some panels call this API Access Key)"
+            value={newSecret.secret}
+          />
           <button type="button" onClick={() => setNewSecret(null)} className="self-start text-xs text-hint">
             Dismiss
           </button>

@@ -51,13 +51,30 @@ async function readBody(request: NextRequest): Promise<Record<string, unknown>> 
  * limited to that tenant's own catalog. See src/lib/reseller-api/ for the
  * implementation of each action.
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const body = await readBody(request);
+async function handle(request: NextRequest): Promise<NextResponse> {
+  // GET carries everything in the query string; POST may still repeat
+  // params there, so both are read either way.
+  const body = request.method === "GET" ? {} : await readBody(request);
   const url = request.nextUrl;
 
-  const action = (field(body, "action") ?? url.searchParams.get("action") ?? "").toLowerCase();
-  const key = field(body, "apikey", "key") ?? url.searchParams.get("apikey");
-  const secret = field(body, "apisecret", "secret") ?? url.searchParams.get("apisecret");
+  const param = (...names: string[]): string | null => {
+    const fromBody = field(body, ...names);
+    if (fromBody) return fromBody;
+    for (const name of names) {
+      const fromQuery = url.searchParams.get(name);
+      if (fromQuery) return fromQuery;
+    }
+    return null;
+  };
+
+  const action = (param("action") ?? "").toLowerCase();
+  // `username` + `apiaccesskey` are what real DHRU/GSM Theme client software
+  // sends - our own outbound connectors send exactly those names to
+  // providers, which is the proof of what the ecosystem expects. Accepting
+  // only apikey/apisecret meant a standard reseller panel pointed at this
+  // endpoint failed authentication with no obvious reason.
+  const key = param("apikey", "key", "username", "user");
+  const secret = param("apisecret", "secret", "apiaccesskey", "apiaccess");
 
   const auth = await authenticateResellerApi(key ?? null, secret ?? null);
   if (!auth.ok) {
@@ -107,4 +124,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     console.error("[reseller-api] action failed", action, error);
     return NextResponse.json(errorEnvelope("Request failed"), { status: 500, headers: RESPONSE_HEADERS });
   }
+}
+
+/**
+ * Both verbs hit the same handler: the DHRU convention is loose about which
+ * one a client uses (our own DHRU connector GETs for balance/services and
+ * POSTs for orders), so accepting only POST would reject perfectly standard
+ * integrations with a bare 405.
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  return handle(request);
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return handle(request);
 }
