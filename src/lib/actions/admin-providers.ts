@@ -59,7 +59,7 @@ function validateCredentials(input: {
   apiKey?: string | null;
   apiSecret?: string | null;
   token?: string | null;
-}): string | null {
+}, requireSecret: boolean): string | null {
   for (const [label, value] of [
     ["Username", input.username],
     ["API Key", input.apiKey],
@@ -70,6 +70,15 @@ function validateCredentials(input: {
     if (trimmed && looksLikeMask(trimmed)) {
       return `${label} looks like the masked placeholder - paste the real value, or leave it blank to keep the current one`;
     }
+  }
+
+  // DHRU Fusion Pro authenticates with a single Bearer token and nothing
+  // else, so a row saved without one produces `Authorization: Bearer ` -
+  // rejected upstream as a plain 401 that looks like a bad token rather
+  // than a missing one. Only enforced on create: an edit leaves the field
+  // blank to mean "keep the stored token".
+  if (input.type === ProviderType.DHRU_PRO && requireSecret && !input.token?.trim()) {
+    return "Access Token is required for DHRU Fusion Pro - it is the only credential this API takes";
   }
 
   if (USERNAME_REQUIRED_TYPES.has(input.type) && !input.username?.trim()) {
@@ -240,7 +249,7 @@ export async function createProviderAction(
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
 
-    const credentialProblem = validateCredentials(input);
+    const credentialProblem = validateCredentials(input, true);
     if (credentialProblem) return { ok: false, error: credentialProblem };
 
     const hasSecret = Boolean(input.apiKey?.trim() || input.apiSecret?.trim() || input.token?.trim());
@@ -294,7 +303,7 @@ export async function updateProviderAction(
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
 
-    const credentialProblem = validateCredentials(input);
+    const credentialProblem = validateCredentials(input, false);
     if (credentialProblem) return { ok: false, error: credentialProblem };
 
     const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { id: true } });

@@ -52,7 +52,9 @@ export class FalconConnector extends BaseConnector {
   private async parseResponse(
     response: Response,
   ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
-    const json = (await response.json()) as {
+    const body = await this.readJson(response);
+    if (!body.ok) return body;
+    const json = body.json as {
       SUCCESS?: Record<string, unknown>[];
       ERROR?: (Record<string, unknown> | string)[];
     };

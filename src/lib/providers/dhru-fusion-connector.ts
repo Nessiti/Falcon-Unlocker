@@ -34,7 +34,9 @@ export class DhruFusionConnector extends BaseConnector {
   private async parseDhruResponse(response: Response): Promise<
     { ok: true; data: Record<string, unknown> } | { ok: false; error: string }
   > {
-    const json = (await response.json()) as {
+    const body = await this.readJson(response);
+    if (!body.ok) return body;
+    const json = body.json as {
       SUCCESS?: Record<string, unknown>[];
       ERROR?: (Record<string, unknown> | string)[];
     };
@@ -71,10 +73,9 @@ export class DhruFusionConnector extends BaseConnector {
     const response = await this.fetchWithTimeout(this.url("imeiservicelist"), { method: "GET" }, "getServices");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const json = (await response.json()) as {
-      SUCCESS?: { LIST?: Record<string, unknown>[] }[];
-    };
-    const list = json.SUCCESS?.[0]?.LIST ?? [];
+    const parsed = await this.parseDhruResponse(response);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const list = (parsed.data.LIST ?? []) as Record<string, unknown>[];
 
     return list.map((service) => ({
       providerServiceId: String(service.ID ?? service.id),

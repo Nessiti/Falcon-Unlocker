@@ -9,6 +9,7 @@ import { DhruFusionConnector } from "./dhru-fusion-connector";
 import { WebXConnector } from "./webx-connector";
 import { GsmThemeConnector } from "./gsm-theme-connector";
 import { FalconConnector } from "./falcon-connector";
+import { DhruProConnector } from "./dhru-pro-connector";
 import { decryptSecret } from "@/lib/security/encryption";
 
 /**
@@ -29,6 +30,8 @@ export function getProviderConnector(provider: Provider): ProviderConnector {
   switch (decrypted.type) {
     case ProviderType.DHRU_FUSION:
       return new DhruFusionConnector(decrypted);
+    case ProviderType.DHRU_PRO:
+      return new DhruProConnector(decrypted);
     case ProviderType.PHP_API:
       return new PhpQueryConnector(decrypted);
     case ProviderType.XML_API:

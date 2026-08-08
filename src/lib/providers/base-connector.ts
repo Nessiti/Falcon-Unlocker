@@ -109,6 +109,45 @@ export abstract class BaseConnector implements ProviderConnector {
    * if the count query itself fails, the call is blocked rather than let
    * through unchecked.
    */
+  /**
+   * `response.json()` on a panel's homepage throws `Unexpected token '<'`,
+   * which tells an admin nothing about what is actually wrong. In practice
+   * the cause is almost always the same one: the Base URL points at the
+   * storefront root instead of the API endpoint, so the panel happily
+   * serves its HTML index with a 200. Name that here, once, for every
+   * connector - the message an admin reads in API Logs should say what to
+   * fix, not which character failed to parse.
+   */
+  protected async readJson(
+    response: Response,
+  ): Promise<{ ok: true; json: unknown } | { ok: false; error: string }> {
+    const text = await response.text();
+    const trimmed = text.trimStart();
+
+    if (trimmed.startsWith("<")) {
+      const title = /<title[^>]*>([^<]*)<\/title>/i.exec(text)?.[1]?.trim();
+      return {
+        ok: false,
+        error: `The Base URL returned a web page${
+          title ? ` ("${title}")` : ""
+        }, not an API response. It is pointing at the site itself instead of its API endpoint - ask the provider for the exact API URL.`,
+      };
+    }
+
+    if (!trimmed) {
+      return { ok: false, error: `Provider returned an empty body (HTTP ${response.status})` };
+    }
+
+    try {
+      return { ok: true, json: JSON.parse(text) };
+    } catch {
+      return {
+        ok: false,
+        error: `Provider returned a non-JSON response (HTTP ${response.status}): ${trimmed.slice(0, 120)}`,
+      };
+    }
+  }
+
   private async isRateLimited(): Promise<boolean> {
     if (!this.provider.rateLimitPerMinute) return false;
     try {

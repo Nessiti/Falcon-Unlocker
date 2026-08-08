@@ -709,6 +709,11 @@ enum ProviderType {
   /// authenticated with this app's own apikey/apisecret pair rather than
   /// username/apiaccesskey - see FalconConnector.
   FALCON
+  /// DHRU Fusion Pro's modern reseller API (github.com/dhru-com/reseller-api):
+  /// REST + JSON, `Authorization: Bearer <token>`, /account /products /order.
+  /// A different protocol from DHRU_FUSION above, which is the legacy
+  /// single-endpoint `api=json&action=...` panel API - see DhruProConnector.
+  DHRU_PRO
 }
 
 /// Smart Routing Engine (Chapter 15) strategies for picking a provider among

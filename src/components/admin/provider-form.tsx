@@ -12,7 +12,8 @@ import { formInputClass } from "@/lib/ui";
 
 const TYPE_OPTIONS: { value: ProviderType; label: string }[] = [
   { value: ProviderType.FALCON, label: "Falcon UPS Server" },
-  { value: ProviderType.DHRU_FUSION, label: "DHRU Fusion API" },
+  { value: ProviderType.DHRU_PRO, label: "DHRU Fusion Pro (Bearer token)" },
+  { value: ProviderType.DHRU_FUSION, label: "DHRU Fusion Legacy (username + key)" },
   { value: ProviderType.PHP_API, label: "PHP API" },
   { value: ProviderType.WEBX, label: "WebX Next API" },
   { value: ProviderType.GSM_THEME, label: "GSM-THEME Panel" },
@@ -58,6 +59,10 @@ export function ProviderForm({
   // no username at all - so it gets its own field pair rather than being
   // squeezed into either of the other two shapes.
   const falconStyle = type === ProviderType.FALCON;
+  // DHRU Fusion Pro takes exactly one credential - an access token sent as
+  // `Authorization: Bearer`. Showing it a username/apiaccesskey pair is what
+  // sends admins looking for values their provider never issued.
+  const bearerStyle = type === ProviderType.DHRU_PRO;
   const panelStyle =
     type === ProviderType.DHRU_FUSION ||
     type === ProviderType.GSM_THEME ||
@@ -194,6 +199,25 @@ export function ProviderForm({
             }
             value={apiSecret}
             onChange={(e) => setApiSecret(e.target.value)}
+          />
+        </>
+      ) : bearerStyle ? (
+        <>
+          <p className="text-[11px] text-hint">
+            The modern DHRU reseller API. Base URL is the provider&apos;s API host (often{" "}
+            <code>https://api.…</code>), not their website - this connector calls{" "}
+            <code>/account</code>, <code>/products</code> and <code>/order</code> on it.
+          </p>
+          <input
+            className={formInputClass}
+            type="password"
+            placeholder={
+              editingProvider?.tokenMasked
+                ? `Access Token (current: ${editingProvider.tokenMasked}, leave blank to keep)`
+                : "Access Token (Bearer)"
+            }
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
           />
         </>
       ) : panelStyle ? (
