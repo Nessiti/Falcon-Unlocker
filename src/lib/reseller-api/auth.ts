@@ -17,7 +17,17 @@ export async function authenticateResellerApi(
   key: string | null,
   secret: string | null,
 ): Promise<{ ok: true; context: ResellerContext } | { ok: false; error: string }> {
-  if (!key || !secret) return { ok: false, error: "Missing API credentials" };
+  // Naming the missing half matters: DHRU-style panels send the key as
+  // `username` and the secret as `apiaccesskey`, and a config with only one
+  // of the two filled in is the single most common integration mistake -
+  // "Missing API credentials" left integrators guessing which one.
+  if (!key && !secret) {
+    return { ok: false, error: "Missing API credentials (send apikey/username and apisecret/apiaccesskey)" };
+  }
+  if (!key) return { ok: false, error: "Missing API key - send it as `apikey` or `username`" };
+  if (!secret) {
+    return { ok: false, error: "Missing API secret - send it as `apisecret` or `apiaccesskey`" };
+  }
 
   const apiKey = await prisma.apiKey.findUnique({
     where: { key },

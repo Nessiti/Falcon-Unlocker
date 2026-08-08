@@ -17,7 +17,7 @@ import { formInputClass } from "@/lib/ui";
  * username, API access key - and handing over only two leaves the reseller
  * asking "what's the link?".
  */
-const API_URL = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/reseller`;
+const API_URL = `${(process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "")}/api/reseller`;
 
 function CopyRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
