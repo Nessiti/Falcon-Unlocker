@@ -11,6 +11,21 @@ import { syncProvider } from "@/lib/providers/sync-engine";
 import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
 
 /**
+ * Collapses the duplicate slashes and trailing slash that creep in when a
+ * base URL is assembled by hand or pasted from somewhere that already ended
+ * in "/". Left alone, `https://host//api/reseller` is what actually goes out
+ * on every call - harmless on some servers, a 404 on others, and confusing
+ * in the API logs either way. The protocol's own "//" is preserved.
+ */
+function normalizeBaseUrl(raw: string): string {
+  const trimmed = raw.trim();
+  const match = /^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(.*)$/.exec(trimmed);
+  if (!match) return trimmed.replace(/\/+$/, "");
+  const [, scheme, rest] = match;
+  return `${scheme}${rest.replace(/\/{2,}/g, "/").replace(/\/+$/, "")}`;
+}
+
+/**
  * Provider types that speak the DHRU/GSM Theme convention, where the
  * credential pair is username + apiaccesskey. Saving one of these without a
  * username produces a request carrying only half the credentials, which the
@@ -212,7 +227,7 @@ export async function createProviderAction(
     const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
-    const baseUrl = input.baseUrl.trim();
+    const baseUrl = normalizeBaseUrl(input.baseUrl);
     if (!name) return { ok: false, error: "Name is required" };
     if (!baseUrl) return { ok: false, error: "Base URL is required" };
     if (!Number.isInteger(input.timeoutMs) || input.timeoutMs <= 0) {
@@ -266,7 +281,7 @@ export async function updateProviderAction(
     const tenantId = requireTenantId(admin);
 
     const name = input.name.trim();
-    const baseUrl = input.baseUrl.trim();
+    const baseUrl = normalizeBaseUrl(input.baseUrl);
     if (!name) return { ok: false, error: "Name is required" };
     if (!baseUrl) return { ok: false, error: "Base URL is required" };
     if (!Number.isInteger(input.timeoutMs) || input.timeoutMs <= 0) {

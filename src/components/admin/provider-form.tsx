@@ -44,6 +44,20 @@ export function ProviderForm({
   const [type, setType] = useState<ProviderType>(editingProvider?.type ?? ProviderType.REST_API);
   const [baseUrl, setBaseUrl] = useState(editingProvider?.baseUrl ?? "");
   const [username, setUsername] = useState(editingProvider?.username ?? "");
+  // Each provider type only ever reads two of the four credential columns
+  // (see src/lib/providers/*-connector.ts). Showing all four made admins
+  // guess which pair mattered - and my own "put the key here, the secret in
+  // API Key" note read as a contradiction next to a field literally named
+  // API Secret. Show only what the selected type actually sends.
+  //
+  // "panel" types speak the DHRU/GSM Theme convention: username +
+  // apiaccesskey in the query string. "header" types authenticate with a
+  // bearer-style token plus an optional secret header.
+  const panelStyle =
+    type === ProviderType.DHRU_FUSION ||
+    type === ProviderType.GSM_THEME ||
+    type === ProviderType.PHP_API ||
+    type === ProviderType.WEBX;
   const usernameRequired =
     type === ProviderType.DHRU_FUSION || type === ProviderType.GSM_THEME;
   const [apiKey, setApiKey] = useState("");
@@ -152,55 +166,61 @@ export function ProviderForm({
         onChange={(e) => setBaseUrl(e.target.value)}
         required
       />
-      <input
-        className={formInputClass}
-        placeholder={
-          usernameRequired ? "Username (required for this provider type)" : "Username (optional)"
-        }
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        required={usernameRequired}
-      />
-      {usernameRequired ? (
-        <p className="-mt-2 text-[11px] text-hint">
-          DHRU / GSM Theme send credentials as <code>username</code> + <code>apiaccesskey</code>:
-          put the provider&apos;s key here and its secret in API Key below.
-        </p>
-      ) : null}
-
-      <input
-        className={formInputClass}
-        type="password"
-        placeholder={
-          editingProvider?.apiKeyMasked
-            ? `API Key (current: ${editingProvider.apiKeyMasked}, leave blank to keep)`
-            : "API Key"
-        }
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-      />
-      <input
-        className={formInputClass}
-        type="password"
-        placeholder={
-          editingProvider?.apiSecretMasked
-            ? `API Secret (current: ${editingProvider.apiSecretMasked}, leave blank to keep)`
-            : "API Secret"
-        }
-        value={apiSecret}
-        onChange={(e) => setApiSecret(e.target.value)}
-      />
-      <input
-        className={formInputClass}
-        type="password"
-        placeholder={
-          editingProvider?.tokenMasked
-            ? `Token (current: ${editingProvider.tokenMasked}, leave blank to keep)`
-            : "Token (optional)"
-        }
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-      />
+      {panelStyle ? (
+        <>
+          <p className="text-[11px] text-hint">
+            This provider expects two credentials in the query string:{" "}
+            <code>username</code> and <code>apiaccesskey</code>.
+          </p>
+          <input
+            className={formInputClass}
+            placeholder={usernameRequired ? "Username (required)" : "Username"}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required={usernameRequired}
+          />
+          <input
+            className={formInputClass}
+            type="password"
+            placeholder={
+              editingProvider?.apiKeyMasked
+                ? `API Access Key (current: ${editingProvider.apiKeyMasked}, leave blank to keep)`
+                : "API Access Key"
+            }
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+        </>
+      ) : (
+        <>
+          <p className="text-[11px] text-hint">
+            This provider authenticates with a token sent as an
+            <code> Authorization</code> header.
+          </p>
+          <input
+            className={formInputClass}
+            type="password"
+            placeholder={
+              editingProvider?.apiKeyMasked
+                ? `API Key / Token (current: ${editingProvider.apiKeyMasked}, leave blank to keep)`
+                : "API Key / Token"
+            }
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <input
+            className={formInputClass}
+            type="password"
+            placeholder={
+              editingProvider?.apiSecretMasked
+                ? `API Secret (current: ${editingProvider.apiSecretMasked}, leave blank to keep)`
+                : "API Secret (optional)"
+            }
+            value={apiSecret}
+            onChange={(e) => setApiSecret(e.target.value)}
+          />
+        </>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <input
