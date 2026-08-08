@@ -29,11 +29,24 @@ export async function authenticateResellerApi(
     return { ok: false, error: "Missing API secret - send it as `apisecret` or `apiaccesskey`" };
   }
 
+  // Generated keys always carry this prefix (see generateApiCredentials).
+  // Calling out a value that clearly isn't one separates "you put the wrong
+  // thing in this field" - typically a Telegram username or an email, since
+  // DHRU panels label the field "username" - from "your key was revoked",
+  // which are the same 401 otherwise. The prefix is deliberately
+  // public-looking, so naming it leaks nothing.
+  if (!key.startsWith("fu_")) {
+    return {
+      ok: false,
+      error: "Invalid API key - expected the generated key starting with `fu_`, not an account username",
+    };
+  }
+
   const apiKey = await prisma.apiKey.findUnique({
     where: { key },
     include: { user: true },
   });
-  if (!apiKey || !apiKey.enabled) return { ok: false, error: "Invalid API key" };
+  if (!apiKey || !apiKey.enabled) return { ok: false, error: "Invalid or disabled API key" };
   if (!verifyApiSecret(secret, apiKey.secretHash)) return { ok: false, error: "Invalid API secret" };
   if (apiKey.user.status !== UserStatus.ACTIVE) return { ok: false, error: "Account is not active" };
 
