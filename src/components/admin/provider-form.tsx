@@ -44,6 +44,8 @@ export function ProviderForm({
   const [type, setType] = useState<ProviderType>(editingProvider?.type ?? ProviderType.REST_API);
   const [baseUrl, setBaseUrl] = useState(editingProvider?.baseUrl ?? "");
   const [username, setUsername] = useState(editingProvider?.username ?? "");
+  const usernameRequired =
+    type === ProviderType.DHRU_FUSION || type === ProviderType.GSM_THEME;
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [token, setToken] = useState("");
@@ -152,10 +154,19 @@ export function ProviderForm({
       />
       <input
         className={formInputClass}
-        placeholder="Username (optional)"
+        placeholder={
+          usernameRequired ? "Username (required for this provider type)" : "Username (optional)"
+        }
         value={username}
         onChange={(e) => setUsername(e.target.value)}
+        required={usernameRequired}
       />
+      {usernameRequired ? (
+        <p className="-mt-2 text-[11px] text-hint">
+          DHRU / GSM Theme send credentials as <code>username</code> + <code>apiaccesskey</code>:
+          put the provider&apos;s key here and its secret in API Key below.
+        </p>
+      ) : null}
 
       <input
         className={formInputClass}

@@ -10,6 +10,56 @@ import { getProviderConnector } from "@/lib/providers/registry";
 import { syncProvider } from "@/lib/providers/sync-engine";
 import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
 
+/**
+ * Provider types that speak the DHRU/GSM Theme convention, where the
+ * credential pair is username + apiaccesskey. Saving one of these without a
+ * username produces a request carrying only half the credentials, which the
+ * remote end rejects as a bare 401 with nothing pointing at the cause -
+ * worth catching at save time instead.
+ */
+const USERNAME_REQUIRED_TYPES = new Set<ProviderType>([
+  ProviderType.DHRU_FUSION,
+  ProviderType.GSM_THEME,
+]);
+
+/**
+ * The edit form shows existing credentials masked and expects a blank field
+ * to mean "keep the current value". Someone typing or pasting the mask
+ * itself instead of leaving it blank would store literal bullet characters
+ * as the credential - a failure that then looks exactly like a wrong
+ * password, since the request goes out with `apiaccesskey=••••`. Catch it
+ * here rather than letting it reach the provider.
+ */
+function looksLikeMask(value: string): boolean {
+  return /^[•*\u2022\s]+$/.test(value);
+}
+
+function validateCredentials(input: {
+  type: ProviderType;
+  username?: string | null;
+  apiKey?: string | null;
+  apiSecret?: string | null;
+  token?: string | null;
+}): string | null {
+  for (const [label, value] of [
+    ["Username", input.username],
+    ["API Key", input.apiKey],
+    ["API Secret", input.apiSecret],
+    ["Token", input.token],
+  ] as const) {
+    const trimmed = value?.trim();
+    if (trimmed && looksLikeMask(trimmed)) {
+      return `${label} looks like the masked placeholder - paste the real value, or leave it blank to keep the current one`;
+    }
+  }
+
+  if (USERNAME_REQUIRED_TYPES.has(input.type) && !input.username?.trim()) {
+    return "Username is required for DHRU / GSM Theme providers - it carries one half of the credential pair";
+  }
+
+  return null;
+}
+
 /** Decrypts (Chapter 19) before masking, so the preview always reflects the real plaintext. */
 function maskSecret(value: string | null): string | null {
   if (!value) return null;
@@ -169,6 +219,9 @@ export async function createProviderAction(
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
 
+    const credentialProblem = validateCredentials(input);
+    if (credentialProblem) return { ok: false, error: credentialProblem };
+
     const hasSecret = Boolean(input.apiKey?.trim() || input.apiSecret?.trim() || input.token?.trim());
 
     await prisma.provider.create({
@@ -219,6 +272,9 @@ export async function updateProviderAction(
     if (!Number.isInteger(input.timeoutMs) || input.timeoutMs <= 0) {
       return { ok: false, error: "Timeout must be a positive number of milliseconds" };
     }
+
+    const credentialProblem = validateCredentials(input);
+    if (credentialProblem) return { ok: false, error: credentialProblem };
 
     const owned = await prisma.provider.findFirst({ where: { id: providerId, tenantId }, select: { id: true } });
     if (!owned) return { ok: false, error: "Provider not found" };
