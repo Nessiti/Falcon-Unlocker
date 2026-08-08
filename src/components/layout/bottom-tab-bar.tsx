@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { selectionHaptic } from "@/lib/haptics";
+import { Icon, type IconName } from "@/components/ui/icon";
 
-const TABS = [
-  { label: "Home", href: "/", icon: "🏠" },
-  { label: "Orders", href: "/orders", icon: "🧾" },
-  { label: "Wallet", href: "/wallet", icon: "💰" },
-  { label: "Profile", href: "/settings", icon: "👤" },
+const TABS: { label: string; href: string; icon: IconName }[] = [
+  { label: "Home", href: "/", icon: "home" },
+  { label: "Orders", href: "/orders", icon: "receipt" },
+  { label: "Wallet", href: "/wallet", icon: "wallet" },
+  { label: "Profile", href: "/settings", icon: "user" },
 ];
 
 /** Fixed bottom navigation, phones only (matches the app's own icon set from the Sidebar). */
@@ -32,12 +33,11 @@ export function BottomTabBar() {
             className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-transform active:scale-95"
           >
             <span
-              className={`flex h-8 w-12 items-center justify-center rounded-full text-lg transition-colors ${
+              className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${
                 active ? "bg-accent/15 text-accent" : "text-hint"
               }`}
-              aria-hidden
             >
-              {tab.icon}
+              <Icon name={tab.icon} />
             </span>
             <span className={active ? "text-accent" : "text-hint"}>{tab.label}</span>
           </Link>

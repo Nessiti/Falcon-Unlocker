@@ -5,6 +5,7 @@ import type { AuthUser } from "@/lib/actions/auth";
 import { formatUsdCompact } from "@/lib/ui";
 import { useAdminAlerts } from "@/components/admin/admin-alerts-provider";
 import { FullscreenButton } from "@/components/layout/fullscreen-button";
+import { Icon } from "@/components/ui/icon";
 
 function alertsTarget(alerts: ReturnType<typeof useAdminAlerts>): string | null {
   if (!alerts || alerts.total === 0) return null;
@@ -31,9 +32,9 @@ export function Navbar({
         type="button"
         onClick={onMenuClick}
         aria-label="Open menu"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground transition-colors active:scale-95 hover:bg-surface"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95 hover:bg-surface"
       >
-        ☰
+        <Icon name="menu" />
       </button>
 
       <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground">
@@ -60,9 +61,9 @@ export function Navbar({
         aria-label="Notifications"
         onClick={() => target && router.push(target)}
         disabled={!target}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-foreground transition-colors active:scale-95 hover:bg-surface disabled:cursor-default disabled:active:scale-100"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95 hover:bg-surface disabled:cursor-default disabled:active:scale-100"
       >
-        🔔
+        <Icon name="bell" />
         {alerts && alerts.total > 0 ? (
           <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground ring-2 ring-background">
             {alerts.total}
@@ -78,11 +79,8 @@ export function Navbar({
           className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-accent/20"
         />
       ) : (
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-base ring-2 ring-accent/20"
-          aria-hidden
-        >
-          🦅
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent ring-2 ring-accent/20">
+          <Icon name="shield" className="h-4 w-4" />
         </span>
       )}
     </header>

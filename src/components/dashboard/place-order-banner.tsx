@@ -1,6 +1,7 @@
 "use client";
 
 import { impactHaptic } from "@/lib/haptics";
+import { Icon } from "@/components/ui/icon";
 
 export function PlaceOrderBanner({ onClick }: { onClick: () => void }) {
   return (
@@ -16,8 +17,8 @@ export function PlaceOrderBanner({ onClick }: { onClick: () => void }) {
         <p className="text-base font-semibold">Place New Order</p>
         <p className="truncate text-sm opacity-90">Choose a service and place your order</p>
       </div>
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl" aria-hidden>
-        🛒
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
+        <Icon name="cart" className="h-6 w-6" />
       </span>
     </button>
   );

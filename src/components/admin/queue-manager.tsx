@@ -13,20 +13,8 @@ import {
   type QueueEntryDetail,
 } from "@/lib/actions/admin-queue";
 import { formInputClass } from "@/lib/ui";
+import { statusLabel, statusTone } from "@/lib/status";
 
-const STATUS_LABEL: Record<string, string> = {
-  QUEUED: "Queued",
-  PROCESSING: "Processing",
-  SUCCEEDED: "Succeeded",
-  FAILED: "Failed",
-  CANCELLED: "Cancelled",
-};
-
-function statusClass(status: string): string {
-  if (status === "SUCCEEDED") return "text-foreground";
-  if (status === "FAILED" || status === "CANCELLED") return "text-accent";
-  return "text-hint";
-}
 
 export function QueueManager({ initData }: { initData: string }) {
   const [entries, setEntries] = useState<QueueEntrySummary[] | null>(null);
@@ -201,7 +189,7 @@ export function QueueManager({ initData }: { initData: string }) {
                 <span className="font-medium text-foreground">
                   {entry.kind} · {entry.serviceName}
                 </span>
-                <span className={statusClass(entry.status)}>{STATUS_LABEL[entry.status] ?? entry.status}</span>
+                <span className={statusTone(entry.status).text}>{statusLabel(entry.status)}</span>
               </div>
               <p className="text-xs text-hint">{entry.customerName}</p>
               <p className="text-xs text-hint">

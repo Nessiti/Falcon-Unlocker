@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { Icon, type IconName } from "@/components/ui/icon";
+import { selectionHaptic } from "@/lib/haptics";
 
-const ACTIONS: { label: string; href: string; icon: string }[] = [
-  { label: "My Orders", href: "/orders", icon: "🧾" },
-  { label: "Wallet", href: "/wallet", icon: "💰" },
-  { label: "Tickets", href: "/support?tab=tickets", icon: "💬" },
-  { label: "FAQ", href: "/support?tab=faq", icon: "📋" },
-  { label: "Notifications", href: "/notifications", icon: "🔔" },
-  { label: "Settings", href: "/settings", icon: "⚙️" },
-  { label: "Help Center", href: "/support?tab=help", icon: "❓" },
+const ACTIONS: { label: string; href: string; icon: IconName }[] = [
+  { label: "My Orders", href: "/orders", icon: "receipt" },
+  { label: "Wallet", href: "/wallet", icon: "wallet" },
+  { label: "Tickets", href: "/support?tab=tickets", icon: "message" },
+  { label: "FAQ", href: "/support?tab=faq", icon: "list" },
+  { label: "Notifications", href: "/notifications", icon: "bell" },
+  { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "Help Center", href: "/support?tab=help", icon: "help" },
 ];
 
-function ActionIcon({ icon }: { icon: string }) {
+function ActionIcon({ icon }: { icon: IconName }) {
   return (
-    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-lg" aria-hidden>
-      {icon}
+    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent">
+      <Icon name={icon} />
     </span>
   );
 }
@@ -27,7 +29,8 @@ export function MobileQuickActions({ onNewsClick }: { onNewsClick: () => void })
         <Link
           key={action.href}
           href={action.href}
-          className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
+          onClick={selectionHaptic}
+          className="flex min-w-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
         >
           <ActionIcon icon={action.icon} />
           <span className="w-full truncate text-center text-[11px] text-foreground">{action.label}</span>
@@ -35,10 +38,13 @@ export function MobileQuickActions({ onNewsClick }: { onNewsClick: () => void })
       ))}
       <button
         type="button"
-        onClick={onNewsClick}
-        className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
+        onClick={() => {
+          selectionHaptic();
+          onNewsClick();
+        }}
+        className="flex min-w-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
       >
-        <ActionIcon icon="📰" />
+        <ActionIcon icon="news" />
         <span className="w-full truncate text-center text-[11px] text-foreground">News</span>
       </button>
     </div>

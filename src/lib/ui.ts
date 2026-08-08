@@ -1,3 +1,5 @@
+import type { IconName } from "@/components/ui/icon";
+
 export const formInputClass =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground";
 
@@ -14,32 +16,27 @@ export function readableTextColor(hex: string): "#000000" | "#ffffff" {
   return luminance > 0.6 ? "#000000" : "#ffffff";
 }
 
-const CATEGORY_ICON_RULES: [RegExp, string][] = [
-  [/iphone|ipad|ios|apple|icloud/i, "🍎"],
-  [/samsung|galaxy/i, "📱"],
-  [/xiaomi|redmi|poco/i, "📱"],
-  [/huawei|honor/i, "📱"],
-  [/oppo|vivo|realme|oneplus/i, "📱"],
-  [/pixel|google/i, "📱"],
-  [/lg|sony|nokia|motorola|moto\b/i, "📱"],
-  [/frp|reset/i, "🔐"],
-  [/unlock/i, "🔓"],
-  [/sim|network|carrier/i, "📶"],
-  [/server|remote|activation|license|credit/i, "🖥️"],
-  [/repair|screen|part/i, "🔧"],
-  [/account|login/i, "👤"],
+const CATEGORY_ICON_RULES: [RegExp, IconName][] = [
+  [/iphone|ipad|ios|apple|icloud/i, "apple"],
+  [/samsung|galaxy|xiaomi|redmi|poco|huawei|honor|oppo|vivo|realme|oneplus|pixel|google|lg|sony|nokia|motorola|moto\b/i, "smartphone"],
+  [/frp|reset/i, "shield"],
+  [/unlock/i, "unlock"],
+  [/sim|network|carrier/i, "signal"],
+  [/server|remote|activation|license|credit/i, "server"],
+  [/repair|screen|part/i, "wrench"],
+  [/account|login/i, "user"],
 ];
 
 /**
- * Picks a reasonably fitting emoji for a category name with no admin setup
+ * Picks a reasonably fitting icon for a category name with no admin setup
  * required - keyword-matched against common device brands and service
- * types, falling back to a generic box for anything unrecognized.
+ * types, falling back to a generic package for anything unrecognized.
  */
-export function categoryIcon(name: string): string {
+export function categoryIcon(name: string): IconName {
   for (const [pattern, icon] of CATEGORY_ICON_RULES) {
     if (pattern.test(name)) return icon;
   }
-  return "📦";
+  return "package";
 }
 
 export function formatUsd(cents: number) {

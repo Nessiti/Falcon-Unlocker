@@ -4,21 +4,15 @@ import { useState } from "react";
 import type { OrderSummary } from "@/lib/actions/orders";
 import { Markdown } from "@/components/ui/markdown";
 import { formatUsd } from "@/lib/ui";
+import { statusLabel } from "@/lib/status";
+import { StatusPill } from "@/components/ui/status-pill";
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Pending",
-  CHECKING: "Checking",
-  PROCESSING: "Processing",
-  COMPLETED: "Completed",
-  REJECTED: "Rejected",
-  CANCELLED: "Cancelled",
-};
 
 function buildShareText(order: OrderSummary): string {
   const lines = [
     `Order #${order.id.slice(0, 8)}`,
     `Service: ${order.serviceName} (${order.kind})`,
-    `Status: ${STATUS_LABEL[order.status] ?? order.status}`,
+    `Status: ${statusLabel(order.status)}`,
     `Price: ${formatUsd(order.priceCents)}`,
     `Date: ${new Date(order.createdAt).toLocaleString()}`,
   ];
@@ -36,7 +30,7 @@ function buildShareText(order: OrderSummary): string {
     lines.push("History:");
     for (const event of order.statusHistory) {
       const when = new Date(event.createdAt).toLocaleString();
-      lines.push(`- ${STATUS_LABEL[event.status] ?? event.status} · ${when}${event.comment ? ` - ${event.comment}` : ""}`);
+      lines.push(`- ${statusLabel(event.status)} · ${when}${event.comment ? ` - ${event.comment}` : ""}`);
     }
   }
   return lines.join("\n");
@@ -85,7 +79,7 @@ export function OrderDetailModal({ order, onClose }: { order: OrderSummary; onCl
         <dl className="flex flex-col gap-1 rounded-lg bg-background p-3 text-sm">
           <div className="flex justify-between gap-2">
             <dt className="text-hint">Status</dt>
-            <dd className="font-medium text-foreground">{STATUS_LABEL[order.status] ?? order.status}</dd>
+            <dd><StatusPill status={order.status} /></dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-hint">Price</dt>
@@ -144,7 +138,7 @@ export function OrderDetailModal({ order, onClose }: { order: OrderSummary; onCl
               {order.statusHistory.map((event, index) => (
                 <div key={index} className="text-xs">
                   <p className="text-foreground">
-                    {STATUS_LABEL[event.status] ?? event.status} ·{" "}
+                    {statusLabel(event.status)} ·{" "}
                     {new Date(event.createdAt).toLocaleString()}
                   </p>
                   {event.comment ? <Markdown text={event.comment} className="mt-0.5" /> : null}

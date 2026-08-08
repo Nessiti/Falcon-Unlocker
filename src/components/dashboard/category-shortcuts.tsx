@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { DashboardCategory } from "@/lib/actions/dashboard";
 import { categoryIcon } from "@/lib/ui";
 import { selectionHaptic } from "@/lib/haptics";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Shortcuts to the tenant's top categories. Deliberately built from the
@@ -32,11 +33,8 @@ export function CategoryShortcuts({ categories }: { categories: DashboardCategor
             onClick={selectionHaptic}
             className="flex min-w-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
           >
-            <span
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-lg"
-              aria-hidden
-            >
-              {categoryIcon(category.name)}
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent">
+              <Icon name={categoryIcon(category.name)} />
             </span>
             <span className="w-full truncate text-center text-[11px] text-foreground">
               {category.name}

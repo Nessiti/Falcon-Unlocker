@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatUsd } from "@/lib/ui";
 import { impactHaptic, selectionHaptic } from "@/lib/haptics";
+import { Icon } from "@/components/ui/icon";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -41,17 +42,15 @@ export function BalanceHero({
             className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white/30"
           />
         ) : (
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl ring-2 ring-white/30">
-            🦅
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+            <Icon name="user" className="h-6 w-6" />
           </span>
         )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs opacity-80">{greeting()},</p>
           <p className="truncate text-base font-semibold">{firstName}</p>
         </div>
-        <span aria-hidden className="shrink-0 text-lg opacity-70">
-          ›
-        </span>
+        <Icon name="chevron-right" className="h-5 w-5 shrink-0 opacity-70" />
       </Link>
 
       <div className="min-w-0">
@@ -65,14 +64,14 @@ export function BalanceHero({
           onClick={() => impactHaptic("light")}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/20 px-4 py-2.5 text-sm font-semibold backdrop-blur transition-transform active:scale-95"
         >
-          <span aria-hidden>＋</span> Add funds
+          <Icon name="plus" className="h-4 w-4" /> Add funds
         </Link>
         <Link
           href="/orders"
           onClick={selectionHaptic}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold backdrop-blur transition-transform active:scale-95"
         >
-          <span aria-hidden>🧾</span> My orders
+          <Icon name="receipt" className="h-4 w-4" /> My orders
         </Link>
       </div>
     </div>
