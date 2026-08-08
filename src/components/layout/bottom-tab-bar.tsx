@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { selectionHaptic } from "@/lib/haptics";
 
 const TABS = [
   { label: "Home", href: "/", icon: "🏠" },
@@ -25,6 +26,9 @@ export function BottomTabBar() {
           <Link
             key={tab.href}
             href={tab.href}
+            onClick={() => {
+              if (!active) selectionHaptic();
+            }}
             className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-transform active:scale-95"
           >
             <span

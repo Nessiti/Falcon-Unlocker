@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { DashboardCategory } from "@/lib/actions/dashboard";
 import { categoryIcon } from "@/lib/ui";
+import { selectionHaptic } from "@/lib/haptics";
 
 export function CategoryShortcuts({ categories }: { categories: DashboardCategory[] }) {
   if (categories.length === 0) return null;
@@ -20,6 +21,7 @@ export function CategoryShortcuts({ categories }: { categories: DashboardCategor
           <Link
             key={category.id}
             href={category.href}
+            onClick={selectionHaptic}
             className="flex w-14 shrink-0 flex-col items-center gap-1.5 transition-transform active:scale-95"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-surface text-xl shadow-sm">

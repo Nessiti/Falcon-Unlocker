@@ -15,7 +15,8 @@ import { listMyOrdersAction, type OrderSummary } from "@/lib/actions/orders";
 import { HomeCard } from "@/components/dashboard/home-card";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PopupDisplay } from "@/components/dashboard/popup-display";
-import { WelcomeCard } from "@/components/dashboard/welcome-card";
+import { BalanceHero } from "@/components/dashboard/balance-hero";
+import { OrderStats } from "@/components/dashboard/order-stats";
 import { PlaceOrderBanner } from "@/components/dashboard/place-order-banner";
 import { PlaceOrderChooser } from "@/components/dashboard/place-order-chooser";
 import { CategoryShortcuts } from "@/components/dashboard/category-shortcuts";
@@ -90,11 +91,12 @@ export default function Home() {
 
         {/* Phones: card-based dashboard. */}
         <div className="flex w-full min-w-0 flex-col gap-6 lg:hidden">
-          <WelcomeCard
+          <BalanceHero
             firstName={user.firstName}
             balanceCents={user.balanceCents}
             avatarUrl={user.avatarUrl}
           />
+          <OrderStats summary={summary} />
           <PlaceOrderBanner onClick={() => setShowOrderChooser(true)} />
           <CategoryShortcuts categories={categories} />
           <RecentOrderPreview

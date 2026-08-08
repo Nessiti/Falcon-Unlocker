@@ -1,10 +1,15 @@
 "use client";
 
+import { impactHaptic } from "@/lib/haptics";
+
 export function PlaceOrderBanner({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        impactHaptic("medium");
+        onClick();
+      }}
       className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-accent to-accent/60 px-4 py-4 text-left text-accent-foreground shadow-lg shadow-accent/30 transition-transform active:scale-[0.98]"
     >
       <div className="min-w-0">

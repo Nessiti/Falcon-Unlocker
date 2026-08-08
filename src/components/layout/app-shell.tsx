@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { DesktopHeader } from "@/components/layout/desktop-header";
 import { BottomTabBar } from "@/components/layout/bottom-tab-bar";
 import { BrandThemeSync } from "@/components/layout/brand-theme-sync";
+import { TelegramNativeChrome } from "@/components/layout/telegram-native-chrome";
 import { AdminAlertsProvider } from "@/components/admin/admin-alerts-provider";
 
 function CenteredMessage({ children }: { children: ReactNode }) {
@@ -50,6 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AdminAlertsProvider>
       <BrandThemeSync />
+      <TelegramNativeChrome />
       <div className="flex min-h-full flex-1 lg:flex-row">
         {/* Desktop dashboard shell: persistent sidebar (lg breakpoint and up). */}
         <div className="hidden lg:block">
