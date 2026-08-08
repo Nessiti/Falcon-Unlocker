@@ -113,19 +113,20 @@ export type CreateRechargeOrderInput = {
   methodId: string;
   amountCents: number;
   proofNote: string | null;
-  /** Uploaded directly to Vercel Blob by the client before this action runs
-   * (Chapter 40) - see /api/upload/recharge-proof. */
-  proofUrl: string | null;
+  /** No longer collected client-side - the customer instead sends a
+   * structured message with their details via the method's own contact
+   * channel (WhatsApp/Telegram). RechargeOrder.proofUrl stays nullable in
+   * the schema for older orders that do have one. */
+  proofUrl: null;
 };
 
 export type CreateRechargeOrderResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Step 1-2 of the manual recharge flow: creates the pending request, with
- * the photo of the payment proof attached in-app (Chapter 40). Some
- * methods also have a WhatsApp/Telegram contact configured (contactType/
- * contactValue) the customer can additionally reach out to, but the proof
- * itself no longer has to leave the app for the admin to review it.
+ * Step 1-2 of the manual recharge flow: creates the pending request. The
+ * customer's payment details reach the admin as a structured message sent
+ * through the method's own WhatsApp/Telegram contact (built client-side in
+ * RechargeMethodCard), not as an in-app upload.
  */
 export async function createRechargeOrderAction(
   initData: string,
@@ -137,9 +138,6 @@ export async function createRechargeOrderAction(
 
     if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
       return { ok: false, error: "Enter a valid amount" };
-    }
-    if (!input.proofUrl) {
-      return { ok: false, error: "Attach a photo of your payment proof" };
     }
 
     const method = await prisma.rechargeMethod.findFirst({ where: { id: input.methodId, tenantId } });

@@ -1,28 +1,13 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createRechargeOrderAction, type RechargeMethodSummary } from "@/lib/actions/wallet";
-import { compressImageToJpeg, uploadWithProgress } from "@/lib/upload-image";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 import { notifyHaptic } from "@/lib/haptics";
 import { Markdown } from "@/components/ui/markdown";
-
-// A hung upload used to spin forever with no feedback and no way out -
-// this bounds it so a stalled connection fails cleanly instead.
-const UPLOAD_TIMEOUT_MS = 45_000;
-
-function proofUploadErrorMessage(error: unknown): string {
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return "Upload timed out. Check your connection and try again.";
-  }
-  // Every message the upload route itself returns is already a short,
-  // plain-language reason (e.g. "Unsupported file type") - worth showing
-  // as-is instead of masking it behind one generic string.
-  if (error instanceof Error && error.message) return error.message;
-  return "Couldn't upload the image. Try again.";
-}
+import { useTelegramUser } from "@/components/telegram-user-provider";
 
 function buildContactUrl(method: RechargeMethodSummary, message: string) {
   if (!method.contactType || !method.contactValue) return null;
@@ -36,6 +21,32 @@ function buildContactUrl(method: RechargeMethodSummary, message: string) {
   return `https://t.me/${username}?text=${encodeURIComponent(message)}`;
 }
 
+/**
+ * A clear, labeled message the customer's contact app opens pre-filled with
+ * - so the admin gets everything needed to match the request to a real
+ * payment (who, how much, which method, any reference) without the
+ * customer needing to type it all out themselves.
+ */
+function buildRechargeMessage(
+  method: RechargeMethodSummary,
+  amount: string,
+  note: string,
+  customer: { firstName: string; lastName: string | null; username: string | null; telegramId: string },
+) {
+  const name = [customer.firstName, customer.lastName].filter(Boolean).join(" ");
+  const lines = [
+    "💰 Recharge Request",
+    "",
+    `Method: ${method.name}`,
+    `Amount: ${amount} USD`,
+    `Customer: ${name}${customer.username ? ` (@${customer.username})` : ""}`,
+    `Telegram ID: ${customer.telegramId}`,
+  ];
+  if (note.trim()) lines.push(`Reference: ${note.trim()}`);
+  lines.push("", "Please confirm once payment is received.");
+  return lines.join("\n");
+}
+
 export function RechargeMethodCard({
   method,
   initData,
@@ -44,47 +55,13 @@ export function RechargeMethodCard({
   initData: string;
 }) {
   const router = useRouter();
+  const auth = useTelegramUser();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [proofNote, setProofNote] = useState("");
-  const [proofUrl, setProofUrl] = useState<string | null>(null);
-  const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    setError(null);
-    setProofUrl(null);
-    setProofPreview(URL.createObjectURL(file));
-    setUploading(true);
-    setUploadProgress(0);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
-    try {
-      const compressed = await compressImageToJpeg(file);
-      const result = await uploadWithProgress("/api/upload/recharge-proof", compressed, {
-        headers: { "x-telegram-init-data": initData, "content-type": compressed.type || "image/jpeg" },
-        onProgress: setUploadProgress,
-        signal: controller.signal,
-      });
-      setProofUrl(result.url);
-    } catch (uploadError) {
-      console.error("[wallet] proof upload failed", uploadError);
-      setError(proofUploadErrorMessage(uploadError));
-      setProofPreview(null);
-    } finally {
-      clearTimeout(timeout);
-      setUploading(false);
-    }
-  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -95,15 +72,18 @@ export function RechargeMethodCard({
       setError("Enter a valid amount");
       return;
     }
-    if (!proofUrl) {
-      setError("Attach a photo of your payment proof");
+    if (auth.status !== "authenticated") {
+      setError("Failed to load your account - try again");
       return;
     }
 
-    const contactUrl = buildContactUrl(
-      method,
-      `Hi, I'd like to send proof of payment for a recharge of ${amount} USD via ${method.name}.`,
-    );
+    const message = buildRechargeMessage(method, amount, proofNote, {
+      firstName: auth.user.firstName,
+      lastName: auth.user.lastName,
+      username: auth.user.username,
+      telegramId: auth.user.telegramId,
+    });
+    const contactUrl = buildContactUrl(method, message);
     // Opened synchronously (before the await) so browsers don't treat it as a
     // blocked popup - navigated to the real URL once the order is created.
     const contactWindow = contactUrl ? window.open("", "_blank") : null;
@@ -113,7 +93,7 @@ export function RechargeMethodCard({
       methodId: method.id,
       amountCents,
       proofNote: proofNote.trim() || null,
-      proofUrl,
+      proofUrl: null,
     });
     setSubmitting(false);
 
@@ -133,8 +113,6 @@ export function RechargeMethodCard({
     setOpen(false);
     setAmount("");
     setProofNote("");
-    setProofUrl(null);
-    setProofPreview(null);
     router.refresh();
   }
 
@@ -148,7 +126,7 @@ export function RechargeMethodCard({
           <p className="text-sm font-semibold text-foreground">Request submitted!</p>
           <p className="mt-1 text-xs text-hint">
             {method.contactType
-              ? `We've opened ${method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} - send your proof of payment there to complete your request.`
+              ? `We've opened ${method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} with your details pre-filled - just hit send.`
               : "Your recharge request is awaiting admin approval. You'll be notified once it's reviewed."}
           </p>
         </div>
@@ -186,15 +164,15 @@ export function RechargeMethodCard({
           onClick={() => setOpen(true)}
           className="self-start rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground"
         >
-          Send proof of payment
+          I&apos;ve sent payment
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-border pt-2">
           {method.contactType ? (
             <p className="text-xs text-hint">
               After submitting, we&apos;ll open{" "}
-              {method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} so you
-              can send your proof directly.
+              {method.contactType === RechargeContactType.WHATSAPP ? "WhatsApp" : "Telegram"} with a
+              ready-to-send message including your details.
             </p>
           ) : null}
           <input
@@ -214,42 +192,11 @@ export function RechargeMethodCard({
             onChange={(e) => setProofNote(e.target.value)}
           />
 
-          <label className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-hint">Photo of your payment proof</span>
-            {proofPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element -- local preview of the file about to be uploaded
-              <img
-                src={proofPreview}
-                alt="Payment proof preview"
-                className="max-h-40 w-full rounded-lg object-contain"
-              />
-            ) : null}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="text-xs text-foreground file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground"
-              required={!proofUrl}
-            />
-            {uploading ? (
-              <div className="flex flex-col gap-1">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-background">
-                  <div
-                    className="h-full rounded-full bg-accent transition-all"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-hint">Uploading… {uploadProgress}%</p>
-              </div>
-            ) : null}
-          </label>
-
           {error ? <p className="text-xs text-accent">{error}</p> : null}
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={submitting || uploading || !proofUrl}
+              disabled={submitting}
               className="flex-1 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
             >
               {submitting
