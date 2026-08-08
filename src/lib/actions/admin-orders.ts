@@ -5,8 +5,12 @@ import { requireStaff } from "@/lib/telegram/admin";
 import { requireTenantId } from "@/lib/telegram/tenant";
 import { TelegramAuthError } from "@/lib/telegram/auth";
 import { logAdminAction } from "@/lib/telegram/audit";
-import { notifyOrderCompleted, notifyOrderStatusChanged } from "@/lib/telegram/notifications";
-import { OrderStatus } from "@/generated/prisma/client";
+import {
+  notifyOrderCompleted,
+  notifyOrderRefunded,
+  notifyOrderStatusChanged,
+} from "@/lib/telegram/notifications";
+import { OrderStatus, WalletTransactionType } from "@/generated/prisma/client";
 import { resolveFieldValues } from "@/lib/orders";
 
 export type OrderKind = "IMEI" | "SERVER";
@@ -85,7 +89,24 @@ export type UpdateOrderStatusInput = {
 };
 export type UpdateOrderStatusResult = { ok: true } | { ok: false; error: string };
 
-async function transitionImeiOrder(adminId: string, tenantId: string, input: UpdateOrderStatusInput) {
+/** Rejecting or cancelling an order is the app deciding not to deliver it, so
+ * the money the customer already paid at order time (orders-core.ts debits
+ * up front) has to go back. Anything else silently keeps their funds. */
+const REFUNDABLE = new Set<OrderStatus>([OrderStatus.REJECTED, OrderStatus.CANCELLED]);
+
+type TransitionOutcome = {
+  telegramId: bigint;
+  tenantId: string;
+  serviceName: string;
+  /** 0 when nothing was refunded on this transition. */
+  refundedCents: number;
+};
+
+async function transitionImeiOrder(
+  adminId: string,
+  tenantId: string,
+  input: UpdateOrderStatusInput,
+): Promise<TransitionOutcome | null> {
   return prisma.$transaction(async (tx) => {
     const owned = await tx.imeiOrder.findFirst({ where: { id: input.orderId, tenantId }, select: { id: true } });
     if (!owned) return null;
@@ -98,11 +119,45 @@ async function transitionImeiOrder(adminId: string, tenantId: string, input: Upd
     await tx.imeiOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
+
+    let refundedCents = 0;
+    if (REFUNDABLE.has(input.status) && order.priceCents > 0) {
+      // Guard against double-refunding: an admin can re-apply Rejected, or
+      // move an order Rejected -> Pending -> Rejected. The refund ledger
+      // entry is the record of "already paid back", so its existence - not
+      // the current status - is what decides.
+      const alreadyRefunded = await tx.walletTransaction.findFirst({
+        where: { imeiOrderId: order.id, type: WalletTransactionType.CREDIT },
+        select: { id: true },
+      });
+
+      if (!alreadyRefunded) {
+        await tx.user.update({
+          where: { id: order.userId },
+          data: { balanceCents: { increment: order.priceCents } },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            userId: order.userId,
+            type: WalletTransactionType.CREDIT,
+            amountCents: order.priceCents,
+            reason: `Refund: ${order.service.name}`,
+            imeiOrderId: order.id,
+          },
+        });
+        refundedCents = order.priceCents;
+      }
+    }
+
+    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name, refundedCents };
   });
 }
 
-async function transitionServerOrder(adminId: string, tenantId: string, input: UpdateOrderStatusInput) {
+async function transitionServerOrder(
+  adminId: string,
+  tenantId: string,
+  input: UpdateOrderStatusInput,
+): Promise<TransitionOutcome | null> {
   return prisma.$transaction(async (tx) => {
     const owned = await tx.serverOrder.findFirst({ where: { id: input.orderId, tenantId }, select: { id: true } });
     if (!owned) return null;
@@ -115,7 +170,33 @@ async function transitionServerOrder(adminId: string, tenantId: string, input: U
     await tx.serverOrderStatusEvent.create({
       data: { orderId: order.id, adminId, status: input.status, comment: input.comment },
     });
-    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name };
+
+    let refundedCents = 0;
+    if (REFUNDABLE.has(input.status) && order.priceCents > 0) {
+      const alreadyRefunded = await tx.walletTransaction.findFirst({
+        where: { serverOrderId: order.id, type: WalletTransactionType.CREDIT },
+        select: { id: true },
+      });
+
+      if (!alreadyRefunded) {
+        await tx.user.update({
+          where: { id: order.userId },
+          data: { balanceCents: { increment: order.priceCents } },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            userId: order.userId,
+            type: WalletTransactionType.CREDIT,
+            amountCents: order.priceCents,
+            reason: `Refund: ${order.service.name}`,
+            serverOrderId: order.id,
+          },
+        });
+        refundedCents = order.priceCents;
+      }
+    }
+
+    return { telegramId: order.user.telegramId, tenantId, serviceName: order.service.name, refundedCents };
   });
 }
 
@@ -141,6 +222,20 @@ export async function updateOrderStatusAction(
       await notifyOrderCompleted(outcome.telegramId, outcome.tenantId, outcome.serviceName);
     } else if (input.status !== OrderStatus.PENDING) {
       await notifyOrderStatusChanged(outcome.telegramId, outcome.tenantId, outcome.serviceName, input.status);
+    }
+
+    if (outcome.refundedCents > 0) {
+      await logAdminAction(
+        staff.id,
+        "order.refund",
+        `${input.kind} ${input.orderId} refunded ${outcome.refundedCents} cents`,
+      );
+      await notifyOrderRefunded(
+        outcome.telegramId,
+        outcome.tenantId,
+        outcome.serviceName,
+        outcome.refundedCents,
+      );
     }
 
     return { ok: true };

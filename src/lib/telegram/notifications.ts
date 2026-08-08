@@ -144,6 +144,26 @@ export function notifyCustomizeWelcomeMessage(telegramId: bigint, tenantId: stri
   );
 }
 
+/**
+ * Sent when a rejected/cancelled order's money goes back to the customer's
+ * wallet (admin-orders.ts). Separate from the generic status-change
+ * message: "your order was rejected" without "and you've been refunded" is
+ * exactly the gap that generates support tickets.
+ */
+export function notifyOrderRefunded(
+  telegramId: bigint,
+  tenantId: string,
+  serviceName: string,
+  amountCents: number,
+) {
+  return sendTelegramMessage(
+    telegramId,
+    tenantId,
+    `\u{1F4B0} <b>Refund issued</b>\n${formatUsd(amountCents)} for "${serviceName}" has been returned to your wallet balance.`,
+    [{ text: "Open Wallet", path: "/wallet" }],
+  );
+}
+
 export function notifySupportReply(telegramId: bigint, tenantId: string, message: string) {
   return sendTelegramMessage(telegramId, tenantId, `💬 <b>Support reply</b>\n${message}`, [
     { text: "Open Support", path: "/support" },
