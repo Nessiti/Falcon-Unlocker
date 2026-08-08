@@ -9,6 +9,7 @@ import { ProviderType, SyncFrequency } from "@/generated/prisma/client";
 import { getProviderConnector } from "@/lib/providers/registry";
 import { syncProvider } from "@/lib/providers/sync-engine";
 import { encryptSecret, decryptSecret } from "@/lib/security/encryption";
+import { describeActionError } from "./describe-error";
 
 /**
  * Collapses the duplicate slashes and trailing slash that creep in when a
@@ -233,6 +234,24 @@ export type ProviderInput = {
 export type CreateProviderResult = { ok: true } | { ok: false; error: string };
 
 /** Add a provider (Chapter 12), scoped to the admin's own tenant. Core app logic never depends on the type - see Chapter 13's connector. */
+/**
+ * Postgres rejects an enum value the database does not know with
+ * `invalid input value for enum "ProviderType": "FALCON"`. In this app that
+ * has exactly one cause: a provider type was added to the Prisma schema and
+ * shipped with a migration, but the migration has not been applied to this
+ * database - so the option shows up in the dropdown while the column still
+ * refuses it. Nothing an admin can fix from inside the app, and the raw
+ * Prisma text does not say so; name the cause instead.
+ */
+function describeProviderTypeError(error: unknown): string | null {
+  const detail = error instanceof Error ? error.message : String(error);
+  if (!/invalid input value for enum/i.test(detail)) return null;
+  return (
+    "This provider type is not in the database yet. Its migration has not been applied - " +
+    "redeploy so `prisma migrate deploy` runs, then try again."
+  );
+}
+
 export async function createProviderAction(
   initData: string,
   input: ProviderInput,
@@ -278,8 +297,9 @@ export async function createProviderAction(
     if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
       return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
     }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to create provider";
-    return { ok: false, error: message };
+    const typeProblem = describeProviderTypeError(error);
+    if (typeProblem) return { ok: false, error: typeProblem };
+    return { ok: false, error: describeActionError(error, "Failed to create provider", "admin-providers") };
   }
 }
 
@@ -337,8 +357,9 @@ export async function updateProviderAction(
     if (error instanceof Error && error.message === "ENCRYPTION_KEY is not configured") {
       return { ok: false, error: "Server misconfiguration: ENCRYPTION_KEY is not set" };
     }
-    const message = error instanceof TelegramAuthError ? error.message : "Failed to update provider";
-    return { ok: false, error: message };
+    const typeProblem = describeProviderTypeError(error);
+    if (typeProblem) return { ok: false, error: typeProblem };
+    return { ok: false, error: describeActionError(error, "Failed to update provider", "admin-providers") };
   }
 }
 
