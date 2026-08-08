@@ -2,6 +2,7 @@ import "server-only";
 import { BaseConnector } from "./base-connector";
 import type {
   BalanceResult,
+  ConnectionTestResult,
   CancelOrderResult,
   ConnectorService,
   ConnectorOrderStatus,
@@ -70,6 +71,11 @@ export class FalconConnector extends BaseConnector {
     }
     if (!json.SUCCESS?.length) return { ok: false, error: "Empty response from provider" };
     return { ok: true, data: json.SUCCESS[0] };
+  }
+
+  /** The base URL is the API endpoint here, so a bare unauthenticated GET always 401s - test the credentials instead. */
+  async testConnection(): Promise<ConnectionTestResult> {
+    return this.testConnectionViaBalance();
   }
 
   async getBalance(): Promise<BalanceResult> {

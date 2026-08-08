@@ -85,6 +85,40 @@ export abstract class BaseConnector implements ProviderConnector {
     }
   }
 
+  /**
+   * The testConnection above fetches the base URL bare, which only means
+   * anything for providers whose base URL is a browsable host. For the
+   * credential-carrying panel APIs (DHRU, GSM Theme, Falcon, DHRU Pro) the
+   * base URL *is* the API endpoint, so a bare GET is a request with no
+   * credentials - it answers 401 every single time, forever. That produced
+   * a permanently red `testConnection ✗ 401` line in the API Logs next to
+   * calls that were working fine, and worse, reported success anyway
+   * (401 < 500), so genuinely wrong credentials still tested green.
+   *
+   * Those connectors override testConnection with this instead: the real
+   * balance call, which is the cheapest request that actually exercises the
+   * credentials. Green here means the provider accepted them.
+   */
+  protected async testConnectionViaBalance(): Promise<ConnectionTestResult> {
+    const startedAt = Date.now();
+    try {
+      const result = await this.getBalance();
+      return {
+        success: result.ok,
+        responseTimeMs: Date.now() - startedAt,
+        statusCode: null,
+        errorMessage: result.ok ? null : result.error,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        responseTimeMs: Date.now() - startedAt,
+        statusCode: null,
+        errorMessage: error instanceof Error ? error.message : "Connection failed",
+      };
+    }
+  }
+
   async syncServices(): Promise<SyncServicesResult> {
     try {
       const services = await this.getServices();
