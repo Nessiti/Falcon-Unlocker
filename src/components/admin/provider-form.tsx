@@ -11,6 +11,7 @@ import { ProviderType, SyncFrequency } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 
 const TYPE_OPTIONS: { value: ProviderType; label: string }[] = [
+  { value: ProviderType.FALCON, label: "Falcon UPS Server" },
   { value: ProviderType.DHRU_FUSION, label: "DHRU Fusion API" },
   { value: ProviderType.PHP_API, label: "PHP API" },
   { value: ProviderType.WEBX, label: "WebX Next API" },
@@ -53,6 +54,10 @@ export function ProviderForm({
   // "panel" types speak the DHRU/GSM Theme convention: username +
   // apiaccesskey in the query string. "header" types authenticate with a
   // bearer-style token plus an optional secret header.
+  // Falcon's own reseller API takes the app's native apikey/apisecret pair -
+  // no username at all - so it gets its own field pair rather than being
+  // squeezed into either of the other two shapes.
+  const falconStyle = type === ProviderType.FALCON;
   const panelStyle =
     type === ProviderType.DHRU_FUSION ||
     type === ProviderType.GSM_THEME ||
@@ -166,7 +171,32 @@ export function ProviderForm({
         onChange={(e) => setBaseUrl(e.target.value)}
         required
       />
-      {panelStyle ? (
+      {falconStyle ? (
+        <>
+          <p className="text-[11px] text-hint">
+            Generate these on the other Falcon instance under Admin &rarr; API Keys. Its Base URL
+            ends in <code>/api/reseller</code>.
+          </p>
+          <input
+            className={formInputClass}
+            placeholder="API Key (starts with fu_)"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+          <input
+            className={formInputClass}
+            type="password"
+            placeholder={
+              editingProvider?.apiSecretMasked
+                ? `API Secret (current: ${editingProvider.apiSecretMasked}, leave blank to keep)`
+                : "API Secret"
+            }
+            value={apiSecret}
+            onChange={(e) => setApiSecret(e.target.value)}
+          />
+        </>
+      ) : panelStyle ? (
         <>
           <p className="text-[11px] text-hint">
             This provider expects two credentials in the query string:{" "}

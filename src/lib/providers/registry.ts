@@ -8,6 +8,7 @@ import { XmlConnector } from "./xml-connector";
 import { DhruFusionConnector } from "./dhru-fusion-connector";
 import { WebXConnector } from "./webx-connector";
 import { GsmThemeConnector } from "./gsm-theme-connector";
+import { FalconConnector } from "./falcon-connector";
 import { decryptSecret } from "@/lib/security/encryption";
 
 /**
@@ -36,6 +37,8 @@ export function getProviderConnector(provider: Provider): ProviderConnector {
       return new WebXConnector(decrypted);
     case ProviderType.GSM_THEME:
       return new GsmThemeConnector(decrypted);
+    case ProviderType.FALCON:
+      return new FalconConnector(decrypted);
     case ProviderType.REST_API:
     case ProviderType.JSON_API:
     case ProviderType.CUSTOM_API:

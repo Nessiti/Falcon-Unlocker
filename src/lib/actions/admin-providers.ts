@@ -35,6 +35,10 @@ function normalizeBaseUrl(raw: string): string {
 const USERNAME_REQUIRED_TYPES = new Set<ProviderType>([
   ProviderType.DHRU_FUSION,
   ProviderType.GSM_THEME,
+  // FALCON stores the remote instance's `fu_...` API key in this column -
+  // the form labels it "API Key" rather than "Username", so the error has
+  // to name it the way the admin saw it.
+  ProviderType.FALCON,
 ]);
 
 /**
@@ -69,7 +73,9 @@ function validateCredentials(input: {
   }
 
   if (USERNAME_REQUIRED_TYPES.has(input.type) && !input.username?.trim()) {
-    return "Username is required for DHRU / GSM Theme providers - it carries one half of the credential pair";
+    return input.type === ProviderType.FALCON
+      ? "API Key is required - paste the `fu_...` key generated on the other Falcon instance"
+      : "Username is required for DHRU / GSM Theme providers - it carries one half of the credential pair";
   }
 
   return null;

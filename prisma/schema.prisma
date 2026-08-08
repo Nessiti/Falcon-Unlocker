@@ -704,6 +704,11 @@ enum ProviderType {
   CUSTOM_API
   WEBX
   GSM_THEME
+  /// Another Falcon Unlocker instance, reached through its own reseller API
+  /// (/api/reseller). Same six actions as the DHRU/GSM Theme standard, but
+  /// authenticated with this app's own apikey/apisecret pair rather than
+  /// username/apiaccesskey - see FalconConnector.
+  FALCON
 }
 
 /// Smart Routing Engine (Chapter 15) strategies for picking a provider among
