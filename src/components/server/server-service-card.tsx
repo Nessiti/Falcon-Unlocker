@@ -1,5 +1,6 @@
 import type { Category, ServerService, ServerServiceField } from "@/generated/prisma/client";
 import { ServerOrderButton } from "@/components/server/server-order-button";
+import { Markdown } from "@/components/ui/markdown";
 import { formatUsd } from "@/lib/ui";
 
 type ServiceWithRelations = ServerService & {
@@ -52,7 +53,7 @@ export function ServerServiceCard({ service }: { service: ServiceWithRelations }
         ) : null}
       </div>
 
-      <p className="text-sm text-hint">{service.description}</p>
+      <Markdown text={service.description} />
 
       <div className="flex items-center justify-between text-sm">
         <span className="font-semibold text-foreground">{formatUsd(service.priceCents)}</span>

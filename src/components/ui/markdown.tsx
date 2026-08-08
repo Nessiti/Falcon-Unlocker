@@ -10,7 +10,7 @@ import remarkGfm from "remark-gfm";
  */
 export function Markdown({ text, className }: { text: string; className?: string }) {
   return (
-    <div className={`prose-markdown text-sm text-hint ${className ?? ""}`}>
+    <div className={`prose-markdown text-sm leading-relaxed text-foreground ${className ?? ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

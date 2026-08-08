@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/recharge-methods";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
+import { MarkdownField } from "@/components/ui/markdown-field";
 
 export function RechargeMethodForm({
   initData,
@@ -96,11 +97,10 @@ export function RechargeMethodForm({
         onChange={(e) => setName(e.target.value)}
         required
       />
-      <textarea
-        className={formInputClass}
-        placeholder="Instructions"
+      <MarkdownField
         value={instructions}
-        onChange={(e) => setInstructions(e.target.value)}
+        onChange={setInstructions}
+        placeholder="Instructions"
         required
       />
       <input

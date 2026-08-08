@@ -7,6 +7,7 @@ import { compressImageToJpeg, uploadWithProgress } from "@/lib/upload-image";
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 import { notifyHaptic } from "@/lib/haptics";
+import { Markdown } from "@/components/ui/markdown";
 
 // A hung upload used to spin forever with no feedback and no way out -
 // this bounds it so a stalled connection fails cleanly instead.
@@ -165,7 +166,7 @@ export function RechargeMethodCard({
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4">
       <p className="text-sm font-semibold text-foreground">{method.name}</p>
-      <p className="whitespace-pre-line text-sm text-hint">{method.instructions}</p>
+      <Markdown text={method.instructions} />
       {method.accountDetails ? (
         <p className="whitespace-pre-line text-sm text-foreground">{method.accountDetails}</p>
       ) : null}

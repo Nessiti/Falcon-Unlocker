@@ -1,5 +1,6 @@
 import type { Category, ImeiService, ImeiServiceField } from "@/generated/prisma/client";
 import { ImeiOrderButton } from "@/components/imei/imei-order-button";
+import { Markdown } from "@/components/ui/markdown";
 import { formatUsd } from "@/lib/ui";
 
 type ServiceWithRelations = ImeiService & {
@@ -40,7 +41,7 @@ export function ImeiServiceCard({ service }: { service: ServiceWithRelations }) 
         ) : null}
       </div>
 
-      <p className="text-sm text-hint">{service.description}</p>
+      <Markdown text={service.description} />
 
       <div className="flex items-center justify-between text-sm">
         <span className="font-semibold text-foreground">{formatUsd(service.priceCents)}</span>

@@ -13,6 +13,7 @@ import {
 import { Role, ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated/prisma/browser";
 import { formInputClass as inputClass } from "@/lib/ui";
 import { SERVICE_FIELD_RULES } from "@/lib/validation/field-formats";
+import { MarkdownField } from "@/components/ui/markdown-field";
 
 type FieldDraft = {
   id?: string;
@@ -217,11 +218,10 @@ export function ImeiServiceForm({
         onChange={(e) => setPrice(e.target.value)}
         required
       />
-      <textarea
-        className={inputClass}
-        placeholder="Description"
+      <MarkdownField
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={setDescription}
+        placeholder="Description"
         required
       />
       <input
