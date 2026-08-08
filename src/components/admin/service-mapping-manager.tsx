@@ -59,6 +59,7 @@ export function ServiceMappingManager({
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
+  const [showAllKinds, setShowAllKinds] = useState(false);
   const [manualProviderServiceId, setManualProviderServiceId] = useState("");
   const [addPriority, setAddPriority] = useState(0);
   const [addMarginPercent, setAddMarginPercent] = useState("");
@@ -113,6 +114,17 @@ export function ServiceMappingManager({
     if (result.ok) setRoutingPlan(result.plan);
     else setPlanError(result.error);
   }
+
+  // Providers that serve both rails from one catalog (Falcon, GSM Theme,
+  // WebX) tag each service. Mapping a Server service onto an IMEI service
+  // sends the order down the wrong code path and it fails at the provider,
+  // so the picker hides the other rail by default. Services the provider
+  // left untagged are always shown - an unknown kind must never make a
+  // service unreachable.
+  const visibleCatalog = catalog?.filter(
+    (service) => showAllKinds || service.kind == null || service.kind === kind,
+  );
+  const hiddenByKind = (catalog?.length ?? 0) - (visibleCatalog?.length ?? 0);
 
   async function handleBrowseCatalog() {
     if (!selectedProviderId) return;
@@ -364,6 +376,7 @@ export function ServiceMappingManager({
             setCatalog(null);
             setCatalogError(null);
             setSelectedProviderServiceId("");
+            setShowAllKinds(false);
           }}
           className="rounded border border-border bg-background px-2 py-1 text-foreground"
         >
@@ -390,19 +403,38 @@ export function ServiceMappingManager({
               catalog.length === 0 ? (
                 <p className="text-hint">Provider returned no services.</p>
               ) : (
-                <select
-                  value={selectedProviderServiceId}
-                  onChange={(e) => setSelectedProviderServiceId(e.target.value)}
-                  className="rounded border border-border bg-background px-2 py-1 text-foreground"
-                >
-                  <option value="">Select a service…</option>
-                  {catalog.map((service) => (
-                    <option key={service.providerServiceId} value={service.providerServiceId}>
-                      {service.name}
-                      {service.priceCents != null ? ` - ${formatUsd(service.priceCents)}` : ""}
+                <>
+                  <select
+                    value={selectedProviderServiceId}
+                    onChange={(e) => setSelectedProviderServiceId(e.target.value)}
+                    className="rounded border border-border bg-background px-2 py-1 text-foreground"
+                  >
+                    <option value="">
+                      {visibleCatalog?.length === 0
+                        ? `No ${kind} service in this catalog`
+                        : "Select a service…"}
                     </option>
-                  ))}
-                </select>
+                    {visibleCatalog?.map((service) => (
+                      <option key={service.providerServiceId} value={service.providerServiceId}>
+                        {service.name}
+                        {service.priceCents != null ? ` - ${formatUsd(service.priceCents)}` : ""}
+                        {service.kind && service.kind !== kind ? ` [${service.kind}]` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {hiddenByKind > 0 || showAllKinds ? (
+                    <label className="flex items-center gap-1 text-hint">
+                      <input
+                        type="checkbox"
+                        checked={showAllKinds}
+                        onChange={(e) => setShowAllKinds(e.target.checked)}
+                      />
+                      {showAllKinds
+                        ? `Showing every service, including the ones this provider marks as ${kind === "IMEI" ? "Server" : "IMEI"}`
+                        : `${hiddenByKind} service${hiddenByKind === 1 ? "" : "s"} hidden - the provider marks ${hiddenByKind === 1 ? "it" : "them"} as ${kind === "IMEI" ? "Server" : "IMEI"}, not ${kind}`}
+                    </label>
+                  ) : null}
+                </>
               )
             ) : null}
 

@@ -51,6 +51,15 @@ export type ConnectorService = {
   priceCents: number | null;
   estimatedTime: string | null;
   category: string | null;
+  /**
+   * Which of Falcon's two order rails this provider service belongs to, when
+   * the provider says so. Panels that publish IMEI and Server services in one
+   * catalog (Falcon, GSM Theme) tag each group; WebX serves them from separate
+   * endpoints, so it knows too. `null` means the provider gave no signal -
+   * never assume, because a service mapped to the wrong rail submits through
+   * the wrong code path and the order fails at the provider, not here.
+   */
+  kind: OrderKind | null;
 };
 
 export type SubmitOrderInput = {

@@ -75,6 +75,8 @@ export class XmlConnector extends BaseConnector {
         priceCents: typeof service.price === "number" ? Math.round(service.price * 100) : null,
         estimatedTime: service.eta ?? null,
         category: service.category ?? null,
+        // This shape publishes no IMEI/Server distinction.
+        kind: null,
       }),
     );
   }

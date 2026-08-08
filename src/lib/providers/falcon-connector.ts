@@ -1,5 +1,6 @@
 import "server-only";
 import { BaseConnector } from "./base-connector";
+import { parseOrderKind } from "./order-kind";
 import type {
   BalanceResult,
   ConnectionTestResult,
@@ -112,6 +113,7 @@ export class FalconConnector extends BaseConnector {
     type RawService = {
       SERVICEID: string;
       SERVICENAME: string;
+      SERVICETYPE?: string;
       CREDIT?: string;
       TIME?: string | null;
     };
@@ -129,6 +131,9 @@ export class FalconConnector extends BaseConnector {
           priceCents: Number.isNaN(price) ? null : Math.round(price * 100),
           estimatedTime: service.TIME ?? null,
           category: group.GROUPNAME ?? null,
+          // Both are published; SERVICETYPE is the per-service truth and
+          // GROUPTYPE the group's, and they agree in practice.
+          kind: parseOrderKind(service.SERVICETYPE) ?? parseOrderKind(group.GROUPTYPE),
         });
       }
     }

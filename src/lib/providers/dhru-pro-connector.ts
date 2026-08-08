@@ -176,6 +176,9 @@ export class DhruProConnector extends BaseConnector {
         // This API publishes no delivery-time field.
         estimatedTime: null,
         category: (categoryId ? categories[categoryId]?.name : null) ?? null,
+        // `product.type` is the product's nature ("digital"), not Falcon's
+        // IMEI/Server rail - there is no rail signal in this API.
+        kind: null,
       };
     });
   }

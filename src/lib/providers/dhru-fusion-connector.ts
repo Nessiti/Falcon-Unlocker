@@ -92,6 +92,10 @@ export class DhruFusionConnector extends BaseConnector {
           : null,
       estimatedTime: (service.TIME as string | undefined) ?? null,
       category: (service.GROUP as string | undefined) ?? null,
+      // Panel versions differ on whether this list carries a type field,
+      // and guessing "IMEI" from the action name would hide legitimately
+      // mapped Server services on panels that mix them.
+      kind: null,
     }));
   }
 

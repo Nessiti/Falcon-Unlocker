@@ -104,10 +104,13 @@ export class WebXConnector extends BaseConnector {
 
     if (!imei.ok && !server.ok) throw new Error(imei.error);
 
+    // Two endpoints, one per order rail - so unlike the single-catalog
+    // panels, the kind here is known for certain rather than parsed out of
+    // a label the provider may or may not publish.
     return [
-      ...(imei.ok ? toServiceArray(imei.data) : []),
-      ...(server.ok ? toServiceArray(server.data) : []),
-    ].map(parseWebXService);
+      ...(imei.ok ? toServiceArray(imei.data).map((s) => parseWebXService(s, "IMEI")) : []),
+      ...(server.ok ? toServiceArray(server.data).map((s) => parseWebXService(s, "SERVER")) : []),
+    ];
   }
 
   async submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult> {
@@ -176,7 +179,7 @@ function toServiceArray(data: unknown): Record<string, unknown>[] {
   return [];
 }
 
-function parseWebXService(service: Record<string, unknown>): ConnectorService {
+function parseWebXService(service: Record<string, unknown>, kind: OrderKind): ConnectorService {
   const credits = service.credits;
   const priceCents =
     typeof credits === "number"
@@ -186,6 +189,7 @@ function parseWebXService(service: Record<string, unknown>): ConnectorService {
         : null;
 
   return {
+    kind,
     providerServiceId: String(service.id),
     name: typeof service.name === "string" ? service.name : "",
     priceCents,

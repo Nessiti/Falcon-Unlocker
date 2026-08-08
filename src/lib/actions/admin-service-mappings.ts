@@ -345,9 +345,26 @@ export async function autoMapServiceAction(
     for (const provider of providers) {
       try {
         const services = await getProviderConnector(provider).getServices();
-        const match = services.find((service) => normalizeName(service.name) === targetName);
+        // Only consider services on the same rail. Providers that publish
+        // IMEI and Server services in one catalog (Falcon, GSM Theme) can
+        // easily hold a same-named entry on each; matching on name alone
+        // would silently link a Server service to an IMEI service, and the
+        // mistake only surfaces when a real customer order fails at
+        // submission. Services with no declared kind stay eligible - the
+        // provider gave no signal, so this must not narrow them away.
+        const match = services.find(
+          (service) =>
+            normalizeName(service.name) === targetName &&
+            (service.kind == null || service.kind === kind),
+        );
         if (!match) {
-          skipped.push({ providerName: provider.name, reason: "No matching service name found" });
+          const nameOnly = services.some((service) => normalizeName(service.name) === targetName);
+          skipped.push({
+            providerName: provider.name,
+            reason: nameOnly
+              ? `Name matches, but only on the ${kind === "IMEI" ? "Server" : "IMEI"} side`
+              : "No matching service name found",
+          });
           continue;
         }
 

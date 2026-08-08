@@ -1,5 +1,6 @@
 import "server-only";
 import { BaseConnector } from "./base-connector";
+import { parseOrderKind } from "./order-kind";
 import type {
   BalanceResult,
   ConnectionTestResult,
@@ -115,10 +116,15 @@ export class GsmThemeConnector extends BaseConnector {
     type RawService = {
       SERVICEID: string | number;
       SERVICENAME: string;
+      SERVICETYPE?: string;
       CREDIT?: number | string;
       TIME?: string;
     };
-    type RawGroup = { GROUPNAME: string; SERVICES: Record<string, RawService> };
+    type RawGroup = {
+      GROUPNAME: string;
+      GROUPTYPE?: string;
+      SERVICES: Record<string, RawService>;
+    };
     const list = (parsed.data.LIST ?? {}) as Record<string, RawGroup>;
 
     const services: ConnectorService[] = [];
@@ -132,6 +138,8 @@ export class GsmThemeConnector extends BaseConnector {
           priceCents: typeof price === "number" && !Number.isNaN(price) ? Math.round(price * 100) : null,
           estimatedTime: service.TIME ?? null,
           category: group.GROUPNAME ?? null,
+          // Not every panel clone publishes these; null when absent.
+          kind: parseOrderKind(service.SERVICETYPE) ?? parseOrderKind(group.GROUPTYPE),
         });
       }
     }
