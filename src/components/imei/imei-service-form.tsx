@@ -14,6 +14,7 @@ import { Role, ServiceBadge, ServiceFieldType, ServiceStatus } from "@/generated
 import { formInputClass as inputClass } from "@/lib/ui";
 import { SERVICE_FIELD_RULES } from "@/lib/validation/field-formats";
 import { MarkdownField } from "@/components/ui/markdown-field";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
 
 type FieldDraft = {
   id?: string;
@@ -254,11 +255,12 @@ export function ImeiServiceForm({
         </select>
       </div>
 
-      <input
-        className={inputClass}
-        placeholder="Image URL"
+      <ImageUploadField
+        label="Service image"
         value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
+        onChange={setImageUrl}
+        initData={verifiedInitData}
+        kind="service"
       />
       <input
         className={inputClass}

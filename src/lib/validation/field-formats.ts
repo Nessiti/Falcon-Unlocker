@@ -1,4 +1,5 @@
 import { ServiceFieldType, ServerFieldType } from "@/generated/prisma/client";
+import { isValidImei } from "@/lib/validation/imei";
 
 export type FieldFormatRule = {
   /** Shown as a hint under the input and in validation error messages. */
@@ -10,6 +11,9 @@ export type FieldFormatRule = {
   minLength?: number;
   maxLength?: number;
   inputMode?: "numeric" | "text" | "email";
+  /** Extra check the shape/length rules can't express (e.g. a checksum).
+   * Returns an error message, or null when the value is fine. */
+  validate?: (value: string) => string | null;
 };
 
 /**
@@ -27,6 +31,11 @@ export const SERVICE_FIELD_RULES: Partial<Record<ServiceFieldType, FieldFormatRu
     minLength: 15,
     maxLength: 15,
     inputMode: "numeric",
+    // The 15th digit is a checksum of the first 14, so a single mistyped
+    // digit is detectable here - before the order spends the customer's
+    // balance on a provider call that would have been rejected anyway.
+    validate: (value) =>
+      isValidImei(value) ? null : "is not a valid IMEI (check digit doesn't match)",
   },
   SN: {
     hint: "4-40 letters/numbers",
@@ -129,6 +138,10 @@ export function validateFieldValue(
 
   if (rule?.pattern && !rule.pattern.test(trimmed)) {
     return { ok: false, error: `${options.label}: ${rule.hint || "invalid format"}` };
+  }
+  if (rule?.validate) {
+    const problem = rule.validate(trimmed);
+    if (problem) return { ok: false, error: `${options.label} ${problem}` };
   }
   if (minLength != null && trimmed.length < minLength) {
     return { ok: false, error: `${options.label} must be at least ${minLength} characters` };

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getBrandSettingsAction, updateBrandSettingsAction } from "@/lib/actions/brand-settings";
 import { ColorPickerField } from "@/components/admin/color-picker-field";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
 import { useRefreshTelegramUser } from "@/components/telegram-user-provider";
 import { formInputClass } from "@/lib/ui";
 
@@ -95,11 +96,12 @@ export function BrandSettingsPanel({ initData }: { initData: string }) {
       </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <input
-          className={formInputClass}
-          placeholder="Logo URL"
+        <ImageUploadField
+          label="Brand logo"
           value={form.logoUrl}
-          onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+          onChange={(logoUrl) => setForm({ ...form, logoUrl })}
+          initData={initData}
+          kind="logo"
         />
         <ColorPickerField
           label="Button color"

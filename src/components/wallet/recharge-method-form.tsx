@@ -10,6 +10,7 @@ import {
 import { RechargeContactType } from "@/generated/prisma/browser";
 import { formInputClass } from "@/lib/ui";
 import { MarkdownField } from "@/components/ui/markdown-field";
+import { ImageUploadField } from "@/components/ui/image-upload-field";
 
 export function RechargeMethodForm({
   initData,
@@ -115,17 +116,21 @@ export function RechargeMethodForm({
         value={customText}
         onChange={(e) => setCustomText(e.target.value)}
       />
-      <input
-        className={formInputClass}
-        placeholder="Image URL"
+      <ImageUploadField
+        label="Payment instructions image"
         value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
+        onChange={setImageUrl}
+        initData={initData}
+        kind="payment"
+        hint="Optional - a screenshot of the payment steps, shown under the instructions."
       />
-      <input
-        className={formInputClass}
-        placeholder="QR code URL"
+      <ImageUploadField
+        label="QR code"
         value={qrCodeUrl}
-        onChange={(e) => setQrCodeUrl(e.target.value)}
+        onChange={setQrCodeUrl}
+        initData={initData}
+        kind="qr"
+        hint="Optional - customers scan this to pay."
       />
       <input
         className={formInputClass}

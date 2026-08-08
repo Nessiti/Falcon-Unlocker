@@ -8,6 +8,8 @@ import {
   filterAllowedChars,
   validateFieldValue,
 } from "@/lib/validation/field-formats";
+import { suggestImei } from "@/lib/validation/imei";
+import { selectionHaptic } from "@/lib/haptics";
 
 type Field = {
   id: string;
@@ -53,6 +55,12 @@ export function ImeiFieldInput({
       : { ok: true as const };
   const hint = !error.ok ? error.error : rule?.hint;
   const hintClass = !error.ok ? "text-accent" : "text-hint";
+
+  // The 15th IMEI digit is a checksum of the first 14, so once 14 are typed
+  // the last one is already known - offering it saves squinting at the back
+  // of a handset for one digit, and guarantees a checksum-valid entry.
+  const imeiSuggestion =
+    field.type === ServiceFieldType.IMEI ? suggestImei(value) : null;
 
   if (field.type === ServiceFieldType.TEXTAREA || field.type === ServiceFieldType.JSON) {
     return (
@@ -143,6 +151,18 @@ export function ImeiFieldInput({
         onBlur={() => setTouched(true)}
         required={field.required}
       />
+      {imeiSuggestion ? (
+        <button
+          type="button"
+          onClick={() => {
+            selectionHaptic();
+            onChange(imeiSuggestion);
+          }}
+          className="self-start rounded-lg bg-accent/10 px-2 py-1 text-[11px] font-medium text-accent transition-transform active:scale-95"
+        >
+          Complete to {imeiSuggestion} (check digit {imeiSuggestion.slice(-1)})
+        </button>
+      ) : null}
       {hint ? <span className={hintClass}>{hint}</span> : null}
     </label>
   );
